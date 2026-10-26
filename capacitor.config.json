@@ -1,0 +1,9 @@
+{
+  "appId": "com.gui816.listafamilia",
+  "appName": "Listora",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}

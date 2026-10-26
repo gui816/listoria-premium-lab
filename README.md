@@ -1,47 +1,56 @@
-# Listoria Premium Lab
+# Lista Família
 
-Independent research and development workspace for validating a real-price supermarket basket comparison feature for Listoria.
+Lista de compras familiar, mobile-first, com listas partilhadas, categorias, quantidades e sincronização em tempo real.
 
-> **Safety boundary:** this repository is separate from the Listoria production repository. Do not reuse production credentials, Supabase projects, payment configuration, or deployment targets.
+## Funcionalidades
 
-## Current stage
+- Criar uma lista e partilhá-la apenas através de um código.
+- Entrar numa lista existente com o código, sem precisar de uma página web ou link de convite.
+- Adicionar e remover artigos, definir quantidade e categoria.
+- Marcar artigos como comprados e limpar os concluídos.
+- Atualizações em tempo real entre dispositivos através de Supabase Realtime Broadcast.
+- Interface responsiva em português europeu.
+- Persistência PostgreSQL gerida pelo Supabase; sem servidor Express, MongoDB ou Socket.IO.
 
-**Phase 1 — Data-source feasibility and architecture validation.**
+## Configurar o Supabase
 
-The first deliverable is evidence that we can legally and reliably obtain usable supermarket prices for a defined Portuguese pilot area. Do not build the production comparison flow, enable payments, or present AI-generated prices as real before this gate passes.
+1. Cria um projeto em [supabase.com](https://supabase.com/).
+2. Abre **SQL Editor**, cria uma query e executa todo o ficheiro `supabase/migrations/202610090001_initial_schema.sql`.
+3. Em **Project Settings → API**, copia o Project URL e a chave publishable (ou anon legacy).
+4. Copia `.env.example` para `.env.local` e preenche `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
+5. Instala dependências e arranca a aplicação:
 
-## Goals
+```bash
+npm install
+cp .env.example .env.local
+# Edita .env.local com os dados do teu projeto
+npm run dev
+```
 
-- Identify price-data sources with documented commercial-use rights.
-- Validate coverage, freshness, product identifiers, store/region granularity, and cost.
-- Design a country-agnostic data model, starting operationally in Portugal.
-- Define quality and acceptance gates before implementing the comparison engine.
-- Keep all experiments isolated from Listoria production.
+Abre o endereço local indicado pelo Vite.
 
-## Phase 1 documents
+## Importar compras com Gemini
 
-- [Research plan](docs/phase-1-research.md)
-- [Source evaluation matrix](docs/data-source-evaluation.md)
-- [Proposed architecture](docs/architecture.md)
-- [Decision log](docs/decisions.md)
+A aplicação suporta importação de produtos por fotografia de uma lista manuscrita e por voz. A voz usa o reconhecimento de fala disponível no navegador/dispositivo e envia a transcrição para o Gemini; a fotografia é enviada diretamente ao Gemini. Os produtos e quantidades são apresentados numa pré-visualização editável antes de serem adicionados.
 
-## Non-goals for Phase 1
+Para builds Android através do GitHub Actions:
 
-- No production Listoria changes.
-- No payments or Premium entitlement implementation.
-- No automated collection from retailer sites until terms, permissions, and technical constraints have been reviewed.
-- No real-price claims based on Gemini or other generative AI output.
-- No public launch.
+1. Em **Settings → Secrets and variables → Actions**, cria o secret `GEMINI_API_KEY` com uma chave criada no [Google AI Studio](https://aistudio.google.com/apikey).
+2. Executa o workflow **Android APK** (automaticamente em cada push para `main`, ou manualmente em **Actions**).
+3. Se o secret não existir, o APK continua a compilar, mas a importação por IA mostra uma mensagem a pedir a configuração da chave.
 
-## Initial operating principles
+O workflow injeta o secret em `VITE_GEMINI_API_KEY` apenas durante `npm run build`. Como o Vite incorpora variáveis `VITE_*` no JavaScript do cliente, a chave pode ser extraída do APK; usa uma chave exclusiva para esta app e configura limites/alertas de utilização na Google AI. A fotografia e a transcrição de voz são enviadas à Google para processamento. Para desenvolvimento local, define `VITE_GEMINI_API_KEY` no teu `.env.local`.
 
-1. Every displayed price must have a traceable source and observation timestamp.
-2. Unknown or stale prices are missing data, not values to guess.
-3. Product matching must preserve brand, package size, quantity, unit, and relevant product variants.
-4. Store discovery and price availability are separate capabilities.
-5. Each market defines its country, locale, currency, units, and regional rules.
-6. Any later implementation must use separate development credentials and infrastructure.
+## Deploy
 
-## Status
+A aplicação pode ser distribuída como app Android através do APK gerado no GitHub Actions. Não é necessário publicar uma página web para criar listas ou partilhá-las: os familiares introduzem na app o código da lista. O build web continua disponível para desenvolvimento e testes, mas não é um requisito para a partilha. O URL Supabase e a chave publicável são dados de cliente e podem estar no bundle. **Nunca coloques uma chave `service_role` no frontend.**
 
-Phase 1 is in progress. Source availability and commercial-use permissions are **not yet verified**.
+## Segurança
+
+As tabelas não têm acesso direto concedido ao papel `anon`; a app usa funções PostgreSQL `SECURITY DEFINER` com `search_path` fixo e validação do código de partilha. O código de convite dá acesso de leitura e escrita à lista, pelo que deve ser partilhado apenas com pessoas de confiança. O código gerado tem 12 caracteres hexadecimais. Antes de promover a aplicação para uso público, acrescenta proteção contra abuso/rate limiting e considera autenticação e convites revogáveis.
+
+## Estrutura
+
+- `src/App.jsx`: interface e chamadas RPC.
+- `src/lib/supabase.js`: cliente Supabase.
+- `supabase/migrations/`: schema, funções RPC e permissões.
