@@ -214,6 +214,25 @@ export default function App() {
   const imageFileInputRef = useRef(null);
   const imageCameraInputRef = useRef(null);
   const recognitionRef = useRef(null);
+  const onboardingTouchStartRef = useRef(null);
+
+  useEffect(() => {
+    if (!showOnboarding) return undefined;
+    const handleOnboardingKeydown = event => {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable="true"], button')) return;
+      if (event.key === "ArrowRight" && onboardingStep < 5) {
+        event.preventDefault();
+        setOnboardingStep(step => Math.min(5, step + 1));
+      } else if (event.key === "ArrowLeft" && onboardingStep > 0) {
+        event.preventDefault();
+        setOnboardingStep(step => Math.max(0, step - 1));
+      }
+    };
+    window.addEventListener("keydown", handleOnboardingKeydown);
+    return () => window.removeEventListener("keydown", handleOnboardingKeydown);
+  }, [showOnboarding, onboardingStep]);
 
   const activeItems = useMemo(() => items.filter(i => !i.done), [items]);
   const doneItems = useMemo(() => items.filter(i => i.done), [items]);
@@ -1008,7 +1027,28 @@ export default function App() {
       </div>}
       {importPreview.length > 0 && <div className="modal-backdrop" onClick={() => !importBusy && setImportPreview([])}><section className="share-modal import-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="import-title"><button className="modal-close" onClick={() => !importBusy && setImportPreview([])} aria-label={t("Fechar")}><X size={20}/></button><div className="share-graphic"><ShoppingBasket size={28}/></div><h2 id="import-title">{t("Confirmar produtos")}</h2><p>{importSource === "photo" ? "Revê os produtos reconhecidos na fotografia." : "Revê os produtos reconhecidos por voz."} Podes corrigir os nomes e quantidades antes de adicionar.</p><div className="import-preview-list">{importPreview.map((item, index) => <div className="import-preview-row" key={index}><input aria-label={`Produto ${index + 1}`} value={item.name} maxLength={100} onChange={e => editPreviewItem(index, { name: e.target.value })}/><input aria-label={`Quantidade de ${item.name}`} type="number" min="1" max="999" value={item.quantity} onChange={e => editPreviewItem(index, { quantity: e.target.value })}/><button type="button" aria-label={`Remover ${item.name}`} onClick={() => setImportPreview(previous => previous.filter((_, i) => i !== index))}><X size={17}/></button></div>)}</div>{importError && <p className="error-message">{importError}</p>}<button className="primary-button" disabled={importBusy || !importPreview.some(item => item.name.trim())} onClick={confirmImport}>{importBusy ? <LoaderCircle className="spin" size={17}/> : <Check size={17}/>} {importBusy ? "A adicionar…" : `Adicionar ${importPreview.length} produtos`}</button><button className="secondary-button" disabled={importBusy} onClick={() => setImportPreview([])}>{t("Cancelar")}</button></section></div>}
       {showOnboarding && <div className="modal-backdrop onboarding-backdrop" onClick={() => { setShowOnboarding(false); localStorage.setItem("listora-onboarding-v3-complete", "1"); }}>
-        <section className="share-modal onboarding-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+        <section
+          className="share-modal onboarding-modal"
+          onClick={e => e.stopPropagation()}
+          onTouchStart={event => {
+            const touch = event.touches[0];
+            onboardingTouchStartRef.current = { x: touch.clientX, y: touch.clientY };
+          }}
+          onTouchEnd={event => {
+            const start = onboardingTouchStartRef.current;
+            onboardingTouchStartRef.current = null;
+            if (!start || event.changedTouches.length === 0) return;
+            if (event.target instanceof Element && event.target.closest('button, input, textarea, select, a, [contenteditable="true"]')) return;
+            const touch = event.changedTouches[0];
+            const deltaX = touch.clientX - start.x;
+            const deltaY = touch.clientY - start.y;
+            if (Math.abs(deltaX) < 55 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) return;
+            if (deltaX < 0) setOnboardingStep(step => Math.min(5, step + 1));
+            else setOnboardingStep(step => Math.max(0, step - 1));
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="onboarding-title">
           <button type="button" className="modal-close" onClick={() => { setShowOnboarding(false); localStorage.setItem("listora-onboarding-v3-complete", "1"); }} aria-label={t("Fechar introdução")}><X size={20}/></button>
           <div className="onboarding-progress" aria-label={t("Passo")}><span style={{width: `${((onboardingStep + 1) / 6) * 100}%`}}/></div>
           <div className={`onboarding-art onboarding-art-step-${onboardingStep}`} aria-hidden="true">
