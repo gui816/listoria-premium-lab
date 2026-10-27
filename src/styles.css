@@ -457,7 +457,9 @@
     row-gap:0;
     align-items:center;
     text-align:center;
+    touch-action:pan-y;
   }
+  .onboarding-modal>.modal-close{position:absolute;top:16px;right:16px;float:none;margin:0}
   .onboarding-modal .onboarding-progress{grid-area:progress;width:100%;margin:0 0 28px}
   .onboarding-modal .onboarding-art{
     grid-area:art;
