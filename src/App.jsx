@@ -222,9 +222,13 @@ export default function App() {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       const target = event.target;
       if (target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable="true"], button')) return;
-      if (event.key === "ArrowRight" && onboardingStep < 5) {
+      if (event.key === "ArrowRight") {
         event.preventDefault();
-        setOnboardingStep(step => Math.min(5, step + 1));
+        if (onboardingStep < 5) setOnboardingStep(step => Math.min(5, step + 1));
+        else {
+          setShowOnboarding(false);
+          localStorage.setItem("listora-onboarding-v3-complete", "1");
+        }
       } else if (event.key === "ArrowLeft" && onboardingStep > 0) {
         event.preventDefault();
         setOnboardingStep(step => Math.max(0, step - 1));
@@ -1043,8 +1047,13 @@ export default function App() {
             const deltaX = touch.clientX - start.x;
             const deltaY = touch.clientY - start.y;
             if (Math.abs(deltaX) < 55 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) return;
-            if (deltaX < 0) setOnboardingStep(step => Math.min(5, step + 1));
-            else setOnboardingStep(step => Math.max(0, step - 1));
+            if (deltaX < 0) {
+              if (onboardingStep < 5) setOnboardingStep(step => Math.min(5, step + 1));
+              else {
+                setShowOnboarding(false);
+                localStorage.setItem("listora-onboarding-v3-complete", "1");
+              }
+            } else setOnboardingStep(step => Math.max(0, step - 1));
           }}
           role="dialog"
           aria-modal="true"
