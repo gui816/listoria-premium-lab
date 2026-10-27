@@ -32,8 +32,15 @@ serve(async (req) => {
       return json({ error: "O ficheiro está vazio ou excede o limite de 10 MB." }, 400);
     }
 
+    const requestedLanguage = String(body?.language || "pt-PT");
+    const warningLanguages: Record<string, string> = {
+      "pt-PT": "European Portuguese", en: "English", es: "Spanish", fr: "French",
+      de: "German", it: "Italian", nl: "Dutch", pl: "Polish", ro: "Romanian", "zh-CN": "Simplified Chinese",
+    };
+    const warningLanguage = warningLanguages[requestedLanguage] || "European Portuguese";
     const prompt = [
       "You extract structured purchase receipt data from a receipt/invoice image or PDF.",
+      "Write all warnings in " + warningLanguage + ". Keep product names and merchant names exactly as printed on the receipt.",
       "Return only fields that are clearly supported by the document. Never guess missing values.",
       "Dates must be the purchase/transaction date in YYYY-MM-DD format, or null.",
       "total is the final amount paid by the customer, not subtotal or change. vatTotal is the total VAT/tax amount if printed, otherwise null.",
