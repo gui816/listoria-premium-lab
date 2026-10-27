@@ -31,7 +31,7 @@ jobs:
 
       - name: Build web app for GitHub Pages
         env:
-          VITE_BASE_PATH: /listoria-premium-lab/
+          VITE_BASE_PATH: /
         run: npm run build
 
       - name: Upload Pages artifact
