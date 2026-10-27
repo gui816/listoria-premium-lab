@@ -1,4 +1,4 @@
-const CACHE_NAME = "listora-shell-v2";
+const CACHE_NAME = "listora-shell-v3";
 const APP_ROOT = new URL("./", self.location.href).pathname;
 const APP_SHELL = [APP_ROOT, APP_ROOT + "manifest.webmanifest", APP_ROOT + "icons/listora.svg"];
 
