@@ -167,6 +167,8 @@ export default function App() {
   const [receiptExtractBusy, setReceiptExtractBusy] = useState(false);
   const [receiptExtraction, setReceiptExtraction] = useState(null);
   const [receiptNeedsName, setReceiptNeedsName] = useState(false);
+  const [receiptAddMode, setReceiptAddMode] = useState("choice");
+  const [receiptChooserOpen, setReceiptChooserOpen] = useState(false);
   const channelRef = useRef(null);
   const [list, setList] = useState(null);
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -781,8 +783,10 @@ export default function App() {
       }).filter(Boolean).join(", "));
       if (detailLines.length) setReceiptNotes(previous => [previous.trim(), detailLines.join("\\n")].filter(Boolean).join("\\n").slice(0,1000));
       setReceiptExtraction({ items, vatTotal: data.vatTotal, confidence: data.confidence || "medium", warnings: Array.isArray(data.warnings) ? data.warnings : [] });
+      setReceiptAddMode("review");
       notify("Sugestões extraídas. Confirma os campos antes de guardar.");
     } catch (err) {
+      setReceiptAddMode("review");
       setError(err.message || "Não foi possível extrair os dados da fatura.");
     } finally { setReceiptExtractBusy(false); }
   }
@@ -814,7 +818,7 @@ export default function App() {
       });
       if (rpcError) throw rpcError;
       setReceipts(data.receipts || []); setList(data.list || list); broadcastChange();
-      setReceiptStore(""); setReceiptTotal(""); setReceiptNotes(""); setReceiptFile(null); setReceiptExtraction(null);
+      setReceiptStore(""); setReceiptTotal(""); setReceiptNotes(""); setReceiptFile(null); setReceiptExtraction(null); setReceiptAddMode("choice"); setReceiptChooserOpen(false);
       const input = document.getElementById("receipt-file"); if (input) input.value = "";
       notify("Fatura adicionada à lista partilhada.");
     } catch (err) {
@@ -991,6 +995,44 @@ export default function App() {
       </>}
       {activeTab === "receipts" && <section className="receipts-section">
         <div className="receipts-heading"><div><span className="eyebrow">{t("ARQUIVO PARTILHADO")}</span><h1>{t("Faturas de compras")}</h1><p>{t("Comprovativos acessíveis a todos os membros desta lista.")}</p></div></div>
+        <div className="receipt-start-card">
+          <div className="receipt-start-icon"><Receipt size={25}/></div>
+          <h2>{t("Guardar uma fatura")}</h2>
+          <p>{t("Fotografa, escolhe um ficheiro ou introduz os dados manualmente.")}</p>
+          <button type="button" className="primary-button" onClick={() => setReceiptChooserOpen(true)}><Plus size={17}/>{t("Adicionar fatura")}</button>
+        </div>
+        <input className="receipt-file-input" id="receipt-camera-file" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={e => { const file = e.target.files?.[0] || null; if (file) { setReceiptFile(file); setReceiptExtraction(null); setReceiptChooserOpen(false); void extractReceiptData(file); } e.target.value = ""; }}/>
+        <input className="receipt-file-input" id="receipt-document-file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={e => { const file = e.target.files?.[0] || null; if (file) { setReceiptFile(file); setReceiptExtraction(null); setReceiptChooserOpen(false); void extractReceiptData(file); } e.target.value = ""; }}/>
+        {receiptChooserOpen && <div className="modal-backdrop receipt-chooser-backdrop" onClick={() => setReceiptChooserOpen(false)}>
+          <section className="receipt-chooser-modal" role="dialog" aria-modal="true" aria-labelledby="receipt-chooser-title" onClick={e => e.stopPropagation()}>
+            <button type="button" className="modal-close" aria-label={t("Fechar")} onClick={() => setReceiptChooserOpen(false)}><X size={20}/></button>
+            <div className="receipt-chooser-icon"><Receipt size={27}/></div>
+            <h2 id="receipt-chooser-title">{t("Como queres adicionar?")}</h2>
+            <p>{t("Escolhe a forma mais conveniente.")}</p>
+            <button type="button" className="receipt-choice-option" onClick={() => document.getElementById("receipt-camera-file")?.click()}>
+              <span className="receipt-choice-icon"><Camera size={23}/></span><span><strong>{t("Fotografar fatura")}</strong><small>{t("Digitaliza uma fatura com a câmara.")}</small></span><ChevronDown className="receipt-choice-arrow" size={18}/>
+            </button>
+            <button type="button" className="receipt-choice-option" onClick={() => document.getElementById("receipt-document-file")?.click()}>
+              <span className="receipt-choice-icon"><Upload size={23}/></span><span><strong>{t("Escolher ficheiro")}</strong><small>{t("Imagem ou PDF da fatura.")}</small></span><ChevronDown className="receipt-choice-arrow" size={18}/>
+            </button>
+            <button type="button" className="receipt-choice-option" onClick={() => { setReceiptAddMode("manual"); setReceiptChooserOpen(false); setReceiptFile(null); setReceiptExtraction(null); }}>
+              <span className="receipt-choice-icon manual"><FileText size={23}/></span><span><strong>{t("Introduzir manualmente")}</strong><small>{t("Preenche os dados sem anexar ficheiro.")}</small></span><ChevronDown className="receipt-choice-arrow" size={18}/>
+            </button>
+            <button type="button" className="receipt-chooser-cancel" onClick={() => setReceiptChooserOpen(false)}>{t("Cancelar")}</button>
+          </section>
+        </div>}
+        {receiptExtractBusy && <div className="receipt-processing-card" role="status" aria-live="polite"><LoaderCircle size={30} className="spin"/><strong>{t("A analisar a fatura com IA…")}</strong><span>{t("A identificar o supermercado, a data, o total, o IVA e os artigos. Isto pode demorar alguns segundos.")}</span></div>}
+        {receiptAddMode !== "choice" && !receiptExtractBusy && <form className="receipt-form" onSubmit={addReceipt}>
+          <div className="receipt-form-heading"><div><h2>{receiptAddMode === "manual" ? t("Introduzir dados da fatura") : t("Rever fatura")}</h2><p>{receiptAddMode === "manual" ? t("Preenche os dados essenciais. Podes anexar o comprovativo se quiseres.") : t("Confirma os dados identificados. Podes corrigir qualquer campo.")}</p></div><button type="button" className="receipt-form-close" onClick={() => { setReceiptAddMode("choice"); setReceiptFile(null); setReceiptExtraction(null); setReceiptStore(""); setReceiptTotal(""); setReceiptNotes(""); setError(""); }}>{t("Cancelar")}</button></div>
+          {receiptFile && <div className="receipt-selected-file"><FileText size={19}/><span>{receiptFile.name}</span><button type="button" onClick={() => { setReceiptFile(null); setReceiptExtraction(null); const input=document.getElementById("receipt-file"); if(input) input.value=""; }} aria-label={t("Remover ficheiro")}><X size={17}/></button></div>}
+          {receiptNeedsName && !memberName.trim() && <div className="receipt-name-prompt"><strong>{t("Antes de guardar, como te devemos identificar?")}</strong><label htmlFor="receipt-member-name">{t("O teu nome")}</label><input id="receipt-member-name" value={memberNameInput} onChange={e => setMemberNameInput(e.target.value)} placeholder={t("Ex.: Ana")} maxLength={60} autoComplete="name" required/><small>{t("O nome ficará associado às faturas que adicionares nesta lista.")}</small><button type="button" className="secondary-button" disabled={!memberNameInput.trim()} onClick={() => { const displayName = memberNameInput.trim().slice(0,60); localStorage.setItem("listora-member-name", displayName); setMemberName(displayName); setReceiptNeedsName(false); setError(""); }}>{t("Guardar nome e continuar")}</button></div>}
+          <label htmlFor="receipt-store">{t("Supermercado")}</label><input id="receipt-store" value={receiptStore} onChange={e => setReceiptStore(e.target.value)} placeholder={t("Ex.: Continente, Lidl, Pingo Doce")} maxLength={120} required/>
+          <div className="receipt-form-grid"><div><label htmlFor="receipt-date">{t("Data da compra")}</label><input id="receipt-date" type="date" value={receiptDate} onChange={e => setReceiptDate(e.target.value)} required/></div><div><label htmlFor="receipt-total">{t("Total (€)")}</label><input id="receipt-total" type="number" min="0" step="0.01" value={receiptTotal} onChange={e => setReceiptTotal(e.target.value)} placeholder="0,00" required/></div></div>
+          <label htmlFor="receipt-notes">{t("Notas (opcional)")}</label><textarea id="receipt-notes" value={receiptNotes} onChange={e => setReceiptNotes(e.target.value)} maxLength={1000} placeholder={t("Ex.: compras da semana, IVA, descontos…")}/>
+          {receiptAddMode === "manual" && <><label className="receipt-file-label" htmlFor="receipt-file"><span className="receipt-upload-icon"><FileText size={22}/></span><span className="receipt-upload-copy"><strong>{receiptFile ? receiptFile.name : t("Anexar comprovativo (opcional)")}</strong><small>{t("Fotografia ou PDF · até 10 MB")}</small></span><span className="receipt-upload-action">{t("Carregar ficheiro")}</span></label><input className="receipt-file-input" id="receipt-file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={e => { const file = e.target.files?.[0] || null; setReceiptFile(file); setReceiptExtraction(null); if (file) void extractReceiptData(file); }}/></>}
+          {receiptExtraction && <div className="receipt-extraction-preview" role="status"><strong><Check size={16}/> {t("Sugestões extraídas — confirma os campos acima")}</strong>{receiptExtraction.vatTotal !== null && receiptExtraction.vatTotal !== undefined && <span>{t("IVA identificado")}: €{Number(receiptExtraction.vatTotal).toFixed(2)}</span>}{receiptExtraction.items.length > 0 && <div><span>{t("Artigos identificados")} ({receiptExtraction.items.length})</span><ul>{receiptExtraction.items.slice(0,12).map((item,index) => <li key={index}>{item.name}{Number.isFinite(Number(item.total)) ? " — €"+Number(item.total).toFixed(2) : ""}</li>)}</ul>{receiptExtraction.items.length > 12 && <small>{t("Mais artigos incluídos nas notas", { count: receiptExtraction.items.length - 12 })}</small>}</div>}{receiptExtraction.warnings.map((warning,index) => <small key={index}>{warning}</small>)}</div>}
+          <button className="primary-button" type="submit" disabled={receiptBusy}>{receiptBusy ? <LoaderCircle size={17} className="spin"/> : <Plus size={17}/>} {t("Guardar fatura")}</button>
+        </form>}
         <form className="receipt-form" onSubmit={addReceipt}>
           <h2><Upload size={18}/> {t("Adicionar fatura")}</h2>
           {receiptNeedsName && !memberName.trim() && <div className="receipt-name-prompt"><strong>{t("Antes de guardar, como te devemos identificar?")}</strong><label htmlFor="receipt-member-name">{t("O teu nome")}</label><input id="receipt-member-name" value={memberNameInput} onChange={e => setMemberNameInput(e.target.value)} placeholder={t("Ex.: Ana")} maxLength={60} autoComplete="name" required/><small>{t("O nome ficará associado às faturas que adicionares nesta lista.")}</small><button type="button" className="secondary-button" disabled={!memberNameInput.trim()} onClick={() => { const displayName = memberNameInput.trim().slice(0,60); localStorage.setItem("listora-member-name", displayName); setMemberName(displayName); setReceiptNeedsName(false); setError(""); }}>{t("Guardar nome e continuar")}</button></div>}
