@@ -135,6 +135,12 @@ function LanguagePicker({ language, onChange }) {
   </label>;
 }
 
+function getReceiptMimeType(file) {
+  const extension = String(file?.name || "").split(".").pop()?.toLowerCase();
+  const known = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", pdf: "application/pdf" };
+  return ["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(file?.type) ? file.type : (known[extension] || file?.type || "");
+}
+
 function getDeviceId() { let id = localStorage.getItem("listora-device-id"); if (!id) { id = crypto.randomUUID ? crypto.randomUUID() : "device-" + Date.now() + "-" + Math.random().toString(36).slice(2); localStorage.setItem("listora-device-id", id); } return id; }
 
 
@@ -750,7 +756,8 @@ export default function App() {
 
   async function extractReceiptData(file = receiptFile) {
     if (!file) { setError("Seleciona primeiro uma fotografia ou PDF da fatura."); return; }
-    if (!["image/jpeg","image/png","image/webp","application/pdf"].includes(file.type)) {
+    const mimeType = getReceiptMimeType(file);
+    if (!["image/jpeg","image/png","image/webp","application/pdf"].includes(mimeType)) {
       setError("Usa uma imagem JPG, PNG, WebP ou PDF."); return;
     }
     if (file.size > 10 * 1024 * 1024) { setError("O comprovativo deve ter no máximo 10 MB."); return; }
@@ -764,7 +771,7 @@ export default function App() {
       });
       const base64 = dataUrl.split(",")[1];
       const { data, error: invokeError } = await supabase.functions.invoke("listora-receipt-extract", {
-        body: { mimeType: file.type, fileData: base64, language }
+        body: { mimeType, fileData: base64, language }
       });
       if (invokeError) {
         const detail = await invokeError.context?.json?.().catch(() => null);
@@ -807,9 +814,10 @@ export default function App() {
       const receiptId = crypto.randomUUID();
       if (receiptFile) {
         if (receiptFile.size > 10 * 1024 * 1024) throw new Error("O comprovativo deve ter no máximo 10 MB.");
-        if (!["image/jpeg","image/png","image/webp","application/pdf"].includes(receiptFile.type)) throw new Error("Usa uma imagem JPG, PNG, WebP ou PDF.");
+        const mimeType = getReceiptMimeType(receiptFile);
+        if (!["image/jpeg","image/png","image/webp","application/pdf"].includes(mimeType)) throw new Error("Usa uma imagem JPG, PNG, WebP ou PDF.");
         filePath = listCode + "/" + receiptId + "/" + receiptFile.name.replace(/[^a-zA-Z0-9._-]/g,"_");
-        const { error: uploadError } = await supabase.storage.from("family-receipts").upload(filePath, receiptFile, { contentType: receiptFile.type, upsert: false });
+        const { error: uploadError } = await supabase.storage.from("family-receipts").upload(filePath, receiptFile, { contentType: getReceiptMimeType(receiptFile), upsert: false });
         if (uploadError) throw uploadError;
       }
       const { data, error: rpcError } = await supabase.rpc("add_family_receipt", {
