@@ -1382,3 +1382,42 @@ button { -webkit-tap-highlight-color: transparent; }
   .photo-source-modal { padding: 24px 16px 16px; border-radius: 22px; }
   .photo-source-option { padding: 12px; }
 }
+
+
+/* Lightweight confirmation when a product is successfully added. */
+.shopping-item.is-recently-added {
+  animation: listoria-product-added 850ms cubic-bezier(.2,.75,.25,1) both;
+}
+@keyframes listoria-product-added {
+  0% {
+    opacity: 0;
+    transform: translateY(9px) scale(.985);
+    border-color: #b9d8bd;
+    box-shadow: 0 0 0 3px rgba(91, 153, 103, .12);
+  }
+  42% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    border-color: #9fc6a3;
+    box-shadow: 0 0 0 3px rgba(91, 153, 103, .1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    border-color: #e9ebe4;
+    box-shadow: 0 0 0 0 rgba(91, 153, 103, 0);
+  }
+}
+.toast {
+  animation: listoria-toast-in 220ms ease-out both;
+}
+@keyframes listoria-toast-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shopping-item.is-recently-added,
+  .toast {
+    animation: none !important;
+  }
+}
