@@ -1511,3 +1511,88 @@ button { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   .add-panel.floating-add-panel { transition: none; }
 }
+
+
+/* Compact segmented navigation for the two primary Listoria areas. */
+.main-tabs.segmented-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  padding: 4px;
+  margin: 14px 0 12px;
+  border: 0;
+  border-radius: 15px;
+  background: #edf1e9;
+}
+.main-tabs.segmented-tabs .main-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  gap: 8px;
+  min-width: 0;
+  min-height: 42px;
+  margin: 0;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #788278;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.2;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+.main-tabs.segmented-tabs .main-tab.active {
+  background: #fffefa;
+  color: var(--green);
+  box-shadow: 0 1px 3px rgba(31, 55, 38, .09), 0 1px 1px rgba(31, 55, 38, .04);
+}
+.main-tabs.segmented-tabs .main-tab > svg {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+}
+.main-tabs.segmented-tabs .main-tab .tab-label {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+.main-tabs.segmented-tabs .main-tab .tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 99px;
+  background: #eaf1e8;
+  color: #738173;
+  font-size: 10px;
+  font-weight: 700;
+}
+.main-tabs.segmented-tabs .main-tab.active .tab-count {
+  background: #e8f0e6;
+  color: var(--green);
+}
+@media (max-width: 420px) {
+  .main-tabs.segmented-tabs {
+    gap: 3px;
+    padding: 3px;
+    margin: 11px 0 10px;
+    border-radius: 13px;
+  }
+  .main-tabs.segmented-tabs .main-tab {
+    min-height: 40px;
+    gap: 6px;
+    padding: 8px 7px;
+    font-size: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .main-tabs.segmented-tabs .main-tab { transition: none; }
+}
