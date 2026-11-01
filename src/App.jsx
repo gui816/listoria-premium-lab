@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase.js";
 import {
-  ArrowRight, ArrowLeft, Sparkles, Check, CheckCheck, ChevronDown, CircleHelp, Clipboard, Copy, Share2, Repeat2, Download,
+  ArrowRight, ArrowLeft, Sparkles, Check, CheckCheck, ChevronDown, CircleHelp, Clipboard, Copy, Share2, Download,
   Camera, Mic, Leaf, LoaderCircle, Plus, ShoppingBasket, Trash2, Users, LogOut, Wifi, WifiOff, X, FileText, Receipt, Upload, ExternalLink, Zap, Smartphone, Bell
 } from "lucide-react";
 
@@ -904,7 +904,6 @@ export default function App() {
         <div className="topbar-actions">
           <LanguagePicker language={language} onChange={setLanguage} />
           <button className="icon-action" onClick={() => setShowShare(true)} aria-label={t("Partilhar")} title={t("Partilhar")}><Share2 size={22}/></button>
-          <button className="icon-action" onClick={() => { if (doneItems.length) repeatItem(doneItems[0].name); else document.querySelector(".add-main input")?.focus(); }} aria-label={t("Repetir compras")} title={t("Repetir compras")}><Repeat2 size={22}/></button>
         </div>
       </header>
       <nav className="main-tabs" aria-label={t("Secções da lista")}>
@@ -927,16 +926,17 @@ export default function App() {
           <div className="add-options"><div className="quantity-control"><label htmlFor="quantity">{t("Qtd.")}</label><input id="quantity" type="number" min="1" max="999" value={quantity} onChange={e => setQuantity(e.target.value)}/></div><span className="option-separator"/><label className="category-select-label" htmlFor="category-select">{t("Categoria")}</label><select id="category-select" value={category} onChange={e => setCategory(e.target.value)}><option value="auto">{t("Automática")}</option>{CATEGORIES.filter(c => c.id !== "all").map(c => <option key={c.id} value={c.id}>{c.emoji} {t(c.label)}</option>)}</select></div>
         </form>
       </section>
-      <nav className="quick-actions" hidden={shoppingMode} aria-label={t("Ações rápidas")}>
-        <button type="button" className="quick-action" onClick={() => doneItems.length ? repeatItem(doneItems[0].name) : document.querySelector(".add-main input")?.focus()}><span className="quick-action-icon">↻</span>{t("Repetir compras")}</button>
-        <button type="button" className="quick-action" onClick={() => { setShoppingMode(false); document.querySelector(".templates-section")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}><span className="quick-action-icon"><span className="folder-glyph">▱</span></span>{t("Listas guardadas")}</button>
-      </nav>
-      <section className={templates.length ? "templates-section" : "templates-section is-empty"} hidden={shoppingMode}>
-        <div className="templates-title-row"><span>{t("Listas reutilizáveis")}</span><button type="button" onClick={saveCurrentTemplate} disabled={!activeItems.length}>{t("Guardar lista atual")}</button></div>
-        {templates.length > 0 ? <div className="template-chips">{templates.map(template => <button type="button" className="template-chip" key={template.id} onClick={() => useTemplate(template)}><span>{template.name}</span><small>{template.items.length} {t("artigos")}</small></button>)}</div> : <p className="template-hint">{t("Guarda uma compra habitual para a reutilizares noutra semana.")}</p>}
+      <section className="templates-section" hidden={shoppingMode}>
+        <div className="templates-title-row">
+          <details className="saved-lists-disclosure">
+            <summary><span>{t("Listas guardadas")}</span><small>{templates.length}</small><ChevronDown size={16}/></summary>
+            {templates.length > 0 ? <div className="template-chips">{templates.map(template => <button type="button" className="template-chip" key={template.id} onClick={() => useTemplate(template)}><span>{template.name}</span><small>{template.items.length} {t("artigos")}</small></button>)}</div> : <p className="template-hint">{t("Guarda uma compra habitual para a reutilizares noutra semana.")}</p>}
+          </details>
+          <button type="button" className="save-template-button" onClick={saveCurrentTemplate} disabled={!activeItems.length}>{t("Guardar lista atual")}</button>
+        </div>
       </section>
-      {doneItems.length > 0 && !shoppingMode && <section className="repeat-section" aria-label={t("Repetir compras")}>
-        <div className="repeat-heading">{t("Repetir compras")}</div>
+      {doneItems.length > 0 && !shoppingMode && <section className="repeat-section" aria-label={t("Adicionar novamente")}>
+        <div className="repeat-heading">{t("Adicionar novamente")}</div>
         <div className="repeat-chips">{[...new Map(doneItems.map(item => [item.name.toLocaleLowerCase(), item.name])).values()].slice(0, 5).map(itemName => <button type="button" className="repeat-chip" key={itemName} onClick={() => repeatItem(itemName)}><Plus size={13}/>{itemName}</button>)}</div>
       </section>}
       {!showOnboarding && !shoppingMode && activeTab === "shopping" && activeItems.length > 0 && showShoppingNudge && !itemsSectionVisible && <button type="button" className="shopping-list-floating-nudge" onClick={() => document.querySelector(".items-section")?.scrollIntoView({behavior:"smooth",block:"start"})}><span className="shopping-nudge-icon"><ShoppingBasket size={25}/></span><span className="shopping-nudge-copy"><strong>{items.length} {t("produtos na lista")}</strong><small>{t("Desliza para ver")}</small></span><span className="shopping-nudge-divider"/><span className="shopping-nudge-chevron"><ChevronDown size={24}/><ChevronDown size={24}/></span><span className="shopping-nudge-close" aria-label={t("Fechar aviso")} onClick={e => {e.stopPropagation();setShowShoppingNudge(false);}}><X size={17}/></span></button>}
