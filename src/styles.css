@@ -1421,3 +1421,178 @@ button { -webkit-tap-highlight-color: transparent; }
     animation: none !important;
   }
 }
+
+
+/* Mobile-first shopping layout: products stay in focus, add controls float above the safe area. */
+@media (max-width: 680px) {
+  .app-shell {
+    padding-bottom: calc(190px + env(safe-area-inset-bottom, 0px));
+  }
+  .add-panel.floating-add-panel {
+    position: fixed;
+    z-index: 20;
+    left: max(12px, calc((100vw - 720px) / 2));
+    right: max(12px, calc((100vw - 720px) / 2));
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 8px 12px;
+    border: 1px solid #dce6d8;
+    border-radius: 20px;
+    background: rgba(255, 255, 251, .96);
+    box-shadow: 0 10px 36px rgba(31, 55, 38, .18), 0 2px 8px rgba(31, 55, 38, .07);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    transition: box-shadow .2s ease, border-radius .2s ease;
+  }
+  .floating-add-panel .add-main {
+    min-height: 44px;
+    gap: 9px;
+  }
+  .floating-add-panel .add-main input {
+    min-height: 42px;
+    font-size: 15px;
+    padding: 8px 0;
+  }
+  .floating-add-panel .add-main > button {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+  }
+  .floating-add-panel .add-main .add-tool-button {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+  .floating-add-panel:not(.expanded) .quick-add-chips,
+  .floating-add-panel:not(.expanded) .add-options,
+  .floating-add-panel:not(.expanded) .other-products-panel {
+    display: none;
+  }
+  .floating-add-panel.expanded {
+    padding: 10px 13px 8px;
+    border-radius: 22px;
+    box-shadow: 0 14px 42px rgba(31, 55, 38, .22), 0 2px 8px rgba(31, 55, 38, .08);
+  }
+  .floating-add-panel.expanded .quick-add-chips {
+    padding: 8px 0 7px;
+    gap: 6px;
+  }
+  .floating-add-panel.expanded .add-options {
+    padding: 8px 0 2px;
+  }
+  .floating-add-panel .other-products-panel {
+    max-height: min(38dvh, 300px);
+    overflow-y: auto;
+  }
+  .purchased-dock {
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    padding: 0 20px;
+    background: none;
+  }
+  .purchased-dock-button {
+    min-height: 43px;
+    border-radius: 16px;
+    font-size: 13px;
+    box-shadow: 0 5px 18px rgba(31, 55, 38, .12);
+  }
+  .templates-section,
+  .repeat-section,
+  .shopping-mode-row {
+    margin-top: 12px;
+  }
+}
+@media (min-width: 681px) {
+  .floating-add-panel .quick-add-chips,
+  .floating-add-panel .add-options {
+    display: flex;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .add-panel.floating-add-panel { transition: none; }
+}
+
+
+/* Compact segmented navigation for the two primary Listoria areas. */
+.main-tabs.segmented-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  padding: 4px;
+  margin: 14px 0 12px;
+  border: 0;
+  border-radius: 15px;
+  background: #edf1e9;
+}
+.main-tabs.segmented-tabs .main-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  gap: 8px;
+  min-width: 0;
+  min-height: 42px;
+  margin: 0;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #788278;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.2;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+.main-tabs.segmented-tabs .main-tab.active {
+  background: #fffefa;
+  color: var(--green);
+  box-shadow: 0 1px 3px rgba(31, 55, 38, .09), 0 1px 1px rgba(31, 55, 38, .04);
+}
+.main-tabs.segmented-tabs .main-tab > svg {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+}
+.main-tabs.segmented-tabs .main-tab .tab-label {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+.main-tabs.segmented-tabs .main-tab .tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 99px;
+  background: #eaf1e8;
+  color: #738173;
+  font-size: 10px;
+  font-weight: 700;
+}
+.main-tabs.segmented-tabs .main-tab.active .tab-count {
+  background: #e8f0e6;
+  color: var(--green);
+}
+@media (max-width: 420px) {
+  .main-tabs.segmented-tabs {
+    gap: 3px;
+    padding: 3px;
+    margin: 11px 0 10px;
+    border-radius: 13px;
+  }
+  .main-tabs.segmented-tabs .main-tab {
+    min-height: 40px;
+    gap: 6px;
+    padding: 8px 7px;
+    font-size: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .main-tabs.segmented-tabs .main-tab { transition: none; }
+}
