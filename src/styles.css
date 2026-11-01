@@ -1294,3 +1294,84 @@ button { -webkit-tap-highlight-color: transparent; }
   .save-template-button { padding: 6px 8px; font-size: 9px; }
   .repeat-section { padding-top: 5px; }
 }
+
+
+/* Camera/gallery source picker as a focused, cancellable modal. */
+.photo-source-backdrop {
+  z-index: 45;
+  padding: 18px;
+}
+.photo-source-modal {
+  position: relative;
+  width: min(100%, 430px);
+  max-height: min(88dvh, 620px);
+  overflow-y: auto;
+  padding: 28px 22px 20px;
+  text-align: center;
+}
+.photo-source-modal .modal-close {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+}
+.photo-source-modal .share-graphic {
+  margin: 0 auto 14px;
+}
+.photo-source-modal h2 {
+  margin: 0 32px 7px;
+  color: #294432;
+  font-size: 21px;
+}
+.photo-source-modal > p {
+  margin: 0 0 19px;
+  color: #7d897e;
+  font-size: 13px;
+}
+.photo-source-options {
+  display: grid;
+  gap: 9px;
+  text-align: left;
+}
+.photo-source-option {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #e1e9df;
+  border-radius: 15px;
+  background: #fbfcf9;
+  color: #315c3d;
+  text-align: left;
+}
+.photo-source-option:active { background: #edf4eb; }
+.photo-source-option-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 13px;
+  background: #e8f0e5;
+}
+.photo-source-option strong {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 14px;
+}
+.photo-source-option small {
+  display: block;
+  color: #7d897e;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.photo-source-cancel {
+  width: 100%;
+  min-height: 43px;
+  margin-top: 13px;
+}
+@media (max-width: 420px) {
+  .photo-source-modal { padding: 24px 16px 16px; border-radius: 22px; }
+  .photo-source-option { padding: 12px; }
+}
