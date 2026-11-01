@@ -1692,3 +1692,74 @@ button { -webkit-tap-highlight-color: transparent; }
 @media(prefers-reduced-motion:reduce) {
   .receipt-choice-option { transition: none; }
 }
+
+
+/* Final hierarchy polish: one purchased count, one clearly identifiable add action. */
+.purchased-dock-button {
+  color: #365f45;
+  font-weight: 700;
+}
+.purchased-dock-button span {
+  letter-spacing: -.12px;
+}
+
+/* The floating composer should read as the primary action, not another product card. */
+.add-panel.floating-add-panel {
+  border: 1.5px solid #a9c9ad;
+  box-shadow:
+    0 0 0 3px rgba(130, 177, 139, .10),
+    0 10px 30px rgba(39, 83, 52, .14),
+    0 2px 7px rgba(31, 55, 38, .06);
+}
+.add-panel.floating-add-panel:focus-within,
+.add-panel.floating-add-panel.expanded {
+  border-color: #78a984;
+  box-shadow:
+    0 0 0 4px rgba(111, 164, 123, .14),
+    0 14px 38px rgba(39, 83, 52, .18),
+    0 2px 8px rgba(31, 55, 38, .07);
+}
+.add-panel.floating-add-panel .add-main input {
+  color: #24352a;
+}
+.add-panel.floating-add-panel .add-main input::placeholder {
+  color: #7b887d;
+  opacity: 1;
+}
+.add-panel.floating-add-panel .add-submit-left,
+.add-panel.floating-add-panel .add-main > button.input-plus {
+  background: #e1efe2;
+  color: #286b4b;
+  border: 1px solid #d2e4d4;
+}
+.add-panel.floating-add-panel:focus-within .add-submit-left,
+.add-panel.floating-add-panel.expanded .add-submit-left {
+  background: #d5e9d8;
+  border-color: #bdd8c2;
+  color: #205f40;
+}
+.add-panel.floating-add-panel .add-tool-button {
+  border: 1px solid rgba(94, 139, 101, .14);
+}
+@media (max-width: 680px) {
+  .add-panel.floating-add-panel {
+    border-width: 1.5px;
+    box-shadow:
+      0 0 0 3px rgba(130, 177, 139, .11),
+      0 10px 30px rgba(39, 83, 52, .15),
+      0 2px 7px rgba(31, 55, 38, .06);
+  }
+  .add-panel.floating-add-panel:focus-within,
+  .add-panel.floating-add-panel.expanded {
+    box-shadow:
+      0 0 0 4px rgba(111, 164, 123, .15),
+      0 14px 38px rgba(39, 83, 52, .19),
+      0 2px 8px rgba(31, 55, 38, .07);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .add-panel.floating-add-panel,
+  .add-panel.floating-add-panel:focus-within {
+    transition: none;
+  }
+}
