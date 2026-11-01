@@ -534,27 +534,102 @@ export default function App() {
     return parseGeminiItems({ candidates: [{ content: { parts: [{ text: JSON.stringify(data) }] } }] });
   }
 
-  async function processPhoto(file) {
+  async function processImportFile(file) {
     if (!file) return;
-    if (!file.type.startsWith("image/")) { setImportError("Escolhe um ficheiro de imagem."); return; }
-    if (file.size > 12 * 1024 * 1024) { setImportError("A imagem deve ter menos de 12 MB."); return; }
+    const extension = file.name.split(".").pop()?.toLocaleLowerCase() || "";
+    const isImage = file.type.startsWith("image/") || ["jpg", "jpeg", "png", "webp", "heic", "heif"].includes(extension);
+    const supported = isImage || ["pdf", "xlsx", "xls", "ods", "csv", "txt", "docx"].includes(extension);
+    if (!supported) {
+      setImportError(t("Formato não suportado. Usa uma imagem, PDF, Excel, CSV, TXT ou Word (.docx)."));
+      return;
+    }
+    if (file.size > 12 * 1024 * 1024) {
+      setImportError(t("O ficheiro deve ter menos de 12 MB."));
+      return;
+    }
+
+    setImportBusy(true);
     setImportError("");
-    // The file input (with capture="environment") lets the browser handle camera permission.
-    // Do not require getUserMedia here: users may also select an existing image file.
-    setImportBusy(true); setImportError(""); setImportSource("photo");
+    setImportSource(isImage ? "photo" : "document");
     try {
-      const dataUrl = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => reject(new Error("Não foi possível ler a imagem."));
-        reader.readAsDataURL(file);
-      });
-      const base64 = dataUrl.split(",")[1];
-      const itemsFound = await callGemini({ image: { mimeType: file.type, data: base64 } });
-      if (!itemsFound.length) throw new Error("Não consegui identificar produtos. Tenta uma fotografia mais nítida.");
+      let itemsFound = [];
+      if (isImage) {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(new Error(t("Não foi possível ler o ficheiro.")));
+          reader.readAsDataURL(file);
+        });
+        const base64 = dataUrl.split(",")[1];
+        itemsFound = await callGemini({ image: { mimeType: file.type || "image/jpeg", data: base64 } });
+      } else if (extension === "pdf") {
+        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/legacy/build/pdf.worker.mjs", import.meta.url).toString();
+        const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+        if (pdf.numPages > 30) throw new Error(t("O PDF tem demasiadas páginas. O limite é 30."));
+        const pageTexts = [];
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+          const page = await pdf.getPage(pageNumber);
+          const content = await page.getTextContent();
+          const pageText = content.items.map(item => item.str || "").join(" ").replace(/\s+/g, " ").trim();
+          if (pageText) pageTexts.push(pageText);
+        }
+        const pdfText = pageTexts.join("\n");
+        if (pdfText.trim().length > 20) {
+          itemsFound = await callGemini({ text: "Extrai os produtos e quantidades desta lista de compras. O conteúdo foi extraído de um PDF. Ignora cabeçalhos, rodapés e texto que não sejam produtos.\n\n" + pdfText.slice(0, 30000) });
+        } else {
+          // Scanned PDFs have no text layer. Render a few pages and let the existing image AI read them.
+          const imageResults = [];
+          const pagesToRead = Math.min(pdf.numPages, 4);
+          for (let pageNumber = 1; pageNumber <= pagesToRead; pageNumber += 1) {
+            const page = await pdf.getPage(pageNumber);
+            const viewport = page.getViewport({ scale: 1.6 });
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.ceil(viewport.width);
+            canvas.height = Math.ceil(viewport.height);
+            const context = canvas.getContext("2d");
+            if (!context) throw new Error(t("Não foi possível processar este PDF."));
+            await page.render({ canvasContext: context, viewport }).promise;
+            const base64 = canvas.toDataURL("image/png").split(",")[1];
+            imageResults.push(await callGemini({ image: { mimeType: "image/png", data: base64 } }));
+            canvas.width = 0;
+            canvas.height = 0;
+          }
+          itemsFound = imageResults.flat();
+        }
+      } else if (["xlsx", "xls", "ods"].includes(extension)) {
+        const XLSX = await import("xlsx");
+        const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+        const sheets = workbook.SheetNames.slice(0, 10).map(name => {
+          const rows = XLSX.utils.sheet_to_csv(workbook.Sheets[name], { blankrows: false }).split("\n").slice(0, 250).join("\n");
+          return "Folha: " + name + "\n" + rows;
+        });
+        const spreadsheetText = sheets.join("\n\n").slice(0, 30000);
+        if (!spreadsheetText.trim()) throw new Error(t("Não encontrámos dados neste ficheiro Excel."));
+        itemsFound = await callGemini({ text: "Extrai os produtos e quantidades desta folha de cálculo. As linhas e colunas podem conter nomes, quantidades ou notas; identifica apenas os produtos de compras.\n\n" + spreadsheetText });
+      } else if (extension === "docx") {
+        const mammoth = await import("mammoth/mammoth.browser");
+        const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+        const documentText = (result.value || "").trim();
+        if (!documentText) throw new Error(t("Não encontrámos texto neste documento Word."));
+        itemsFound = await callGemini({ text: "Extrai os produtos e quantidades desta lista de compras num documento Word. Ignora títulos e texto que não sejam produtos.\n\n" + documentText.slice(0, 30000) });
+      } else {
+        const plainText = (await file.text()).trim();
+        if (!plainText) throw new Error(t("O ficheiro está vazio ou não contém texto."));
+        itemsFound = await callGemini({ text: "Extrai os produtos e quantidades desta lista de compras. O conteúdo foi importado de um ficheiro de texto ou CSV.\n\n" + plainText.slice(0, 30000) });
+      }
+
+      if (!itemsFound.length) throw new Error(t("Não consegui identificar produtos neste ficheiro. Confirma o conteúdo e tenta novamente."));
       setImportPreview(itemsFound);
-    } catch (err) { setImportError(err.message || "Não foi possível interpretar a imagem."); }
-    finally { setImportBusy(false); if (imageInputRef.current) imageInputRef.current.value = ""; }
+    } catch (err) {
+      console.error("Listora file import failed:", err);
+      setImportError(err.message || t("Não foi possível interpretar este ficheiro."));
+    } finally {
+      setImportBusy(false);
+      if (imageInputRef.current) imageInputRef.current.value = "";
+      if (imageFileInputRef.current) imageFileInputRef.current.value = "";
+      if (imageCameraInputRef.current) imageCameraInputRef.current.value = "";
+    }
   }
 
   async function startVoiceImport() {
@@ -934,8 +1009,8 @@ export default function App() {
           <div className="quick-add-chips" aria-label={t("Sugestões rápidas")}>{(language === "pt-PT" ? ["Leite","Pão","Água"] : language === "en" ? ["Milk","Bread","Water"] : language === "es" ? ["Leche","Pan","Agua"] : language === "fr" ? ["Lait","Pain","Eau"] : language === "de" ? ["Milch","Brot","Wasser"] : language === "it" ? ["Latte","Pane","Acqua"] : language === "nl" ? ["Melk","Brood","Water"] : language === "pl" ? ["Mleko","Chleb","Woda"] : language === "ro" ? ["Lapte","Pâine","Apă"] : ["牛奶","面包","水"]).map(itemName => <button type="button" key={itemName} onClick={() => submitItem(itemName, 1, "auto", true)}><Plus size={13}/>{itemName}</button>)}<button type="button" className="quick-add-other" onClick={() => {setShowOtherProducts(v => !v); setOtherProductSearch("");}}><Plus size={13}/>{t("Outros")}</button></div>
           
           {showOtherProducts && <section className="other-products-panel"><div className="other-products-heading"><div><strong>{t("Escolhe outros produtos")}</strong><small>{t("Toca num produto para o adicionar à lista.")}</small></div><button type="button" aria-label={t("Fechar")} onClick={() => setShowOtherProducts(false)}><X size={18}/></button></div><input className="other-products-search" value={otherProductSearch} onChange={e => setOtherProductSearch(e.target.value)} placeholder={t("Pesquisar produtos…")}/>{(language === "pt-PT" ? [{category:"Carne e peixe",items:["Ovos","Frango","Carne picada","Bifes","Costeletas","Salsichas","Fiambre","Bacon","Peixe","Salmão","Atum","Camarão"]},{category:"Pequeno-almoço e cereais",items:["Cereais","Muesli","Aveia","Granola","Iogurtes","Queijo","Manteiga","Margarina","Compota","Mel"]},{category:"Fruta e legumes",items:["Maçãs","Bananas","Laranjas","Tomates","Batatas","Cebolas","Alface","Cenouras","Brócolos","Abacates"]},{category:"Despensa",items:["Arroz","Massa","Farinha","Açúcar","Sal","Azeite","Óleo","Feijão","Grão","Lentilhas","Tomate em lata","Caldo"]},{category:"Congelados",items:["Legumes congelados","Pizza","Gelado","Batatas fritas congeladas"]},{category:"Casa e higiene",items:["Detergente da roupa","Detergente da loiça","Papel higiénico","Papel de cozinha","Champô","Pasta de dentes"]}] : language === "en" ? [{category:"Meat and fish",items:["Eggs","Chicken","Minced beef","Steak","Pork chops","Sausages","Ham","Bacon","Fish","Salmon","Tuna","Prawns"]},{category:"Breakfast and cereals",items:["Cereal","Muesli","Oats","Granola","Yogurt","Cheese","Butter","Margarine","Jam","Honey"]},{category:"Fruit and vegetables",items:["Apples","Bananas","Oranges","Tomatoes","Potatoes","Onions","Lettuce","Carrots","Broccoli","Avocados"]},{category:"Pantry",items:["Rice","Pasta","Flour","Sugar","Salt","Olive oil","Cooking oil","Beans","Chickpeas","Lentils","Canned tomatoes","Stock cubes"]},{category:"Frozen",items:["Frozen vegetables","Pizza","Ice cream","Frozen chips"]},{category:"Home and personal care",items:["Laundry detergent","Dish soap","Toilet paper","Kitchen roll","Shampoo","Toothpaste"]}] : [{category:t("Carne e peixe"),items:[t("Ovos"),t("Frango"),t("Carne picada"),t("Bifes"),t("Costeletas"),t("Salsichas"),t("Fiambre"),t("Bacon"),t("Peixe"),t("Salmão"),t("Atum"),t("Camarão")]},{category:t("Pequeno-almoço e cereais"),items:[t("Cereais"),t("Muesli"),t("Aveia"),t("Granola"),t("Iogurtes"),t("Queijo"),t("Manteiga"),t("Margarina"),t("Compota"),t("Mel")]},{category:t("Fruta e legumes"),items:[t("Maçãs"),t("Bananas"),t("Laranjas"),t("Tomates"),t("Batatas"),t("Cebolas"),t("Alface"),t("Cenouras"),t("Brócolos"),t("Abacates")]},{category:t("Despensa"),items:[t("Arroz"),t("Massa"),t("Farinha"),t("Açúcar"),t("Sal"),t("Azeite"),t("Óleo"),t("Feijão"),t("Grão"),t("Lentilhas"),t("Tomate em lata"),t("Caldo")]},{category:t("Congelados"),items:[t("Legumes congelados"),t("Pizza"),t("Gelado"),t("Batatas fritas congeladas")]},{category:t("Casa e higiene"),items:[t("Detergente da roupa"),t("Detergente da loiça"),t("Papel higiénico"),t("Papel de cozinha"),t("Champô"),t("Pasta de dentes")]}]).map(group => ({...group, items:group.items.filter(item => item.toLocaleLowerCase().includes(otherProductSearch.toLocaleLowerCase()))})).filter(group => group.items.length > 0).map(group => <div className="other-products-group" key={group.category}><strong>{group.category}</strong><div>{group.items.map(item => <button type="button" key={item} onClick={async () => {const added=await submitItem(item, 1, "auto", true); if(added) setShowOtherProducts(false);}}><Plus size={13}/>{item}</button>)}</div></div>)}</section>}
-          <input ref={imageFileInputRef} type="file" accept="image/*" hidden onChange={e => { void processPhoto(e.target.files?.[0]); e.target.value = ""; }}/>
-          <input ref={imageCameraInputRef} type="file" accept="image/*" capture="environment" hidden onChange={e => { void processPhoto(e.target.files?.[0]); e.target.value = ""; }}/>{(importBusy || importError) && <div className={importError ? "ai-import-status error-message" : "ai-import-status"}>{importBusy && <LoaderCircle size={15} className="spin"/>}{importBusy ? (importSource === "photo" ? "A analisar a fotografia…" : "A interpretar os produtos…") : importError}</div>}
+          <input ref={imageFileInputRef} type="file" accept="image/*,.pdf,.xlsx,.xls,.ods,.csv,.txt,.docx" hidden onChange={e => { void processImportFile(e.target.files?.[0]); e.target.value = ""; }}/>
+          <input ref={imageCameraInputRef} type="file" accept="image/*" capture="environment" hidden onChange={e => { void processPhoto(e.target.files?.[0]); e.target.value = ""; }}/>{(importBusy || importError) && <div className={importError ? "ai-import-status error-message" : "ai-import-status"}>{importBusy && <LoaderCircle size={15} className="spin"/>}{importBusy ? (importSource === "photo" ? t("A analisar a fotografia…") : importSource === "document" ? t("A analisar o ficheiro…") : t("A interpretar os produtos…")) : importError}</div>}
           <div className="add-options"><div className="quantity-control"><label htmlFor="quantity">{t("Qtd.")}</label><input id="quantity" type="number" min="1" max="999" value={quantity} onChange={e => setQuantity(e.target.value)}/></div><span className="option-separator"/><label className="category-select-label" htmlFor="category-select">{t("Categoria")}</label><select id="category-select" value={category} onChange={e => setCategory(e.target.value)}><option value="auto">{t("Automática")}</option>{CATEGORIES.filter(c => c.id !== "all").map(c => <option key={c.id} value={c.id}>{c.emoji} {t(c.label)}</option>)}</select></div>
         </form>
       </section>
@@ -1022,8 +1097,8 @@ export default function App() {
           {listening && <button type="button" className="primary-button voice-stop-button" onClick={() => { recognitionRef.current?.stop(); setListening(false); setVoiceModalOpen(false); }}><X size={17}/>{t("Parar gravação")}</button>}
         </section>
       </div>}
-      {showPhotoSource && <div className="modal-backdrop photo-source-backdrop" onClick={() => setShowPhotoSource(false)}><section className="share-modal photo-source-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="photo-source-title"><button type="button" className="modal-close" aria-label={t("Cancelar")} onClick={() => setShowPhotoSource(false)}><X size={19}/></button><div className="share-graphic"><Camera size={25}/></div><h2 id="photo-source-title">{t("Câmara ou galeria")}</h2><p>{t("Escolhe como queres adicionar os produtos")}</p><div className="photo-source-options"><button type="button" className="photo-source-option" onClick={() => {setShowPhotoSource(false); imageCameraInputRef.current?.click();}}><span className="photo-source-option-icon"><Camera size={20}/></span><span><strong>{t("Abrir câmara")}</strong><small>{t("Fotografar uma lista de compras em papel, manuscrita ou num quadro.")}</small></span></button><button type="button" className="photo-source-option" onClick={() => {setShowPhotoSource(false); imageFileInputRef.current?.click();}}><span className="photo-source-option-icon"><Upload size={20}/></span><span><strong>{t("Escolher ficheiro")}</strong><small>{t("Seleciona uma fotografia da galeria. A importação de PDF e Excel ainda não está disponível nesta opção.")}</small></span></button></div><button type="button" className="secondary-button photo-source-cancel" onClick={() => setShowPhotoSource(false)}>{t("Cancelar")}</button></section></div>}
-      {importPreview.length > 0 && <div className="modal-backdrop" onClick={() => !importBusy && setImportPreview([])}><section className="share-modal import-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="import-title"><button className="modal-close" onClick={() => !importBusy && setImportPreview([])} aria-label={t("Fechar")}><X size={20}/></button><div className="share-graphic"><ShoppingBasket size={28}/></div><h2 id="import-title">{t("Confirmar produtos")}</h2><p>{importSource === "photo" ? "Revê os produtos reconhecidos na fotografia." : "Revê os produtos reconhecidos por voz."} Podes corrigir os nomes e quantidades antes de adicionar.</p><div className="import-preview-list">{importPreview.map((item, index) => <div className="import-preview-row" key={index}><input aria-label={`Produto ${index + 1}`} value={item.name} maxLength={100} onChange={e => editPreviewItem(index, { name: e.target.value })}/><input aria-label={`Quantidade de ${item.name}`} type="number" min="1" max="999" value={item.quantity} onChange={e => editPreviewItem(index, { quantity: e.target.value })}/><button type="button" aria-label={`Remover ${item.name}`} onClick={() => setImportPreview(previous => previous.filter((_, i) => i !== index))}><X size={17}/></button></div>)}</div>{importError && <p className="error-message">{importError}</p>}<button className="primary-button" disabled={importBusy || !importPreview.some(item => item.name.trim())} onClick={confirmImport}>{importBusy ? <LoaderCircle className="spin" size={17}/> : <Check size={17}/>} {importBusy ? "A adicionar…" : `Adicionar ${importPreview.length} produtos`}</button><button className="secondary-button" disabled={importBusy} onClick={() => setImportPreview([])}>{t("Cancelar")}</button></section></div>}
+      {showPhotoSource && <div className="modal-backdrop photo-source-backdrop" onClick={() => setShowPhotoSource(false)}><section className="share-modal photo-source-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="photo-source-title"><button type="button" className="modal-close" aria-label={t("Cancelar")} onClick={() => setShowPhotoSource(false)}><X size={19}/></button><div className="share-graphic"><Camera size={25}/></div><h2 id="photo-source-title">{t("Câmara ou galeria")}</h2><p>{t("Escolhe como queres adicionar os produtos")}</p><div className="photo-source-options"><button type="button" className="photo-source-option" onClick={() => {setShowPhotoSource(false); imageCameraInputRef.current?.click();}}><span className="photo-source-option-icon"><Camera size={20}/></span><span><strong>{t("Abrir câmara")}</strong><small>{t("Fotografar uma lista de compras em papel, manuscrita ou num quadro.")}</small></span></button><button type="button" className="photo-source-option" onClick={() => {setShowPhotoSource(false); imageFileInputRef.current?.click();}}><span className="photo-source-option-icon"><Upload size={20}/></span><span><strong>{t("Escolher ficheiro")}</strong><small>{t("Seleciona uma fotografia, PDF, Excel, CSV, TXT ou Word (.docx) com a tua lista de compras.")}</small></span></button></div><button type="button" className="secondary-button photo-source-cancel" onClick={() => setShowPhotoSource(false)}>{t("Cancelar")}</button></section></div>}
+      {importPreview.length > 0 && <div className="modal-backdrop" onClick={() => !importBusy && setImportPreview([])}><section className="share-modal import-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="import-title"><button className="modal-close" onClick={() => !importBusy && setImportPreview([])} aria-label={t("Fechar")}><X size={20}/></button><div className="share-graphic"><ShoppingBasket size={28}/></div><h2 id="import-title">{t("Confirmar produtos")}</h2><p>{importSource === "photo" ? t("Revê os produtos reconhecidos na fotografia.") : importSource === "document" ? t("Revê os produtos identificados no ficheiro.") : t("Revê os produtos reconhecidos por voz.")} Podes corrigir os nomes e quantidades antes de adicionar.</p><div className="import-preview-list">{importPreview.map((item, index) => <div className="import-preview-row" key={index}><input aria-label={`Produto ${index + 1}`} value={item.name} maxLength={100} onChange={e => editPreviewItem(index, { name: e.target.value })}/><input aria-label={`Quantidade de ${item.name}`} type="number" min="1" max="999" value={item.quantity} onChange={e => editPreviewItem(index, { quantity: e.target.value })}/><button type="button" aria-label={`Remover ${item.name}`} onClick={() => setImportPreview(previous => previous.filter((_, i) => i !== index))}><X size={17}/></button></div>)}</div>{importError && <p className="error-message">{importError}</p>}<button className="primary-button" disabled={importBusy || !importPreview.some(item => item.name.trim())} onClick={confirmImport}>{importBusy ? <LoaderCircle className="spin" size={17}/> : <Check size={17}/>} {importBusy ? "A adicionar…" : `Adicionar ${importPreview.length} produtos`}</button><button className="secondary-button" disabled={importBusy} onClick={() => setImportPreview([])}>{t("Cancelar")}</button></section></div>}
       {showOnboarding && <div className="modal-backdrop onboarding-backdrop" onClick={() => { setShowOnboarding(false); localStorage.setItem("listora-onboarding-v3-complete", "1"); }}>
         <section className="share-modal onboarding-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
           <button type="button" className="modal-close" onClick={() => { setShowOnboarding(false); localStorage.setItem("listora-onboarding-v3-complete", "1"); }} aria-label={t("Fechar introdução")}><X size={20}/></button>
