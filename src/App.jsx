@@ -935,8 +935,8 @@ export default function App() {
           <button type="button" className="save-template-button" onClick={saveCurrentTemplate} disabled={!activeItems.length}>{t("Guardar lista atual")}</button>
         </div>
       </section>
-      {doneItems.length > 0 && !shoppingMode && <section className="repeat-section" aria-label={t("Adicionar novamente")}>
-        <div className="repeat-heading">{t("Adicionar novamente")}</div>
+      {doneItems.length > 0 && !shoppingMode && <section className="repeat-section" aria-label={t("Repetir compras")}>
+        <div className="repeat-heading">{t("Repetir compras")}</div>
         <div className="repeat-chips">{[...new Map(doneItems.map(item => [item.name.toLocaleLowerCase(), item.name])).values()].slice(0, 5).map(itemName => <button type="button" className="repeat-chip" key={itemName} onClick={() => repeatItem(itemName)}><Plus size={13}/>{itemName}</button>)}</div>
       </section>}
       {!showOnboarding && !shoppingMode && activeTab === "shopping" && activeItems.length > 0 && showShoppingNudge && !itemsSectionVisible && <button type="button" className="shopping-list-floating-nudge" onClick={() => document.querySelector(".items-section")?.scrollIntoView({behavior:"smooth",block:"start"})}><span className="shopping-nudge-icon"><ShoppingBasket size={25}/></span><span className="shopping-nudge-copy"><strong>{items.length} {t("produtos na lista")}</strong><small>{t("Desliza para ver")}</small></span><span className="shopping-nudge-divider"/><span className="shopping-nudge-chevron"><ChevronDown size={24}/><ChevronDown size={24}/></span><span className="shopping-nudge-close" aria-label={t("Fechar aviso")} onClick={e => {e.stopPropagation();setShowShoppingNudge(false);}}><X size={17}/></span></button>}
