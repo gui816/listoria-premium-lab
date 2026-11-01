@@ -1298,8 +1298,15 @@ button { -webkit-tap-highlight-color: transparent; }
 
 /* Camera/gallery source picker as a focused, cancellable modal. */
 .photo-source-backdrop {
+  position: fixed;
+  inset: 0;
   z-index: 45;
-  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
 }
 .photo-source-modal {
   position: relative;
