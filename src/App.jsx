@@ -996,12 +996,12 @@ export default function App() {
       </>}
       {activeTab === "receipts" && <section className="receipts-section">
         <div className="receipts-heading"><div><span className="eyebrow">{t("ARQUIVO PARTILHADO")}</span><h1>{t("Faturas de compras")}</h1><p>{t("Comprovativos acessíveis a todos os membros desta lista.")}</p></div></div>
-        <div className="receipt-start-card">
+        {receiptAddMode === "choice" && !receiptExtractBusy && <div className="receipt-start-card">
           <div className="receipt-start-icon"><Receipt size={25}/></div>
           <h2>{t("Guardar uma fatura")}</h2>
           <p>{t("Fotografa, escolhe um ficheiro ou introduz os dados manualmente.")}</p>
           <button type="button" className="primary-button" onClick={() => setReceiptChooserOpen(true)}><Plus size={17}/>{t("Adicionar fatura")}</button>
-        </div>
+        </div>}
         <input className="receipt-file-input" id="receipt-camera-file" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={e => { const file = e.target.files?.[0] || null; if (file) { setReceiptFile(file); setReceiptExtraction(null); setReceiptChooserOpen(false); void extractReceiptData(file); } e.target.value = ""; }}/>
         <input className="receipt-file-input" id="receipt-document-file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={e => { const file = e.target.files?.[0] || null; if (file) { setReceiptFile(file); setReceiptExtraction(null); setReceiptChooserOpen(false); void extractReceiptData(file); } e.target.value = ""; }}/>
         {receiptChooserOpen && <div className="modal-backdrop receipt-chooser-backdrop" onClick={() => setReceiptChooserOpen(false)}>
