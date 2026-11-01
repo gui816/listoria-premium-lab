@@ -215,6 +215,9 @@ export default function App() {
   const [showDiscover, setShowDiscover] = useState(() => window.location.hash === "#descobrir");
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
+  const [showGuidedTourIntro, setShowGuidedTourIntro] = useState(false);
+  const [guidedTourStep, setGuidedTourStep] = useState(null);
+  const [guidedTourRect, setGuidedTourRect] = useState(null);
   const [showListMenu, setShowListMenu] = useState(false);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [installHelpNeedsSafari, setInstallHelpNeedsSafari] = useState(false);
@@ -270,6 +273,19 @@ export default function App() {
     return () => { window.removeEventListener("hashchange", syncDiscoverRoute); window.removeEventListener("popstate", syncDiscoverRoute); };
   }, []);
 
+  function startGuidedTour() {
+    localStorage.setItem("listora-guided-tour-seen", "1");
+    setShowGuidedTourIntro(false);
+    setActiveTab("shopping");
+    setShowDone(false);
+    setShoppingMode(false);
+    setGuidedTourStep(0);
+  }
+  function finishGuidedTour() {
+    localStorage.setItem("listora-guided-tour-seen", "1");
+    setGuidedTourStep(null);
+    setShowGuidedTourIntro(false);
+  }
   function openDiscover() { setShowDiscover(true); if (window.location.hash !== "#descobrir") window.history.pushState({ page: "discover" }, "", "#descobrir"); window.scrollTo({ top: 0, behavior: "smooth" }); }
   function closeDiscover() { setShowDiscover(false); if (window.location.hash === "#descobrir") window.history.pushState({}, "", window.location.pathname + window.location.search); window.scrollTo({ top: 0, behavior: "smooth" }); }
 
@@ -301,6 +317,47 @@ export default function App() {
     setShowOnboarding(true);
     setOnboardingStep(0);
   }, [list, memberName, showOnboarding]);
+
+  useEffect(() => {
+    if (!list || !memberName || showOnboarding || activeTab !== "shopping") return;
+    if (localStorage.getItem("listora-onboarding-v3-complete") !== "1") return;
+    if (localStorage.getItem("listora-guided-tour-seen") === "1") return;
+    setShowGuidedTourIntro(true);
+  }, [list, memberName, showOnboarding, activeTab]);
+
+  useEffect(() => {
+    if (guidedTourStep === null) { setGuidedTourRect(null); return; }
+    const selectors = [".main-tabs.segmented-tabs", ".add-panel.floating-add-panel", ".shopping-mode-row"];
+    const selector = guidedTourStep === 2 && !items.length ? ".add-panel.floating-add-panel" : selectors[guidedTourStep];
+    const target = document.querySelector(selector);
+    if (!target) { setGuidedTourRect(null); return; }
+    target.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    let frameA = 0;
+    let frameB = 0;
+    const measure = () => {
+      const rect = target.getBoundingClientRect();
+      const margin = 8;
+      const width = Math.min(rect.width + margin * 2, window.innerWidth - 24);
+      const left = Math.max(12, Math.min(rect.left - margin, window.innerWidth - width - 12));
+      const top = Math.max(8, rect.top - margin);
+      const height = rect.height + margin * 2;
+      const tooltipWidth = Math.min(336, window.innerWidth - 32);
+      const tooltipHeight = 184;
+      const tooltipLeft = Math.max(16, Math.min(left + width / 2 - tooltipWidth / 2, window.innerWidth - tooltipWidth - 16));
+      const placeBelow = top + height + tooltipHeight + 18 < window.innerHeight;
+      const tooltipTop = placeBelow ? top + height + 14 : Math.max(12, top - tooltipHeight - 14);
+      setGuidedTourRect({ top, left, width, height, tooltipTop, tooltipLeft, tooltipWidth });
+    };
+    frameA = requestAnimationFrame(() => { frameB = requestAnimationFrame(measure); });
+    window.addEventListener("scroll", measure, { passive: true });
+    window.addEventListener("resize", measure);
+    return () => {
+      cancelAnimationFrame(frameA);
+      cancelAnimationFrame(frameB);
+      window.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
+    };
+  }, [guidedTourStep, items.length]);
 
   useEffect(() => {
     if (!initialInviteCode || !isSupabaseConfigured) return;
@@ -928,7 +985,7 @@ export default function App() {
       <header className="topbar refined-topbar">
         <div className="refined-brand">
           <span className="brand-mark"><ShoppingBasket size={24}/></span>
-          <div className="refined-brand-copy"><span className="brand-name">Listora</span><button type="button" className="list-name-inline" aria-expanded={showListMenu} onClick={() => setShowListMenu(v => !v)}>{displayListName}<ChevronDown size={15}/></button>{showListMenu && <div className="list-switch-menu"><strong>{t("Lista atual")}</strong><button type="button" onClick={() => {setShowListMenu(false); setShowShare(true);}}><Share2 size={16}/>{t("Partilhar lista")}</button><button type="button" onClick={() => {setShowListMenu(false); leaveCurrentList();}}><LogOut size={16}/>{t("Sair da lista")}</button><button type="button" onClick={() => {setShowListMenu(false); leaveCurrentList();}}><Plus size={16}/>{t("Sair e criar nova lista")}</button></div>}</div>
+          <div className="refined-brand-copy"><span className="brand-name">Listora</span><button type="button" className="list-name-inline" aria-expanded={showListMenu} onClick={() => setShowListMenu(v => !v)}>{displayListName}<ChevronDown size={15}/></button>{showListMenu && <div className="list-switch-menu"><strong>{t("Lista atual")}</strong><button type="button" onClick={() => {setShowListMenu(false); startGuidedTour();}}><CircleHelp size={16}/>{t("Visita guiada")}</button><button type="button" onClick={() => {setShowListMenu(false); setShowShare(true);}}><Share2 size={16}/>{t("Partilhar lista")}</button><button type="button" onClick={() => {setShowListMenu(false); leaveCurrentList();}}><LogOut size={16}/>{t("Sair da lista")}</button><button type="button" onClick={() => {setShowListMenu(false); leaveCurrentList();}}><Plus size={16}/>{t("Sair e criar nova lista")}</button></div>}</div>
         </div>
         <div className="topbar-actions">
           <LanguagePicker language={language} onChange={setLanguage} />
@@ -1133,6 +1190,36 @@ export default function App() {
       </div>}
       {showInstallHelp && <div className="modal-backdrop install-help-backdrop" onClick={() => setShowInstallHelp(false)}><section className="share-modal install-help-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="install-help-title"><button className="modal-close" onClick={() => setShowInstallHelp(false)} aria-label={t("Fechar")}><X size={20}/></button><div className="share-graphic"><Download size={25}/></div><h2 id="install-help-title">{t("Instalar a Listora no iPhone")}</h2>{installHelpNeedsSafari && <p className="install-help-safari-note">{t("Para instalar a Listora, abre primeiro este endereço no Safari.")}</p>}{installHelpNeedsSafari ? <p>{t("A instalação é feita pelo menu Partilhar do Safari. Demora apenas alguns segundos.")}</p> : <p>{t("No Chrome para computador, abre o menu ⋮ e procura a opção Instalar Listora. Se não aparecer, o Chrome pode ainda não considerar o site elegível para instalação.")}</p>}<ol className="install-help-steps"><li><span className="install-help-step-icon"><Share2 size={17}/></span><span><strong>{t("1. Toca em Partilhar")}</strong><small>{t("Na barra do Safari, em baixo ou no topo.")}</small></span></li><li><span className="install-help-step-icon"><Plus size={17}/></span><span><strong>{t("2. Adicionar ao ecrã principal")}</strong><small>{t("Se não aparecer, procura em Editar ações.")}</small></span></li><li><span className="install-help-step-icon"><Check size={17}/></span><span><strong>{t("3. Confirma em Adicionar")}</strong><small>{t("O ícone da Listora ficará no ecrã inicial.")}</small></span></li></ol><button className="primary-button" onClick={() => setShowInstallHelp(false)}>{t("Percebi")}</button></section></div>}
       {showShare && <div className="modal-backdrop" onClick={() => setShowShare(false)}><section className="share-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="share-title"><button className="modal-close" onClick={() => setShowShare(false)} aria-label={t("Fechar")}><X size={20}/></button><div className="share-graphic"><Users size={28}/></div><h2 id="share-title">{t("A lista é melhor em família")}</h2><p>{t("Mostra este QR Code a quem queres convidar. Ao digitalizar, o convite abre a Listora com esta lista pronta a entrar.")}</p><div className="invite-qr"><QRCodeSVG value={inviteUrl} size={208} level="H" includeMargin/><span>{t("Digitaliza com a câmara para entrar na lista")}</span></div><button className="primary-button" onClick={copyInviteLink}><Copy size={17}/> Copiar link de convite</button><div className="share-code-box"><span>{t("CÓDIGO DA LISTA")}</span><strong>{list.shareCode}</strong></div><button className="primary-button" onClick={shareListCode}>{typeof navigator.share === "function" ? <Users size={17}/> : <Copy size={17}/>} {t(typeof navigator.share === "function" ? "Partilhar código" : "Copiar código")}</button>{typeof navigator.share === "function" && <button className="secondary-button" onClick={copyListCode}><Clipboard size={17}/> {t("Copiar apenas o código")}</button>}<p className="share-note"><CircleHelp size={14}/> {t("Qualquer pessoa com o código pode aceder à lista. Partilha apenas com pessoas de confiança.")}</p></section></div>}
+      {showGuidedTourIntro && <div className="modal-backdrop guided-tour-intro-backdrop" onClick={() => { setShowGuidedTourIntro(false); localStorage.setItem("listora-guided-tour-seen", "1"); }}>
+        <section className="guided-tour-intro" role="dialog" aria-modal="true" aria-labelledby="guided-tour-intro-title" onClick={e => e.stopPropagation()}>
+          <button type="button" className="modal-close" aria-label={t("Fechar")} onClick={() => { setShowGuidedTourIntro(false); localStorage.setItem("listora-guided-tour-seen", "1"); }}><X size={20}/></button>
+          <div className="guided-tour-intro-icon"><Sparkles size={27}/></div>
+          <span className="guided-tour-kicker">{t("CONHECE A LISTORIA")}</span>
+          <h2 id="guided-tour-intro-title">{t("Uma visita rápida")}</h2>
+          <p>{t("Descobre em poucos segundos as três funcionalidades essenciais da tua lista.")}</p>
+          <div className="guided-tour-preview-points">
+            <span><ShoppingBasket size={17}/>{t("Compras e faturas")}</span>
+            <span><Camera size={17}/>{t("Adicionar por texto, câmara e voz")}</span>
+            <span><Zap size={17}/>{t("Modo supermercado")}</span>
+          </div>
+          <button type="button" className="primary-button" onClick={startGuidedTour}>{t("Começar visita guiada")} <ArrowRight size={17}/></button>
+          <button type="button" className="guided-tour-skip-intro" onClick={() => { setShowGuidedTourIntro(false); localStorage.setItem("listora-guided-tour-seen", "1"); }}>{t("Agora não")}</button>
+        </section>
+      </div>}
+      {guidedTourStep !== null && guidedTourRect && <div className="guided-tour-layer">
+        <div className="guided-tour-backdrop" onClick={finishGuidedTour}/>
+        <div className="guided-tour-spotlight" style={{top: guidedTourRect.top, left: guidedTourRect.left, width: guidedTourRect.width, height: guidedTourRect.height}}/>
+        <section className="guided-tour-tooltip" style={{top: guidedTourRect.tooltipTop, left: guidedTourRect.tooltipLeft, width: guidedTourRect.tooltipWidth}} role="dialog" aria-modal="true" aria-label={t("Visita guiada")}>
+          <div className="guided-tour-tooltip-top"><span>{t("VISITA GUIADA")}</span><strong>0{guidedTourStep + 1} / 03</strong><button type="button" aria-label={t("Saltar")} onClick={finishGuidedTour}><X size={17}/></button></div>
+          <div className="guided-tour-progress"><span style={{width: `${((guidedTourStep + 1) / 3) * 100}%`}}/></div>
+          <h3>{[t("Compras e faturas"), t("Adiciona produtos à tua maneira"), t("Modo supermercado")][guidedTourStep]}</h3>
+          <p>{guidedTourStep === 0 ? t("Alterna entre a tua lista de compras e o arquivo de faturas da família.") : guidedTourStep === 1 ? t("Escreve um produto, fotografa uma lista ou utiliza a voz para adicionar vários produtos.") : items.length ? t("Ativa este modo para te concentrares nos artigos por comprar enquanto estás na loja.") : t("Depois de adicionares o primeiro produto, aparece aqui o modo supermercado para te acompanhar na loja.")}</p>
+          <div className="guided-tour-actions">
+            <button type="button" className="guided-tour-previous" disabled={guidedTourStep === 0} onClick={() => setGuidedTourStep(step => Math.max(0, step - 1))}>{t("Anterior")}</button>
+            <button type="button" className="guided-tour-next" onClick={() => guidedTourStep === 2 ? finishGuidedTour() : setGuidedTourStep(step => step + 1)}>{guidedTourStep === 2 ? t("Começar a usar") : t("Seguinte")} {guidedTourStep === 2 ? <Check size={16}/> : <ArrowRight size={16}/>}</button>
+          </div>
+        </section>
+      </div>}
       {toast && <div className="toast"><Check size={16}/>{toast}</div>}
       {error && <button className="error-toast" onClick={() => setError("")}>{error}<X size={15}/></button>}
     </main>
