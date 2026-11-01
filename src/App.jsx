@@ -486,7 +486,7 @@ export default function App() {
           if (addedFeedbackTimerRef.current) window.clearTimeout(addedFeedbackTimerRef.current);
           addedFeedbackTimerRef.current = window.setTimeout(() => setRecentlyAddedItemId(""), 1050);
         }
-        notify(t("Produto adicionado"));
+        notify(`${t("Produto adicionado")}: ${cleanName}`);
         try { if (!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) navigator.vibrate?.(12); } catch {}
       }
       setItemHistory(previous => {
