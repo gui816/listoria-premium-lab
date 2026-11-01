@@ -998,7 +998,7 @@ export default function App() {
       </div>}
       {!shoppingMode && !addPanelExpanded && <div className="purchased-dock">
         <button type="button" className={showDone ? "purchased-dock-button active" : "purchased-dock-button"} onClick={() => { setShowDone(!showDone); document.querySelector(".items-section")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>
-          <span>{showDone ? t("Ver por comprar") : t("Ver comprados")} ({doneItems.length})</span><ChevronDown size={19} className={showDone ? "dock-chevron rotated" : "dock-chevron"}/>
+          <span>{showDone ? t("Ver por comprar") : t("Ver comprados")}</span><ChevronDown size={19} className={showDone ? "dock-chevron rotated" : "dock-chevron"}/>
         </button>
       </div>}
       </>}
