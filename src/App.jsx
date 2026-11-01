@@ -921,9 +921,9 @@ export default function App() {
           <button className="icon-action" onClick={() => setShowShare(true)} aria-label={t("Partilhar")} title={t("Partilhar")}><Share2 size={22}/></button>
         </div>
       </header>
-      <nav className="main-tabs" aria-label={t("Secções da lista")}>
-        <button type="button" className={activeTab === "shopping" ? "main-tab active" : "main-tab"} onClick={() => setActiveTab("shopping")}><ShoppingBasket size={17}/> {t("Lista de compras")}</button>
-        <button type="button" className={activeTab === "receipts" ? "main-tab active" : "main-tab"} onClick={() => setActiveTab("receipts")}><Receipt size={17}/> {t("Faturas")} <span>{receipts.length}</span></button>
+      <nav className="main-tabs segmented-tabs" aria-label={t("Secções da lista")}>
+        <button type="button" className={activeTab === "shopping" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "shopping"} onClick={() => setActiveTab("shopping")}><ShoppingBasket size={17}/> <span className="tab-label">{t("Compras")}</span></button>
+        <button type="button" className={activeTab === "receipts" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "receipts"} onClick={() => setActiveTab("receipts")}><Receipt size={17}/> <span className="tab-label">{t("Faturas")}</span>{receipts.length > 0 && <span className="tab-count">{receipts.length}</span>}</button>
       </nav>
       {activeTab === "shopping" && <>
       <section className="list-header">
