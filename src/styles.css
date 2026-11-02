@@ -1489,6 +1489,7 @@ button { -webkit-tap-highlight-color: transparent; }
     height: 38px;
     border-radius: 12px;
   }
+  .floating-add-panel:not(.expanded) .quick-suggestions,
   .floating-add-panel:not(.expanded) .quick-add-chips,
   .floating-add-panel:not(.expanded) .add-options,
   .floating-add-panel:not(.expanded) .other-products-panel {
