@@ -2257,3 +2257,23 @@ button { -webkit-tap-highlight-color: transparent; }
     bottom: calc(210px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+
+/* Keep the supermarket shortcut above the expanded composer, never behind it. */
+.shopping-mode-fab { z-index: 45; }
+@media (max-width: 680px) {
+  .shopping-mode-fab.add-panel-open {
+    position: fixed;
+    z-index: 45;
+    right: 16px;
+    bottom: calc(270px + env(safe-area-inset-bottom, 0px));
+    margin: 0;
+  }
+  .list-tools-saved {
+    align-items: flex-start;
+  }
+  .list-tools-saved .save-template-button {
+    align-self: flex-start;
+    margin-top: 2px;
+  }
+}
