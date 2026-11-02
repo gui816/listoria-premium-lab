@@ -1016,6 +1016,19 @@ export default function App() {
         <div className="list-title-line"><div><div className="eyebrow">{t("A LISTA DA CASA")}</div><h1>{displayListName}</h1></div><span className={`sync-status ${connected ? "online" : ""}`} title={connected ? t("Sincronização ativa") : t("A ligar")}>{connected ? <Wifi size={15}/> : <WifiOff size={15}/>}<span>{connected ? t("Sincronizada") : t("A ligar…")}</span></span></div>
         {!shoppingMode && <div className="progress-line"><div className="progress-track"><span style={{ width: `${items.length ? (doneItems.length / items.length) * 100 : 0}%` }}/></div><span>{doneItems.length} {t("de")} {items.length} {t("comprados")}</span></div>}
       </section>
+      {!shoppingMode && <section className="list-tools" aria-label={t("Gestão da lista")}>
+        <div className="list-tools-saved">
+          <details className="saved-lists-disclosure">
+            <summary><span className="list-tools-icon"><List size={17}/></span><span className="list-tools-label">{t("Listas guardadas")}</span><small>{templates.length}</small><ChevronDown size={15}/></summary>
+            {templates.length > 0 ? <div className="template-chips">{templates.map(template => <button type="button" className="template-chip" key={template.id} onClick={() => useTemplate(template)}><span>{template.name}</span><small>{template.items.length} {t("artigos")}</small></button>)}</div> : <p className="template-hint">{t("Guarda uma compra habitual para a reutilizares noutra semana.")}</p>}
+          </details>
+          <button type="button" className="save-template-button" onClick={saveCurrentTemplate} disabled={!activeItems.length}><Plus size={15}/>{t("Guardar lista atual")}</button>
+        </div>
+        {items.length > 0 && <button type="button" className="shopping-mode-row" onClick={() => { setShoppingMode(true); setShowDone(false); }}>
+          <span className="shopping-mode-copy"><ShoppingBasket size={20} strokeWidth={2.2}/><span className="shopping-mode-text"><strong>{t("Modo supermercado")}</strong><small>{t("Lista otimizada para comprar na loja")}</small></span></span>
+          <span className="mode-toggle">{t("Ativar")}</span>
+        </button>}
+      </section>}
       {shoppingMode && <section className="supermarket-summary" aria-label="Progresso das compras">
         <div className="supermarket-summary-top"><div><span className="supermarket-kicker">{t("AS TUAS COMPRAS")}</span><h2>{doneItems.length === items.length && items.length > 0 ? t("Tudo comprado!") : t("Vamos às compras")}</h2></div><strong>{doneItems.length}<span> / {items.length}</span></strong></div>
         <div className="supermarket-progress-track"><span style={{width: `${shoppingProgress}%`}}/></div>
@@ -1051,24 +1064,11 @@ export default function App() {
           <div className="add-options"><div className="quantity-control"><label htmlFor="quantity">{t("Qtd.")}</label><input id="quantity" type="number" min="1" max="999" value={quantity} onChange={e => setQuantity(e.target.value)}/></div><span className="option-separator"/><label className="category-select-label" htmlFor="category-select">{t("Categoria")}</label><select id="category-select" value={category} onChange={e => setCategory(e.target.value)}><option value="auto">{t("Automática")}</option>{CATEGORIES.filter(c => c.id !== "all").map(c => <option key={c.id} value={c.id}>{c.emoji} {t(c.label)}</option>)}</select></div>
         </form>
       </section>
-      <section className="templates-section" hidden={shoppingMode}>
-        <div className="templates-title-row">
-          <details className="saved-lists-disclosure">
-            <summary><span>{t("Listas guardadas")}</span><small>{templates.length}</small><ChevronDown size={16}/></summary>
-            {templates.length > 0 ? <div className="template-chips">{templates.map(template => <button type="button" className="template-chip" key={template.id} onClick={() => useTemplate(template)}><span>{template.name}</span><small>{template.items.length} {t("artigos")}</small></button>)}</div> : <p className="template-hint">{t("Guarda uma compra habitual para a reutilizares noutra semana.")}</p>}
-          </details>
-          <button type="button" className="save-template-button" onClick={saveCurrentTemplate} disabled={!activeItems.length}>{t("Guardar lista atual")}</button>
-        </div>
-      </section>
       {doneItems.length > 0 && !shoppingMode && <section className="repeat-section" aria-label={t("Repetir compras")}>
         <div className="repeat-heading">{t("Repetir compras")}</div>
         <div className="repeat-chips">{[...new Map(doneItems.map(item => [item.name.toLocaleLowerCase(), item.name])).values()].slice(0, 5).map(itemName => <button type="button" className="repeat-chip" key={itemName} onClick={() => repeatItem(itemName)}><Plus size={13}/>{itemName}</button>)}</div>
       </section>}
       {!showOnboarding && !shoppingMode && activeTab === "shopping" && activeItems.length > 0 && showShoppingNudge && !itemsSectionVisible && <button type="button" className="shopping-list-floating-nudge" onClick={() => document.querySelector(".items-section")?.scrollIntoView({behavior:"smooth",block:"start"})}><span className="shopping-nudge-icon"><ShoppingBasket size={25}/></span><span className="shopping-nudge-copy"><strong>{items.length} {t("produtos na lista")}</strong><small>{t("Desliza para ver")}</small></span><span className="shopping-nudge-divider"/><span className="shopping-nudge-chevron"><ChevronDown size={24}/><ChevronDown size={24}/></span><span className="shopping-nudge-close" aria-label={t("Fechar aviso")} onClick={e => {e.stopPropagation();setShowShoppingNudge(false);}}><X size={17}/></span></button>}
-      {items.length > 0 && !shoppingMode && <div className="shopping-mode-row">
-        <span className="shopping-mode-copy"><ShoppingBasket size={24} strokeWidth={2.2}/><span className="shopping-mode-text"><strong>{t("Modo supermercado")}</strong><small>{t("Lista otimizada para comprar na loja")}</small></span></span>
-        <button type="button" className={shoppingMode ? "mode-toggle active" : "mode-toggle"} aria-pressed={shoppingMode} onClick={() => { if (!items.length) return; setShoppingMode(!shoppingMode); setShowDone(false); }}>{shoppingMode ? "Sair" : t("Ativar")}</button>
-      </div>}
       {!shoppingMode && !addPanelExpanded && <div className="purchased-dock">
         <button type="button" className={showDone ? "purchased-dock-button active" : "purchased-dock-button"} onClick={() => { setShowDone(!showDone); document.querySelector(".items-section")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>
           <span>{showDone ? t("Ver por comprar") : t("Ver comprados")}</span><ChevronDown size={19} className={showDone ? "dock-chevron rotated" : "dock-chevron"}/>
