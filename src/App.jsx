@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import BasketEstimate from "./components/BasketEstimate.jsx";
 import { supabase, isSupabaseConfigured } from "./lib/supabase.js";
 import {
   ArrowRight, ArrowLeft, Sparkles, Check, CheckCheck, ChevronDown, CircleHelp, Clipboard, Copy, Share2, Download, Repeat2, List,
@@ -1167,6 +1168,7 @@ export default function App() {
         </div>
         
       </section>}
+      {!shoppingMode && activeItems.length > 0 && <BasketEstimate items={activeItems} language={language} />}
       {shoppingMode && <section className="supermarket-summary" aria-label="Progresso das compras">
         <div className="supermarket-summary-top"><div><span className="supermarket-kicker">{t("AS TUAS COMPRAS")}</span><h2>{doneItems.length === items.length && items.length > 0 ? t("Tudo comprado!") : t("Vamos às compras")}</h2></div><strong>{doneItems.length}<span> / {items.length}</span></strong></div>
         <div className="supermarket-progress-track"><span style={{width: `${shoppingProgress}%`}}/></div>
