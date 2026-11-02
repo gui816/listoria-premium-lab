@@ -18,9 +18,38 @@ serve(async(req)=>{
   const basket=items.map((x:any)=>({name:String(x?.name||"").trim().replace(/\s+/g," ").slice(0,100),quantity:Math.max(1,Math.min(999,Number(x?.quantity)||1)),unit:String(x?.unit||"un").slice(0,12)})).filter((x:any)=>x.name);
   if(!basket.length) return json({error:"Não foram encontrados artigos válidos."},400);
   const q='[out:json][timeout:20];(node["shop"~"supermarket|convenience|department_store"](around:10000,'+lat+','+lon+');way["shop"~"supermarket|convenience|department_store"](around:10000,'+lat+','+lon+');relation["shop"~"supermarket|convenience|department_store"](around:10000,'+lat+','+lon+'););out center tags;';
-  const osmRes=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"data="+encodeURIComponent(q),signal:AbortSignal.timeout(25000)});
-  if(!osmRes.ok) return json({error:"Não foi possível descobrir supermercados nesta zona. Tenta novamente mais tarde."},502);
-  const osm=await osmRes.json(); const counts=new Map<string,number>();
+  const overpassEndpoints=[
+   "https://overpass-api.de/api/interpreter",
+   "https://overpass.kumi.systems/api/interpreter",
+   "https://overpass.private.coffee/api/interpreter"
+  ];
+  let osm:any=null;
+  const endpointErrors:string[]=[];
+  for(const endpoint of overpassEndpoints){
+   try{
+    const response=await fetch(endpoint,{
+     method:"POST",
+     headers:{"Content-Type":"application/x-www-form-urlencoded"},
+     body:"data="+encodeURIComponent(q),
+     signal:AbortSignal.timeout(12000)
+    });
+    if(!response.ok){
+     endpointErrors.push(new URL(endpoint).hostname+" returned HTTP "+response.status);
+     continue;
+    }
+    osm=await response.json();
+    if(Array.isArray(osm?.elements)) break;
+    endpointErrors.push(new URL(endpoint).hostname+" returned an invalid response");
+    osm=null;
+   }catch(error){
+    endpointErrors.push(new URL(endpoint).hostname+": "+(error instanceof Error?error.message:"request failed"));
+   }
+  }
+  if(!osm){
+   console.error("All Overpass endpoints failed:",endpointErrors);
+   return json({error:"Os serviços de localização estão temporariamente indisponíveis. Tentámos vários servidores OpenStreetMap. Aguarda um minuto e tenta novamente."},502);
+  }
+  const counts=new Map<string,number>();
   for(const el of (Array.isArray(osm?.elements)?osm.elements:[])){const tags=el.tags||{};const raw=tags.brand||tags.operator||tags.name;if(raw){const chain=normalize(String(raw));counts.set(chain,(counts.get(chain)||0)+1);}}
   const chains=[...counts.entries()].map(([chain,nearbyStores])=>({chain,nearbyStores})).sort((a,b)=>b.nearbyStores-a.nearbyStores).slice(0,12);
   if(!chains.length) return json({error:"Não encontrámos supermercados identificáveis num raio de 10 km."},404);
