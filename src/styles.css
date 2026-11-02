@@ -2112,3 +2112,13 @@ button { -webkit-tap-highlight-color: transparent; }
   }
   .shopping-mode-fab span { white-space: nowrap; }
 }
+
+@media (max-width: 680px) {
+  /* Keep the existing quick filters and scroll hint in a clear vertical stack. */
+  .purchased-dock {
+    bottom: calc(128px + env(safe-area-inset-bottom, 0px));
+  }
+  .shopping-list-floating-nudge {
+    bottom: calc(188px + env(safe-area-inset-bottom, 0px));
+  }
+}
