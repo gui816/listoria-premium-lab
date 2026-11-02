@@ -1036,7 +1036,7 @@ export default function App() {
         {CATEGORIES.map(c => <button key={c.id} className={filter === c.id ? "category-tab active" : "category-tab"} onClick={() => setFilter(c.id)}><span>{c.emoji}</span>{t(c.label)}{c.id === "all" && <span className="tab-count">{activeItems.length}</span>}</button>)}
       </nav>
       <section className={shoppingMode ? "items-section supermarket-items-section" : "items-section"}>
-        <div className="section-heading"><div><h2>{shoppingMode ? t("Por comprar") : showDone ? t("Já comprados") : t("Falta comprar")}</h2><span>{visibleItems.length} {visibleItems.length === 1 ? t("artigo") : t("artigos")}</span></div>{!shoppingMode && <button className="view-toggle" onClick={() => setShowDone(!showDone)}>{showDone ? t("Ver por comprar") : `${t("Ver comprados")} (${doneItems.length})`} <ChevronDown size={15} className={showDone ? "rotate" : ""}/></button>}</div>
+        <div className="section-heading"><div><h2>{shoppingMode ? t("Por comprar") : t("Falta comprar")}</h2><span>{visibleItems.length} {visibleItems.length === 1 ? t("artigo") : t("artigos")}</span></div></div>
         {visibleItems.length === 0 ? <div className="empty-state"><span className="empty-illustration">{showDone ? "✨" : "🧺"}</span><h3>{showDone ? t("Ainda não há compras concluídas") : filter === "all" ? t("A lista está vazia") : t("Nada nesta categoria")}</h3><p>{showDone ? t("Quando marcares um artigo como comprado, aparece aqui.") : t("Adiciona o primeiro artigo no campo acima.")}</p></div> : (
           <div className={shoppingMode ? "items-list supermarket-list" : "items-list"}>{(shoppingMode && filter === "all" ? [...visibleItems].sort((a, b) => CATEGORIES.findIndex(cat => cat.id === a.category) - CATEGORIES.findIndex(cat => cat.id === b.category)) : visibleItems).map(item => {
             const cat = CATEGORIES.find(c => c.id === item.category) || CATEGORIES[5];
@@ -1047,7 +1047,7 @@ export default function App() {
             </article>;
           })}</div>
         )}
-        {shoppingMode && doneItems.length > 0 && <section className="supermarket-purchased">
+        {doneItems.length > 0 && <section className="supermarket-purchased">
           <button type="button" className="supermarket-purchased-toggle" aria-expanded={showPurchasedInline} onClick={() => setShowPurchasedInline(value => !value)}>
             <span><CheckCheck size={17}/><strong>{t("Comprados")} ({doneItems.filter(item => filter === "all" || item.category === filter).length})</strong></span>
             <ChevronDown size={18} className={showPurchasedInline ? "rotate" : ""}/>
@@ -1064,7 +1064,7 @@ export default function App() {
         {doneItems.length > 0 && !showDone && !shoppingMode && <button className="clear-done" onClick={clearDone}><CheckCheck size={16}/> {t("Limpar artigos comprados")}</button>}
         {items.length > 0 && !shoppingMode && <button type="button" className="clear-all-items" onClick={clearAllItems}><Trash2 size={16}/> {t("Remover todos os produtos")}</button>}
       </section>
-      {!showOnboarding && !shoppingMode && activeTab === "shopping" && items.length > 0 && !addPanelExpanded && <button type="button" className="shopping-mode-fab" onClick={() => { setShoppingMode(true); setShowDone(false); }}><ShoppingBasket size={18} strokeWidth={2.2}/><span>{t("Modo supermercado")}</span></button>}
+      {!showOnboarding && !shoppingMode && activeTab === "shopping" && items.length > 0 && <button type="button" className={addPanelExpanded ? "shopping-mode-fab add-panel-open" : "shopping-mode-fab"} onClick={() => { setShoppingMode(true); setShowDone(false); }}><ShoppingBasket size={18} strokeWidth={2.2}/><span>{t("Modo supermercado")}</span></button>}
       {!showOnboarding && shoppingMode && activeTab === "shopping" && <button type="button" className="shopping-mode-fab supermarket-exit-fab" onClick={() => { setShoppingMode(false); setShowDone(false); }}><X size={18} strokeWidth={2.4}/><span>{t("Sair do modo supermercado")}</span></button>}
       <section className={addPanelExpanded ? "add-panel floating-add-panel expanded" : "add-panel floating-add-panel"} hidden={shoppingMode}>
         <form onSubmit={addItem}>
