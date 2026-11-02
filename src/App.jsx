@@ -189,6 +189,7 @@ export default function App() {
   const [connected, setConnected] = useState(false);
   const [name, setName] = useState("");
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [supermarketFabTop, setSupermarketFabTop] = useState(null);
   const [addPanelExpanded, setAddPanelExpanded] = useState(false);
   const [showOtherProducts, setShowOtherProducts] = useState(false);
   const [showPhotoSource, setShowPhotoSource] = useState(false);
@@ -255,6 +256,35 @@ export default function App() {
       window.removeEventListener("resize", updateKeyboardState);
     };
   }, []);
+  useEffect(() => {
+    if (shoppingMode || keyboardOpen || activeTab !== "shopping" || !items.length || !window.matchMedia("(max-width: 680px)").matches) {
+      setSupermarketFabTop(null);
+      return undefined;
+    }
+    const panel = document.querySelector(".add-panel.floating-add-panel");
+    const fab = document.querySelector(".shopping-mode-fab:not(.supermarket-exit-fab)");
+    if (!panel || !fab) return undefined;
+    let frame = 0;
+    const measure = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const panelRect = panel.getBoundingClientRect();
+        const fabHeight = fab.getBoundingClientRect().height || 44;
+        setSupermarketFabTop(Math.max(8, Math.round(panelRect.top - fabHeight - 12)));
+      });
+    };
+    measure();
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    observer?.observe(panel);
+    window.addEventListener("resize", measure);
+    window.visualViewport?.addEventListener("resize", measure);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.removeEventListener("resize", measure);
+      window.visualViewport?.removeEventListener("resize", measure);
+    };
+  }, [shoppingMode, keyboardOpen, activeTab, items.length, addPanelExpanded]);
   const activeItems = useMemo(() => items.filter(i => !i.done), [items]);
   const doneItems = useMemo(() => items.filter(i => i.done), [items]);
   const repeatSuggestions = useMemo(() => {
@@ -1119,7 +1149,7 @@ export default function App() {
         {doneItems.length > 0 && !showDone && !shoppingMode && <button className="clear-done" onClick={clearDone}><CheckCheck size={16}/> {t("Limpar artigos comprados")}</button>}
         {items.length > 0 && !shoppingMode && <button type="button" className="clear-all-items" onClick={clearAllItems}><Trash2 size={16}/> {t("Remover todos os produtos")}</button>}
       </section>
-      {!showOnboarding && !shoppingMode && activeTab === "shopping" && items.length > 0 && !keyboardOpen && <button type="button" className={addPanelExpanded ? "shopping-mode-fab add-panel-open" : "shopping-mode-fab"} onClick={() => { setShoppingMode(true); setShowDone(false); }}><ShoppingBasket size={18} strokeWidth={2.2}/><span>{t("Modo supermercado")}</span></button>}
+      {!showOnboarding && !shoppingMode && activeTab === "shopping" && items.length > 0 && !keyboardOpen && <button type="button" className={addPanelExpanded ? "shopping-mode-fab add-panel-open" : "shopping-mode-fab"} style={supermarketFabTop == null ? undefined : { top: `${supermarketFabTop}px`, bottom: "auto" }} onClick={() => { setShoppingMode(true); setShowDone(false); }}><ShoppingBasket size={18} strokeWidth={2.2}/><span>{t("Modo supermercado")}</span></button>}
       {!showOnboarding && shoppingMode && activeTab === "shopping" && <button type="button" className="shopping-mode-fab supermarket-exit-fab" onClick={() => { setShoppingMode(false); setShowDone(false); }}><X size={18} strokeWidth={2.4}/><span>{t("Sair do modo supermercado")}</span></button>}
       <section className={addPanelExpanded ? "add-panel floating-add-panel expanded" : "add-panel floating-add-panel"} hidden={shoppingMode}>
         <form onSubmit={addItem}>
