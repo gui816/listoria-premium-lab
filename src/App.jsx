@@ -1003,6 +1003,11 @@ export default function App() {
         <div className="list-title-line"><div><div className="eyebrow">{t("A LISTA DA CASA")}</div><h1>{displayListName}</h1></div><span className={`sync-status ${connected ? "online" : ""}`} title={connected ? t("Sincronização ativa") : t("A ligar")}>{connected ? <Wifi size={15}/> : <WifiOff size={15}/>}<span>{connected ? t("Sincronizada") : t("A ligar…")}</span></span></div>
         <div className="progress-line"><div className="progress-track"><span style={{ width: `${items.length ? (doneItems.length / items.length) * 100 : 0}%` }}/></div><span>{doneItems.length} {t("de")} {items.length} {t("comprados")}</span></div>
       </section>
+      {shoppingMode && <section className="supermarket-summary" aria-label="Progresso das compras">
+        <div className="supermarket-summary-top"><div><span className="supermarket-kicker">{t("AS TUAS COMPRAS")}</span><h2>{doneItems.length === items.length && items.length > 0 ? t("Tudo comprado!") : t("Vamos às compras")}</h2></div><strong>{doneItems.length}<span> / {items.length}</span></strong></div>
+        <div className="supermarket-progress-track"><span style={{width: `${shoppingProgress}%`}}/></div>
+        <div className="supermarket-summary-bottom"><span>{t("Progresso das compras", { done: doneItems.length, total: items.length })}</span><div className="supermarket-summary-actions"><button type="button" className={showDone ? "purchased-filter active" : "purchased-filter"} onClick={() => setShowDone(!showDone)}>{showDone ? "Ver por comprar" : `Comprados (${doneItems.length})`}</button><button type="button" className="supermarket-exit-button" onClick={() => { setShoppingMode(false); setShowDone(false); }}>{t("Sair")}</button></div></div>
+      </section>}
       <nav className="category-tabs" aria-label={t("Filtrar por categoria")} tabIndex={0}>
         {CATEGORIES.map(c => <button key={c.id} className={filter === c.id ? "category-tab active" : "category-tab"} onClick={() => setFilter(c.id)}><span>{c.emoji}</span>{t(c.label)}{c.id === "all" && <span className="tab-count">{activeItems.length}</span>}</button>)}
       </nav>
@@ -1032,11 +1037,6 @@ export default function App() {
           <div className="add-options"><div className="quantity-control"><label htmlFor="quantity">{t("Qtd.")}</label><input id="quantity" type="number" min="1" max="999" value={quantity} onChange={e => setQuantity(e.target.value)}/></div><span className="option-separator"/><label className="category-select-label" htmlFor="category-select">{t("Categoria")}</label><select id="category-select" value={category} onChange={e => setCategory(e.target.value)}><option value="auto">{t("Automática")}</option>{CATEGORIES.filter(c => c.id !== "all").map(c => <option key={c.id} value={c.id}>{c.emoji} {t(c.label)}</option>)}</select></div>
         </form>
       </section>
-      {shoppingMode && <section className="supermarket-summary" aria-label="Progresso das compras">
-        <div className="supermarket-summary-top"><div><span className="supermarket-kicker">{t("AS TUAS COMPRAS")}</span><h2>{doneItems.length === items.length && items.length > 0 ? t("Tudo comprado!") : t("Vamos às compras")}</h2></div><strong>{doneItems.length}<span> / {items.length}</span></strong></div>
-        <div className="supermarket-progress-track"><span style={{width: `${shoppingProgress}%`}}/></div>
-        <div className="supermarket-summary-bottom"><span>{t("Progresso das compras", { done: doneItems.length, total: items.length })}</span><div className="supermarket-summary-actions"><button type="button" className={showDone ? "purchased-filter active" : "purchased-filter"} onClick={() => setShowDone(!showDone)}>{showDone ? "Ver por comprar" : `Comprados (${doneItems.length})`}</button><button type="button" className="supermarket-exit-button" onClick={() => { setShoppingMode(false); setShowDone(false); }}>{t("Sair")}</button></div></div>
-      </section>}
       <section className="templates-section" hidden={shoppingMode}>
         <div className="templates-title-row">
           <details className="saved-lists-disclosure">
