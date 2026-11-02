@@ -235,6 +235,7 @@ export default function App() {
   const [listening, setListening] = useState(false);
   const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const productNameInputRef = useRef(null);
+  const normalViewportHeightRef = useRef(typeof window !== "undefined" ? Math.max(window.innerHeight, window.visualViewport?.height || 0) : 0);
   const imageInputRef = useRef(null);
   const imageFileInputRef = useRef(null);
   const imageCameraInputRef = useRef(null);
@@ -251,17 +252,30 @@ export default function App() {
       return undefined;
     }
     const updateKeyboardState = () => {
-      // Android Chrome keeps the input focused when Back dismisses the keyboard.
-      // The visual viewport resize, rather than input blur, detects that transition.
-      const heightLoss = window.innerHeight - viewport.height;
-      const isKeyboardVisible = heightLoss > Math.max(120, window.innerHeight * 0.18);
+      // Keep a stable non-keyboard baseline: some Android browsers resize
+      // window.innerHeight, while others only resize the visual viewport.
+      const baselineHeight = Math.max(
+        normalViewportHeightRef.current,
+        window.innerHeight,
+        viewport.height
+      );
+      const heightLoss = baselineHeight - viewport.height;
+      const keyboardThreshold = Math.max(120, baselineHeight * 0.18);
+      const isKeyboardVisible = productInputFocused && heightLoss > keyboardThreshold;
       setKeyboardOpen(isKeyboardVisible);
-      // Keep the fixed composer dock above Android/iOS's on-screen keyboard.
-      const keyboardInset = isKeyboardVisible
-        ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+
+      // If the layout viewport itself shrinks, fixed elements are already
+      // positioned above the keyboard. Otherwise apply the visual-viewport inset.
+      const layoutViewportShrunk = baselineHeight - window.innerHeight > keyboardThreshold;
+      const keyboardInset = isKeyboardVisible && !layoutViewportShrunk
+        ? Math.max(0, baselineHeight - viewport.height - viewport.offsetTop)
         : 0;
       document.documentElement.style.setProperty("--listoria-keyboard-inset", `${keyboardInset}px`);
       document.documentElement.style.setProperty("--listoria-visual-viewport-height", `${viewport.height}px`);
+
+      if (!isKeyboardVisible) {
+        normalViewportHeightRef.current = Math.max(window.innerHeight, viewport.height);
+      }
     };
     const onWindowFocus = () => requestAnimationFrame(updateKeyboardState);
     // Focus sets keyboardOpen immediately; viewport events reconcile Android Back dismissals.
@@ -1195,9 +1209,9 @@ export default function App() {
       {!showOnboarding && shoppingMode && activeTab === "shopping" && <button type="button" className="shopping-mode-fab supermarket-exit-fab" onClick={() => { setShoppingMode(false); setShowDone(false); }}><X size={18} strokeWidth={2.4}/><span>{t("Sair do modo supermercado")}</span></button>}
       <section className={`add-panel floating-add-panel${addPanelExpanded ? " expanded" : ""}${keyboardOpen ? " keyboard-open" : ""}`} hidden={shoppingMode}>
         <form onSubmit={addItem}>
-          {toast === t("Produto adicionado") && <div className="add-inline-feedback" role="status" aria-live="polite"><Check size={15}/><span>{toast}</span></div>}
+          {toast === t("Produto adicionado") && !keyboardOpen && <div className="add-inline-feedback" role="status" aria-live="polite"><Check size={15}/><span>{toast}</span></div>}
           <div className="add-main"><button type="submit" className="input-plus add-submit-left" aria-label={t("Adicionar artigo")} disabled={!name.trim()}><Plus size={22}/></button><input ref={productNameInputRef} autoComplete="off" value={name} onFocus={() => { setAddPanelExpanded(true); setProductInputFocused(true); setKeyboardOpen(true); }} onBlur={e => { if (e.relatedTarget?.type === "submit") return; setProductInputFocused(false); setKeyboardOpen(false); }} onChange={e => setName(e.target.value)} placeholder={t("Adicionar produto…")} aria-label={t("Nome do artigo")} maxLength={100}/><div className="add-import-tools add-import-tools-inline" aria-label={t("Adicionar por imagem ou voz")}><div className="add-photo-tool"><button type="button" className="add-tool-button add-tool-photo" aria-label={t("Fotografar lista")} title={t("Fotografa uma lista para reconhecer os produtos")} aria-expanded={showPhotoSource} disabled={importBusy} onClick={() => setShowPhotoSource(true)}><Camera size={19}/></button></div><button type="button" className={listening ? "add-tool-button add-tool-voice recording" : "add-tool-button add-tool-voice"} aria-label={listening ? t("A ouvir… toca para parar") : t("Adicionar por voz")} title={t("Dita vários produtos sem escrever")} disabled={importBusy} onClick={startVoiceImport}><Mic size={19}/></button></div></div>
-          {repeatSuggestions.length > 0 && !shoppingMode && <details className="repeat-inline-disclosure">
+          {repeatSuggestions.length > 0 && !shoppingMode && !keyboardOpen && <details className="repeat-inline-disclosure">
             <summary><span>{t("Repetir compras")}</span><small>{Math.min(repeatSuggestions.length, 4)}</small><ChevronDown size={15}/></summary>
             <div className="repeat-chips">{repeatSuggestions.slice(0, 4).map(item => <button type="button" className="repeat-chip" key={item._id} onClick={async () => { await repeatItem(item.name); setAddPanelExpanded(false); }}><Plus size={13}/>{item.name}</button>)}</div>
           </details>}
