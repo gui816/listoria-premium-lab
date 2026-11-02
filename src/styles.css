@@ -2259,112 +2259,22 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 
-/* Keep the supermarket shortcut above the expanded composer, never behind it. */
-.shopping-mode-fab { z-index: 45; }
-@media (max-width: 680px) {
-  .shopping-mode-fab.add-panel-open {
-    position: fixed;
-    z-index: 45;
-    right: 16px;
-    bottom: calc(270px + env(safe-area-inset-bottom, 0px));
-    margin: 0;
-  }
-  .list-tools-saved {
-    align-items: flex-start;
-  }
-  .list-tools-saved .save-template-button {
-    align-self: flex-start;
-    margin-top: 2px;
-  }
-}
-
-/* Keep the expanded product composer clear of the supermarket action. */
-@media (max-width: 680px) {
-  .shopping-mode-fab.add-panel-open {
-    bottom: calc(330px + env(safe-area-inset-bottom, 0px)) !important;
-    right: 16px;
-    z-index: 60;
-  }
-  .repeat-inline-disclosure .repeat-chips {
-    flex-wrap: nowrap;
-    max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 7px 0 5px;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-  .repeat-inline-disclosure .repeat-chips::-webkit-scrollbar { display: none; }
-  .repeat-inline-disclosure .repeat-chip {
-    flex: 0 0 auto;
-    max-width: 132px;
-    min-height: 34px;
-    white-space: nowrap;
-  }
-}
-
-/* Minimal progress indicator paired with the pending-items heading. */
-.inline-shopping-progress {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
-  color: #718075;
-}
-.inline-progress-count {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: #55745d;
-  font-size: 12px;
-  font-weight: 750;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.inline-progress-count svg { color: #6b9b78; }
-.inline-progress-track {
-  display: block;
-  width: 34px;
-  height: 4px;
-  overflow: hidden;
-  border-radius: 99px;
-  background: #e4eae2;
-}
-.inline-progress-track > span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: #6e9f7a;
-  transition: width .2s ease;
-}
-@media (max-width: 680px) {
-  .items-section .section-heading {
-    min-height: 28px;
-    align-items: center;
-  }
-  .inline-shopping-progress { gap: 6px; }
-  .inline-progress-count { font-size: 11px; }
-  .inline-progress-track { width: 26px; height: 3px; }
-}
-
-/* Remove the now-empty legacy header spacer after moving progress to the list. */
-.list-header { display: none !important; }
-
-/* Mobile composer occupies the bottom edge; keep the supermarket action
-   consistently stacked immediately above it, regardless of input focus. */
+/* The supermarket shortcut is shown only while the composer is collapsed.
+   Expanded product entry and the "Other products" picker own the screen space. */
 @media (max-width: 680px) {
   .shopping-mode-fab:not(.supermarket-exit-fab) {
     position: fixed !important;
     right: 16px !important;
-    bottom: calc(155px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    top: auto !important;
     z-index: 70 !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 42px !important;
+    max-height: 48px !important;
     margin: 0 !important;
   }
-  .shopping-mode-fab.add-panel-open:not(.supermarket-exit-fab) {
-    bottom: calc(365px + env(safe-area-inset-bottom, 0px)) !important;
-  }
 }
-
 /* Explicitly reserve the right side of the heading for the progress metric. */
 .items-section .section-heading {
   display: flex;
