@@ -256,7 +256,7 @@ export default function App() {
       setKeyboardOpen(heightLoss > Math.max(120, window.innerHeight * 0.18));
     };
     const onWindowFocus = () => requestAnimationFrame(updateKeyboardState);
-    updateKeyboardState();
+    // Focus sets keyboardOpen immediately; viewport events reconcile Android Back dismissals.
     viewport.addEventListener("resize", updateKeyboardState);
     viewport.addEventListener("scroll", updateKeyboardState);
     window.addEventListener("resize", updateKeyboardState);
