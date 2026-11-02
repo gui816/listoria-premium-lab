@@ -254,7 +254,14 @@ export default function App() {
       // Android Chrome keeps the input focused when Back dismisses the keyboard.
       // The visual viewport resize, rather than input blur, detects that transition.
       const heightLoss = window.innerHeight - viewport.height;
-      setKeyboardOpen(heightLoss > Math.max(120, window.innerHeight * 0.18));
+      const isKeyboardVisible = heightLoss > Math.max(120, window.innerHeight * 0.18);
+      setKeyboardOpen(isKeyboardVisible);
+      // Keep the fixed composer dock above Android/iOS's on-screen keyboard.
+      const keyboardInset = isKeyboardVisible
+        ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+        : 0;
+      document.documentElement.style.setProperty("--listoria-keyboard-inset", `${keyboardInset}px`);
+      document.documentElement.style.setProperty("--listoria-visual-viewport-height", `${viewport.height}px`);
     };
     const onWindowFocus = () => requestAnimationFrame(updateKeyboardState);
     // Focus sets keyboardOpen immediately; viewport events reconcile Android Back dismissals.
@@ -267,6 +274,8 @@ export default function App() {
       viewport.removeEventListener("scroll", updateKeyboardState);
       window.removeEventListener("resize", updateKeyboardState);
       window.removeEventListener("focus", onWindowFocus);
+      document.documentElement.style.setProperty("--listoria-keyboard-inset", "0px");
+      document.documentElement.style.removeProperty("--listoria-visual-viewport-height");
     };
   }, [productInputFocused]);
 
