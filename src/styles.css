@@ -2404,3 +2404,10 @@ button { -webkit-tap-highlight-color: transparent; }
     bottom: calc(365px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
+
+/* The keyboard takes priority while entering a product: keep the composer clear. */
+@media (max-width: 680px) {
+  .shopping-mode-fab.add-panel-open:not(.supermarket-exit-fab) {
+    bottom: calc(365px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
