@@ -2346,3 +2346,37 @@ button { -webkit-tap-highlight-color: transparent; }
   .inline-progress-count { font-size: 11px; }
   .inline-progress-track { width: 26px; height: 3px; }
 }
+
+/* Remove the now-empty legacy header spacer after moving progress to the list. */
+.list-header { display: none !important; }
+
+/* Mobile composer occupies the bottom edge; keep the supermarket action
+   consistently stacked immediately above it, regardless of input focus. */
+@media (max-width: 680px) {
+  .shopping-mode-fab:not(.supermarket-exit-fab) {
+    position: fixed !important;
+    right: 16px !important;
+    bottom: calc(270px + env(safe-area-inset-bottom, 0px)) !important;
+    z-index: 70 !important;
+    margin: 0 !important;
+  }
+}
+
+/* Explicitly reserve the right side of the heading for the progress metric. */
+.items-section .section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.items-section .section-heading > h2 {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.items-section .section-heading > .inline-shopping-progress {
+  display: inline-flex !important;
+  align-items: center;
+  flex: 0 0 auto;
+  margin-left: auto;
+  visibility: visible;
+}
