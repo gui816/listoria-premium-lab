@@ -2302,3 +2302,47 @@ button { -webkit-tap-highlight-color: transparent; }
     white-space: nowrap;
   }
 }
+
+/* Minimal progress indicator paired with the pending-items heading. */
+.inline-shopping-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  color: #718075;
+}
+.inline-progress-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #55745d;
+  font-size: 12px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.inline-progress-count svg { color: #6b9b78; }
+.inline-progress-track {
+  display: block;
+  width: 34px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #e4eae2;
+}
+.inline-progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #6e9f7a;
+  transition: width .2s ease;
+}
+@media (max-width: 680px) {
+  .items-section .section-heading {
+    min-height: 28px;
+    align-items: center;
+  }
+  .inline-shopping-progress { gap: 6px; }
+  .inline-progress-count { font-size: 11px; }
+  .inline-progress-track { width: 26px; height: 3px; }
+}
