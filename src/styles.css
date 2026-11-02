@@ -2277,3 +2277,28 @@ button { -webkit-tap-highlight-color: transparent; }
     margin-top: 2px;
   }
 }
+
+/* Keep the expanded product composer clear of the supermarket action. */
+@media (max-width: 680px) {
+  .shopping-mode-fab.add-panel-open {
+    bottom: calc(330px + env(safe-area-inset-bottom, 0px)) !important;
+    right: 16px;
+    z-index: 60;
+  }
+  .repeat-inline-disclosure .repeat-chips {
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 7px 0 5px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .repeat-inline-disclosure .repeat-chips::-webkit-scrollbar { display: none; }
+  .repeat-inline-disclosure .repeat-chip {
+    flex: 0 0 auto;
+    max-width: 132px;
+    min-height: 34px;
+    white-space: nowrap;
+  }
+}
