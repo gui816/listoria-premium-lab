@@ -1028,6 +1028,7 @@ export default function App() {
       </section>
       <section className={addPanelExpanded ? "add-panel floating-add-panel expanded" : "add-panel floating-add-panel"} hidden={shoppingMode}>
         <form onSubmit={addItem}>
+          {toast === t("Produto adicionado") && <div className="add-inline-feedback" role="status" aria-live="polite"><Check size={15}/><span>{toast}</span></div>}
           <div className="add-main"><button type="submit" className="input-plus add-submit-left" aria-label={t("Adicionar artigo")} disabled={!name.trim()}><Plus size={22}/></button><input list="item-history-suggestions" value={name} onFocus={() => setAddPanelExpanded(true)} onChange={e => setName(e.target.value)} placeholder={t("Adicionar produto…")} aria-label={t("Nome do artigo")} maxLength={100}/><datalist id="item-history-suggestions">{suggestions.map(itemName => <option key={itemName} value={itemName}/>)}</datalist><div className="add-import-tools add-import-tools-inline" aria-label={t("Adicionar por imagem ou voz")}><div className="add-photo-tool"><button type="button" className="add-tool-button add-tool-photo" aria-label={t("Fotografar lista")} title={t("Fotografa uma lista para reconhecer os produtos")} aria-expanded={showPhotoSource} disabled={importBusy} onClick={() => setShowPhotoSource(true)}><Camera size={19}/></button></div><button type="button" className={listening ? "add-tool-button add-tool-voice recording" : "add-tool-button add-tool-voice"} aria-label={listening ? t("A ouvir… toca para parar") : t("Adicionar por voz")} title={t("Dita vários produtos sem escrever")} disabled={importBusy} onClick={startVoiceImport}><Mic size={19}/></button></div></div>
           <div className="quick-add-chips" aria-label={t("Sugestões rápidas")}>{(language === "pt-PT" ? ["Leite","Pão","Água"] : language === "en" ? ["Milk","Bread","Water"] : language === "es" ? ["Leche","Pan","Agua"] : language === "fr" ? ["Lait","Pain","Eau"] : language === "de" ? ["Milch","Brot","Wasser"] : language === "it" ? ["Latte","Pane","Acqua"] : language === "nl" ? ["Melk","Brood","Water"] : language === "pl" ? ["Mleko","Chleb","Woda"] : language === "ro" ? ["Lapte","Pâine","Apă"] : ["牛奶","面包","水"]).map(itemName => <button type="button" key={itemName} onClick={async () => { const added = await submitItem(itemName, 1, "auto", true); if (added) setAddPanelExpanded(false); }}><Plus size={13}/>{itemName}</button>)}<button type="button" className="quick-add-other" onClick={() => {setShowOtherProducts(v => !v); setOtherProductSearch("");}}><Plus size={13}/>{t("Outros")}</button></div>
           
@@ -1222,7 +1223,7 @@ export default function App() {
           </div>
         </section>
       </div>}
-      {toast && <div className="toast"><Check size={16}/>{toast}</div>}
+      {toast && toast !== t("Produto adicionado") && <div className="toast"><Check size={16}/>{toast}</div>}
       {error && <button className="error-toast" onClick={() => setError("")}>{error}<X size={15}/></button>}
     </main>
   );
