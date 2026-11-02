@@ -2259,22 +2259,6 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 
-/* The supermarket shortcut is shown only while the composer is collapsed.
-   Expanded product entry and the "Other products" picker own the screen space. */
-@media (max-width: 680px) {
-  .shopping-mode-fab:not(.supermarket-exit-fab) {
-    position: fixed !important;
-    right: 16px !important;
-    bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
-    top: auto !important;
-    z-index: 70 !important;
-    width: auto !important;
-    height: auto !important;
-    min-height: 42px !important;
-    max-height: 48px !important;
-    margin: 0 !important;
-  }
-}
 /* Explicitly reserve the right side of the heading for the progress metric. */
 .items-section .section-heading {
   display: flex;
@@ -2308,24 +2292,56 @@ button { -webkit-tap-highlight-color: transparent; }
   line-height: 1.2;
 }
 
-/* The supermarket action sits above the expanded composer, not over list rows. */
+
+
+
+/* One mobile dock owns both actions. The supermarket button is a normal flex
+   item above the composer, so content height and keyboard transitions cannot
+   make it overlap the card or product rows. */
 @media (max-width: 680px) {
-  .shopping-mode-fab.add-panel-open:not(.supermarket-exit-fab) {
-    bottom: calc(365px + env(safe-area-inset-bottom, 0px)) !important;
+  .shopping-actions-dock {
+    position: fixed;
+    z-index: 70;
+    left: max(12px, calc((100vw - 720px) / 2));
+    right: max(12px, calc((100vw - 720px) / 2));
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top, 0px));
+    pointer-events: none;
+  }
+  .shopping-actions-dock > * { pointer-events: auto; }
+  .shopping-actions-dock > .shopping-mode-fab {
+    position: relative !important;
+    inset: auto !important;
+    align-self: flex-end;
+    flex: 0 0 auto;
+    width: auto !important;
+    height: auto !important;
+    min-height: 42px !important;
+    max-height: 48px !important;
+    margin: 0 0 0 auto !important;
+    z-index: auto !important;
+  }
+  .shopping-actions-dock > .add-panel.floating-add-panel {
+    position: relative !important;
+    inset: auto !important;
+    flex: 0 1 auto;
+    width: 100%;
+    max-width: none;
+    max-height: min(68dvh, calc(100dvh - 24px));
+    margin: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .shopping-actions-dock > .add-panel.floating-add-panel .other-products-panel {
+    max-height: min(34dvh, 260px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 }
-
-/* The keyboard takes priority while entering a product: keep the composer clear. */
-@media (max-width: 680px) {
-  .shopping-mode-fab.add-panel-open:not(.supermarket-exit-fab) {
-    bottom: calc(365px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-}
-
-/* Keep the supermarket shortcut immediately above the fixed product composer. */
-@media (max-width: 680px) {
-  .shopping-mode-fab.add-panel-open:not(.supermarket-exit-fab) {
-    bottom: calc(205px + env(safe-area-inset-bottom, 0px)) !important;
-    z-index: 60;
-  }
+@media (min-width: 681px) {
+  .shopping-actions-dock { display: contents; }
 }
