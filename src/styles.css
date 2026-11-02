@@ -2162,3 +2162,91 @@ button { -webkit-tap-highlight-color: transparent; }
     min-height: 46px;
   }
 }
+
+
+/* Supermarket completed items stay available without interrupting the active list. */
+.supermarket-purchased {
+  margin: 22px 0 18px;
+  border: 1px solid #dfe7dc;
+  border-radius: 17px;
+  background: rgba(255,255,251,.72);
+  overflow: hidden;
+}
+.supermarket-purchased-toggle {
+  width: 100%;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  border: 0;
+  background: transparent;
+  color: #526b55;
+  cursor: pointer;
+}
+.supermarket-purchased-toggle > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.supermarket-purchased-toggle strong { font-size: 13px; font-weight: 750; }
+.supermarket-purchased-toggle > svg { transition: transform .18s ease; }
+.supermarket-purchased-toggle > svg.rotate { transform: rotate(180deg); }
+.supermarket-purchased-list {
+  display: grid;
+  gap: 8px;
+  padding: 0 10px 10px;
+}
+.supermarket-purchased-list .shopping-item {
+  min-height: 62px;
+  padding: 10px 12px;
+  background: #f5f7f2;
+  box-shadow: none;
+}
+.supermarket-purchased-list .item-name {
+  color: #899187;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+.supermarket-purchased-list .check-button {
+  background: #e5eee2;
+  border-color: #b9cbb5;
+}
+.repeat-inline-disclosure {
+  margin: 7px 0 8px;
+  padding: 0 2px 7px;
+  border-bottom: 1px solid #edf0e9;
+}
+.repeat-inline-disclosure summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 34px;
+  color: #647463;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  list-style: none;
+}
+.repeat-inline-disclosure summary::-webkit-details-marker { display: none; }
+.repeat-inline-disclosure summary small {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 3px 7px;
+  border-radius: 99px;
+  background: #edf2e9;
+  text-align: center;
+}
+.repeat-inline-disclosure[open] summary > svg { transform: rotate(180deg); }
+.repeat-inline-disclosure .repeat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 8px 0 2px;
+}
+@media (max-width: 680px) {
+  .supermarket-purchased { margin-top: 18px; }
+  .supermarket-purchased-list .shopping-item { min-height: 58px; }
+  .repeat-inline-disclosure .repeat-chip { min-height: 34px; }
+}
