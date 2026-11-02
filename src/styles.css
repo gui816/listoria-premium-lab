@@ -2356,9 +2356,12 @@ button { -webkit-tap-highlight-color: transparent; }
   .shopping-mode-fab:not(.supermarket-exit-fab) {
     position: fixed !important;
     right: 16px !important;
-    bottom: calc(365px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(155px + env(safe-area-inset-bottom, 0px)) !important;
     z-index: 70 !important;
     margin: 0 !important;
+  }
+  .shopping-mode-fab.add-panel-open:not(.supermarket-exit-fab) {
+    bottom: calc(365px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 
