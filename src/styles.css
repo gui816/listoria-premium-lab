@@ -2070,3 +2070,45 @@ button { -webkit-tap-highlight-color: transparent; }
   .list-tools { grid-template-columns: minmax(0, 1fr) minmax(260px, .85fr); align-items: center; gap: 14px; }
   .list-tools-saved { min-height: 54px; }
 }
+
+
+/* Contextual supermarket action: floats directly above the product-entry card. */
+.shopping-mode-fab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 44px;
+  margin: 16px 0 12px auto;
+  padding: 0 17px;
+  border: 1px solid #c8dcc2;
+  border-radius: 999px;
+  background: #245b3b;
+  color: #fff;
+  box-shadow: 0 7px 20px rgba(31, 55, 38, .18);
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.shopping-mode-fab:hover {
+  background: #1d4d31;
+  box-shadow: 0 9px 24px rgba(31, 55, 38, .22);
+  transform: translateY(-1px);
+}
+.shopping-mode-fab:active { transform: scale(.98); }
+.shopping-mode-fab:focus-visible { outline: 3px solid #9bc59a; outline-offset: 3px; }
+
+@media (max-width: 680px) {
+  .shopping-mode-fab {
+    position: fixed;
+    z-index: 19;
+    right: max(16px, calc((100vw - 720px) / 2 + 16px));
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    margin: 0;
+    min-height: 42px;
+    padding: 0 15px;
+    box-shadow: 0 7px 20px rgba(31, 55, 38, .22);
+  }
+  .shopping-mode-fab span { white-space: nowrap; }
+}
