@@ -33,7 +33,7 @@ jobs:
         run: |
           test -n "$SUPABASE_ACCESS_TOKEN" || (echo "Missing GitHub secret: SUPABASE_ACCESS_TOKEN" && exit 1)
           test -n "$SUPABASE_PROJECT_REF" || (echo "Missing GitHub secret: SUPABASE_PROJECT_REF" && exit 1)
-          supabase functions deploy listora-receipt-extract --yes --remote "$SUPABASE_PROJECT_REF"
+          supabase functions deploy listora-receipt-extract --yes --remote="$SUPABASE_PROJECT_REF"
 
       - name: Deploy shopping-list extraction function
         env:
@@ -42,7 +42,7 @@ jobs:
         run: |
           test -n "$SUPABASE_ACCESS_TOKEN" || (echo "Missing GitHub secret: SUPABASE_ACCESS_TOKEN" && exit 1)
           test -n "$SUPABASE_PROJECT_REF" || (echo "Missing GitHub secret: SUPABASE_PROJECT_REF" && exit 1)
-          supabase functions deploy listora-list-extract --yes --remote "$SUPABASE_PROJECT_REF"
+          supabase functions deploy listora-list-extract --yes --remote="$SUPABASE_PROJECT_REF"
 
       - name: Deploy basket estimate function
         env:
@@ -51,4 +51,4 @@ jobs:
         run: |
           test -n "$SUPABASE_ACCESS_TOKEN" || (echo "Missing GitHub secret: SUPABASE_ACCESS_TOKEN" && exit 1)
           test -n "$SUPABASE_PROJECT_REF" || (echo "Missing GitHub secret: SUPABASE_PROJECT_REF" && exit 1)
-          supabase functions deploy listora-basket-estimate --yes --remote "$SUPABASE_PROJECT_REF"
+          supabase functions deploy listora-basket-estimate --yes --remote="$SUPABASE_PROJECT_REF"
