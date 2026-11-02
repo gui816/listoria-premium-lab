@@ -325,6 +325,10 @@
 .supermarket-summary-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#687563;font-size:11px}
 .purchased-filter{border:1px solid #d3e1cd;border-radius:999px;background:#fffefa;padding:7px 10px;color:#426b46;font-size:11px;font-weight:700;white-space:nowrap}
 .purchased-filter.active{background:#315536;color:white;border-color:#315536}
+.supermarket-summary-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex:0 0 auto}
+.supermarket-exit-button{min-height:34px;padding:7px 15px;border:1px solid #245b3b;border-radius:999px;background:#245b3b;color:#fff;font-size:11px;font-weight:800;white-space:nowrap;cursor:pointer;transition:background .18s,border-color .18s}
+.supermarket-exit-button:hover{background:#194a30;border-color:#194a30}
+
 .shopping-mode-row.active{background:#e1efdc;border-color:#7eaa77;box-shadow:0 4px 14px #315e3318}
 .supermarket-items-section .section-heading{margin-top:12px}
 .supermarket-items-section .section-heading h2{font-size:12px;color:#6b7c65}
@@ -1849,4 +1853,11 @@ button { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   .guided-tour-spotlight, .guided-tour-progress>span { transition: none; }
   .guided-tour-tooltip { animation: none; }
+}
+
+@media (max-width: 520px) {
+  .supermarket-summary-bottom { align-items:center; gap:10px; }
+  .supermarket-summary-actions { gap:6px; }
+  .supermarket-exit-button { min-height:36px; padding:7px 12px; }
+  .purchased-filter { padding:7px 9px; }
 }

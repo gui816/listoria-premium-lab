@@ -1035,7 +1035,7 @@ export default function App() {
       {shoppingMode && <section className="supermarket-summary" aria-label="Progresso das compras">
         <div className="supermarket-summary-top"><div><span className="supermarket-kicker">{t("AS TUAS COMPRAS")}</span><h2>{doneItems.length === items.length && items.length > 0 ? t("Tudo comprado!") : t("Vamos às compras")}</h2></div><strong>{doneItems.length}<span> / {items.length}</span></strong></div>
         <div className="supermarket-progress-track"><span style={{width: `${shoppingProgress}%`}}/></div>
-        <div className="supermarket-summary-bottom"><span>{t("Progresso das compras", { done: doneItems.length, total: items.length })}</span><button type="button" className={showDone ? "purchased-filter active" : "purchased-filter"} onClick={() => setShowDone(!showDone)}>{showDone ? "Ver por comprar" : `Comprados (${doneItems.length})`}</button></div>
+        <div className="supermarket-summary-bottom"><span>{t("Progresso das compras", { done: doneItems.length, total: items.length })}</span><div className="supermarket-summary-actions"><button type="button" className={showDone ? "purchased-filter active" : "purchased-filter"} onClick={() => setShowDone(!showDone)}>{showDone ? "Ver por comprar" : `Comprados (${doneItems.length})`}</button><button type="button" className="supermarket-exit-button" onClick={() => { setShoppingMode(false); setShowDone(false); }}>{t("Sair")}</button></div></div>
       </section>}
       <section className="templates-section" hidden={shoppingMode}>
         <div className="templates-title-row">
@@ -1051,7 +1051,7 @@ export default function App() {
         <div className="repeat-chips">{[...new Map(doneItems.map(item => [item.name.toLocaleLowerCase(), item.name])).values()].slice(0, 5).map(itemName => <button type="button" className="repeat-chip" key={itemName} onClick={() => repeatItem(itemName)}><Plus size={13}/>{itemName}</button>)}</div>
       </section>}
       {!showOnboarding && !shoppingMode && activeTab === "shopping" && activeItems.length > 0 && showShoppingNudge && !itemsSectionVisible && <button type="button" className="shopping-list-floating-nudge" onClick={() => document.querySelector(".items-section")?.scrollIntoView({behavior:"smooth",block:"start"})}><span className="shopping-nudge-icon"><ShoppingBasket size={25}/></span><span className="shopping-nudge-copy"><strong>{items.length} {t("produtos na lista")}</strong><small>{t("Desliza para ver")}</small></span><span className="shopping-nudge-divider"/><span className="shopping-nudge-chevron"><ChevronDown size={24}/><ChevronDown size={24}/></span><span className="shopping-nudge-close" aria-label={t("Fechar aviso")} onClick={e => {e.stopPropagation();setShowShoppingNudge(false);}}><X size={17}/></span></button>}
-      {items.length > 0 && <div className={shoppingMode ? "shopping-mode-row active" : "shopping-mode-row"}>
+      {items.length > 0 && !shoppingMode && <div className="shopping-mode-row">
         <span className="shopping-mode-copy"><ShoppingBasket size={24} strokeWidth={2.2}/><span className="shopping-mode-text"><strong>{t("Modo supermercado")}</strong><small>{t("Lista otimizada para comprar na loja")}</small></span></span>
         <button type="button" className={shoppingMode ? "mode-toggle active" : "mode-toggle"} aria-pressed={shoppingMode} onClick={() => { if (!items.length) return; setShoppingMode(!shoppingMode); setShowDone(false); }}>{shoppingMode ? "Sair" : t("Ativar")}</button>
       </div>}
