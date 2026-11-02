@@ -2122,3 +2122,43 @@ button { -webkit-tap-highlight-color: transparent; }
     bottom: calc(188px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+
+/* Purchased items are accessed from the section heading, not a floating dock
+   that can cover product cards while scrolling. */
+.purchased-dock { display: none !important; }
+.items-section .section-heading { align-items: center; gap: 12px; }
+.items-section .section-heading .view-toggle {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid #dce7dc;
+  border-radius: 999px;
+  background: #edf4eb;
+  color: #315c3d;
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.items-section .section-heading .view-toggle:active { background: #e1ecdf; }
+.supermarket-exit-fab {
+  position: fixed;
+  z-index: 25;
+  right: max(18px, calc((100vw - 720px) / 2 + 18px));
+  bottom: max(18px, env(safe-area-inset-bottom, 0px));
+  margin: 0;
+  min-height: 48px;
+  padding: 0 18px;
+  background: #fff;
+  color: #245b3b;
+  border: 1px solid #c8dcc2;
+  box-shadow: 0 8px 24px rgba(31, 55, 38, .20);
+}
+.supermarket-exit-fab:hover { background: #f1f7ef; color: #194a30; }
+@media (max-width: 680px) {
+  .shopping-mode-fab.supermarket-exit-fab {
+    right: 16px;
+    bottom: max(18px, env(safe-area-inset-bottom, 0px));
+    min-height: 46px;
+  }
+}
