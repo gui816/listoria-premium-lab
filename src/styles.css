@@ -2411,3 +2411,11 @@ button { -webkit-tap-highlight-color: transparent; }
     bottom: calc(365px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
+
+/* Keep the supermarket shortcut immediately above the fixed product composer. */
+@media (max-width: 680px) {
+  .shopping-mode-fab.add-panel-open:not(.supermarket-exit-fab) {
+    bottom: calc(205px + env(safe-area-inset-bottom, 0px)) !important;
+    z-index: 60;
+  }
+}
