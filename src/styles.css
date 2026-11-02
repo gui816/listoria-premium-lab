@@ -2352,3 +2352,42 @@ button { -webkit-tap-highlight-color: transparent; }
   .floating-add-panel.expanded .quick-suggestions { padding: 6px 0 5px; }
   .floating-add-panel.expanded .quick-suggestions .quick-add-chips { gap: 6px; }
 }
+
+
+/* Keep the shopping list visible when the on-screen keyboard is open.
+   Suggestions become a single horizontal strip instead of a tall overlay. */
+@media (max-width: 680px) {
+  .add-panel.floating-add-panel.keyboard-open {
+    padding: 7px 12px 6px;
+    border-radius: 18px;
+  }
+  .floating-add-panel.keyboard-open .quick-suggestions {
+    max-height: 44px;
+    overflow: hidden;
+    padding: 3px 0 1px;
+  }
+  .floating-add-panel.keyboard-open .quick-suggestions-heading {
+    display: none;
+  }
+  .floating-add-panel.keyboard-open .quick-add-chips {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 0 3px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .floating-add-panel.keyboard-open .quick-add-chips::-webkit-scrollbar {
+    display: none;
+  }
+  .floating-add-panel.keyboard-open .quick-add-chips button {
+    flex: 0 0 auto;
+    min-height: 34px;
+    white-space: nowrap;
+    touch-action: pan-x manipulation;
+  }
+}
