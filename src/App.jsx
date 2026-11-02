@@ -331,7 +331,7 @@ export default function App() {
 
   useEffect(() => {
     if (guidedTourStep === null) { setGuidedTourRect(null); return; }
-    const selectors = [".main-tabs.segmented-tabs", ".add-panel.floating-add-panel", ".shopping-mode-row"];
+    const selectors = [".main-tabs.segmented-tabs", ".add-panel.floating-add-panel", ".shopping-mode-fab"];
     const selector = guidedTourStep === 2 && !items.length ? ".add-panel.floating-add-panel" : selectors[guidedTourStep];
     const target = document.querySelector(selector);
     if (!target) { setGuidedTourRect(null); return; }
@@ -1024,10 +1024,7 @@ export default function App() {
           </details>
           <button type="button" className="save-template-button" onClick={saveCurrentTemplate} disabled={!activeItems.length}><Plus size={15}/>{t("Guardar lista atual")}</button>
         </div>
-        {items.length > 0 && <button type="button" className="shopping-mode-row" onClick={() => { setShoppingMode(true); setShowDone(false); }}>
-          <span className="shopping-mode-copy"><ShoppingBasket size={20} strokeWidth={2.2}/><span className="shopping-mode-text"><strong>{t("Modo supermercado")}</strong><small>{t("Lista otimizada para comprar na loja")}</small></span></span>
-          <span className="mode-toggle">{t("Ativar")}</span>
-        </button>}
+        
       </section>}
       {shoppingMode && <section className="supermarket-summary" aria-label="Progresso das compras">
         <div className="supermarket-summary-top"><div><span className="supermarket-kicker">{t("AS TUAS COMPRAS")}</span><h2>{doneItems.length === items.length && items.length > 0 ? t("Tudo comprado!") : t("Vamos às compras")}</h2></div><strong>{doneItems.length}<span> / {items.length}</span></strong></div>
@@ -1052,6 +1049,7 @@ export default function App() {
         {doneItems.length > 0 && !showDone && !shoppingMode && <button className="clear-done" onClick={clearDone}><CheckCheck size={16}/> {t("Limpar artigos comprados")}</button>}
         {items.length > 0 && !shoppingMode && <button type="button" className="clear-all-items" onClick={clearAllItems}><Trash2 size={16}/> {t("Remover todos os produtos")}</button>}
       </section>
+      {!showOnboarding && !shoppingMode && activeTab === "shopping" && items.length > 0 && !addPanelExpanded && <button type="button" className="shopping-mode-fab" onClick={() => { setShoppingMode(true); setShowDone(false); }}><ShoppingBasket size={18} strokeWidth={2.2}/><span>{t("Modo supermercado")}</span></button>}
       <section className={addPanelExpanded ? "add-panel floating-add-panel expanded" : "add-panel floating-add-panel"} hidden={shoppingMode}>
         <form onSubmit={addItem}>
           {toast === t("Produto adicionado") && <div className="add-inline-feedback" role="status" aria-live="polite"><Check size={15}/><span>{toast}</span></div>}
