@@ -2250,3 +2250,10 @@ button { -webkit-tap-highlight-color: transparent; }
   .supermarket-purchased-list .shopping-item { min-height: 58px; }
   .repeat-inline-disclosure .repeat-chip { min-height: 34px; }
 }
+
+@media (max-width: 680px) {
+  /* Keep the supermarket shortcut visible above the expanded add card. */
+  .shopping-mode-fab.add-panel-open {
+    bottom: calc(210px + env(safe-area-inset-bottom, 0px));
+  }
+}
