@@ -1029,7 +1029,7 @@ export default function App() {
       {shoppingMode && <section className="supermarket-summary" aria-label="Progresso das compras">
         <div className="supermarket-summary-top"><div><span className="supermarket-kicker">{t("AS TUAS COMPRAS")}</span><h2>{doneItems.length === items.length && items.length > 0 ? t("Tudo comprado!") : t("Vamos às compras")}</h2></div><strong>{doneItems.length}<span> / {items.length}</span></strong></div>
         <div className="supermarket-progress-track"><span style={{width: `${shoppingProgress}%`}}/></div>
-        <div className="supermarket-summary-bottom"><span>{t("Progresso das compras", { done: doneItems.length, total: items.length })}</span><div className="supermarket-summary-actions"><button type="button" className={showDone ? "purchased-filter active" : "purchased-filter"} onClick={() => setShowDone(!showDone)}>{showDone ? "Ver por comprar" : `Comprados (${doneItems.length})`}</button><button type="button" className="supermarket-exit-button" onClick={() => { setShoppingMode(false); setShowDone(false); }}>{t("Sair")}</button></div></div>
+        <div className="supermarket-summary-bottom"><span>{t("Progresso das compras", { done: doneItems.length, total: items.length })}</span></div>
       </section>}
       <nav className="category-tabs" aria-label={t("Filtrar por categoria")} tabIndex={0}>
         {CATEGORIES.map(c => <button key={c.id} className={filter === c.id ? "category-tab active" : "category-tab"} onClick={() => setFilter(c.id)}><span>{c.emoji}</span>{t(c.label)}{c.id === "all" && <span className="tab-count">{activeItems.length}</span>}</button>)}
@@ -1050,6 +1050,7 @@ export default function App() {
         {items.length > 0 && !shoppingMode && <button type="button" className="clear-all-items" onClick={clearAllItems}><Trash2 size={16}/> {t("Remover todos os produtos")}</button>}
       </section>
       {!showOnboarding && !shoppingMode && activeTab === "shopping" && items.length > 0 && !addPanelExpanded && <button type="button" className="shopping-mode-fab" onClick={() => { setShoppingMode(true); setShowDone(false); }}><ShoppingBasket size={18} strokeWidth={2.2}/><span>{t("Modo supermercado")}</span></button>}
+      {!showOnboarding && shoppingMode && activeTab === "shopping" && <button type="button" className="shopping-mode-fab supermarket-exit-fab" onClick={() => { setShoppingMode(false); setShowDone(false); }}><X size={18} strokeWidth={2.4}/><span>{t("Sair do modo supermercado")}</span></button>}
       <section className={addPanelExpanded ? "add-panel floating-add-panel expanded" : "add-panel floating-add-panel"} hidden={shoppingMode}>
         <form onSubmit={addItem}>
           {toast === t("Produto adicionado") && <div className="add-inline-feedback" role="status" aria-live="polite"><Check size={15}/><span>{toast}</span></div>}
@@ -1067,11 +1068,7 @@ export default function App() {
         <div className="repeat-chips">{[...new Map(doneItems.map(item => [item.name.toLocaleLowerCase(), item.name])).values()].slice(0, 5).map(itemName => <button type="button" className="repeat-chip" key={itemName} onClick={() => repeatItem(itemName)}><Plus size={13}/>{itemName}</button>)}</div>
       </section>}
       {!showOnboarding && !shoppingMode && activeTab === "shopping" && activeItems.length > 0 && showShoppingNudge && !itemsSectionVisible && !addPanelExpanded && <button type="button" className="shopping-list-floating-nudge" onClick={() => document.querySelector(".items-section")?.scrollIntoView({behavior:"smooth",block:"start"})}><span className="shopping-nudge-icon"><ShoppingBasket size={25}/></span><span className="shopping-nudge-copy"><strong>{items.length} {t("produtos na lista")}</strong><small>{t("Desliza para ver")}</small></span><span className="shopping-nudge-divider"/><span className="shopping-nudge-chevron"><ChevronDown size={24}/><ChevronDown size={24}/></span><span className="shopping-nudge-close" aria-label={t("Fechar aviso")} onClick={e => {e.stopPropagation();setShowShoppingNudge(false);}}><X size={17}/></span></button>}
-      {!shoppingMode && !addPanelExpanded && <div className="purchased-dock">
-        <button type="button" className={showDone ? "purchased-dock-button active" : "purchased-dock-button"} onClick={() => { setShowDone(!showDone); document.querySelector(".items-section")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>
-          <span>{showDone ? t("Ver por comprar") : t("Ver comprados")}</span><ChevronDown size={19} className={showDone ? "dock-chevron rotated" : "dock-chevron"}/>
-        </button>
-      </div>}
+
       </>}
       {templatePreview && <div className="modal-backdrop template-preview-backdrop" onClick={() => !templateImportBusy && setTemplatePreview(null)}>
         <section className="template-preview-modal" role="dialog" aria-modal="true" aria-labelledby="template-preview-title" onClick={e => e.stopPropagation()}>
