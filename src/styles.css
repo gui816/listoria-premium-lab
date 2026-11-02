@@ -1882,3 +1882,57 @@ button { -webkit-tap-highlight-color: transparent; }
   .supermarket-exit-button { min-height:36px; padding:7px 12px; }
   .purchased-filter { padding:7px 9px; }
 }
+
+
+/* Saved-list preview: review contents before importing into the active list. */
+.template-preview-backdrop { z-index: 100; padding: 18px; }
+.template-preview-modal {
+  position: relative;
+  width: min(100%, 440px);
+  max-height: min(82dvh, 720px);
+  overflow: auto;
+  padding: 26px;
+  border: 1px solid #e3ebe1;
+  border-radius: 25px;
+  background: #fff;
+  box-shadow: 0 28px 90px rgba(12, 28, 17, .24);
+}
+.template-preview-modal .modal-close { position: absolute; top: 16px; right: 16px; }
+.template-preview-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 18px;
+  border-radius: 16px;
+  background: #eaf3e9;
+  color: #24583b;
+}
+.template-preview-modal .eyebrow { color: #71816f; font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+.template-preview-modal h2 { margin: 7px 42px 6px 0; color: #20372a; font-size: 25px; letter-spacing: -.04em; }
+.template-preview-description { margin: 0 0 17px; color: #748078; font-size: 14px; line-height: 1.45; }
+.template-preview-count { margin-bottom: 9px; color: #315f42; font-size: 12px; font-weight: 800; }
+.template-preview-items {
+  display: grid;
+  gap: 0;
+  max-height: min(38dvh, 320px);
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #e7ece5;
+  border-radius: 15px;
+  list-style: none;
+}
+.template-preview-items li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid #edf0eb; }
+.template-preview-items li:last-child { border-bottom: 0; }
+.template-preview-item-name { color: #26372c; font-size: 14px; font-weight: 650; }
+.template-preview-item-meta { flex: 0 0 auto; color: #7d897f; font-size: 12px; }
+.template-preview-actions { display: flex; gap: 10px; margin-top: 18px; }
+.template-preview-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 16px; border-radius: 14px; font: inherit; font-size: 14px; font-weight: 750; cursor: pointer; }
+.template-preview-cancel { flex: 1; border: 1px solid #dfe7dc; background: #fff; color: #526457; }
+.template-preview-confirm { flex: 1.5; border: 1px solid #24583b; background: #24583b; color: #fff; }
+.template-preview-actions button:disabled { cursor: wait; opacity: .65; }
+@media (max-width: 480px) {
+  .template-preview-modal { padding: 22px 18px 18px; border-radius: 22px; }
+  .template-preview-actions button { padding: 0 10px; font-size: 13px; }
+}
