@@ -1085,8 +1085,13 @@ export default function App() {
           <div className="template-preview-count">{templatePreview.items.length} {templatePreview.items.length === 1 ? t("artigo") : t("artigos")}</div>
           <ul className="template-preview-items">{templatePreview.items.map((item,index) => {
             const cat = CATEGORIES.find(c => c.id === item.category);
-            return <li key={item.id || index}><span className="template-preview-item-name">{item.name}</span><span className="template-preview-item-meta">{cat?.emoji ? cat.emoji+" " : ""}{item.quantity || 1} ×</span></li>;
+            return <li key={item.id || index}>
+              <span className="template-preview-item-name">{item.name}</span>
+              <span className="template-preview-item-meta">{cat?.emoji ? cat.emoji+" " : ""}{item.quantity || 1} ×</span>
+              <button type="button" className="template-preview-remove" aria-label={`${t("Remover")} ${item.name}`} title={t("Remover")} disabled={templateImportBusy} onClick={() => setTemplatePreview(previous => previous ? {...previous, items: previous.items.filter((_,itemIndex) => itemIndex !== index)} : previous)}><X size={16}/></button>
+            </li>;
           })}</ul>
+          {templatePreview.items.length === 0 && <p className="template-preview-empty">{t("Não há produtos selecionados. Podes cancelar ou fechar esta lista.")}</p>}
           <div className="template-preview-actions">
             <button type="button" className="template-preview-cancel" disabled={templateImportBusy} onClick={() => setTemplatePreview(null)}>{t("Cancelar")}</button>
             <button type="button" className="template-preview-confirm" disabled={templateImportBusy || !templatePreview.items.length} onClick={confirmUseTemplate}>{templateImportBusy ? <><LoaderCircle size={16} className="spin"/>{t("A adicionar…")}</> : <><Plus size={17}/>{t("Adicionar produtos")}</>}</button>
