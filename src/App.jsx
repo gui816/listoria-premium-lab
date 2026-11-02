@@ -188,6 +188,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [connected, setConnected] = useState(false);
   const [name, setName] = useState("");
+  const [productInputFocused, setProductInputFocused] = useState(false);
   const [addPanelExpanded, setAddPanelExpanded] = useState(false);
   const [showOtherProducts, setShowOtherProducts] = useState(false);
   const [showPhotoSource, setShowPhotoSource] = useState(false);
@@ -240,11 +241,24 @@ export default function App() {
   const activeItems = useMemo(() => items.filter(i => !i.done), [items]);
   const doneItems = useMemo(() => items.filter(i => i.done), [items]);
   const repeatSuggestions = useMemo(() => {
-    const pendingNames = new Set(activeItems.map(item => item.name.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase()));
+    const normalizeProductName = value => String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLocaleLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim()
+      .replace(/\s+/g, " ");
+    const pendingNames = activeItems.map(item => normalizeProductName(item.name)).filter(Boolean);
     const seen = new Set();
     return doneItems.filter(item => {
-      const key = item.name.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
-      if (!key || pendingNames.has(key) || seen.has(key)) return false;
+      const key = normalizeProductName(item.name);
+      if (!key || seen.has(key)) return false;
+      // Treat a base product and its qualified variant as the same suggestion
+      // (e.g. "Leite" vs. "Leite meio gordo", "Água" vs. "Água 1,5L").
+      const alreadyPending = pendingNames.some(pending =>
+        pending === key || pending.startsWith(key + " ") || key.startsWith(pending + " ")
+      );
+      if (alreadyPending) return false;
       seen.add(key);
       return true;
     });
@@ -1070,12 +1084,12 @@ export default function App() {
         {doneItems.length > 0 && !showDone && !shoppingMode && <button className="clear-done" onClick={clearDone}><CheckCheck size={16}/> {t("Limpar artigos comprados")}</button>}
         {items.length > 0 && !shoppingMode && <button type="button" className="clear-all-items" onClick={clearAllItems}><Trash2 size={16}/> {t("Remover todos os produtos")}</button>}
       </section>
-      {!showOnboarding && !shoppingMode && activeTab === "shopping" && items.length > 0 && <button type="button" className={addPanelExpanded ? "shopping-mode-fab add-panel-open" : "shopping-mode-fab"} onClick={() => { setShoppingMode(true); setShowDone(false); }}><ShoppingBasket size={18} strokeWidth={2.2}/><span>{t("Modo supermercado")}</span></button>}
+      {!showOnboarding && !shoppingMode && activeTab === "shopping" && items.length > 0 && !productInputFocused && <button type="button" className={addPanelExpanded ? "shopping-mode-fab add-panel-open" : "shopping-mode-fab"} onClick={() => { setShoppingMode(true); setShowDone(false); }}><ShoppingBasket size={18} strokeWidth={2.2}/><span>{t("Modo supermercado")}</span></button>}
       {!showOnboarding && shoppingMode && activeTab === "shopping" && <button type="button" className="shopping-mode-fab supermarket-exit-fab" onClick={() => { setShoppingMode(false); setShowDone(false); }}><X size={18} strokeWidth={2.4}/><span>{t("Sair do modo supermercado")}</span></button>}
       <section className={addPanelExpanded ? "add-panel floating-add-panel expanded" : "add-panel floating-add-panel"} hidden={shoppingMode}>
         <form onSubmit={addItem}>
           {toast === t("Produto adicionado") && <div className="add-inline-feedback" role="status" aria-live="polite"><Check size={15}/><span>{toast}</span></div>}
-          <div className="add-main"><button type="submit" className="input-plus add-submit-left" aria-label={t("Adicionar artigo")} disabled={!name.trim()}><Plus size={22}/></button><input list="item-history-suggestions" value={name} onFocus={() => setAddPanelExpanded(true)} onChange={e => setName(e.target.value)} placeholder={t("Adicionar produto…")} aria-label={t("Nome do artigo")} maxLength={100}/><datalist id="item-history-suggestions">{suggestions.map(itemName => <option key={itemName} value={itemName}/>)}</datalist><div className="add-import-tools add-import-tools-inline" aria-label={t("Adicionar por imagem ou voz")}><div className="add-photo-tool"><button type="button" className="add-tool-button add-tool-photo" aria-label={t("Fotografar lista")} title={t("Fotografa uma lista para reconhecer os produtos")} aria-expanded={showPhotoSource} disabled={importBusy} onClick={() => setShowPhotoSource(true)}><Camera size={19}/></button></div><button type="button" className={listening ? "add-tool-button add-tool-voice recording" : "add-tool-button add-tool-voice"} aria-label={listening ? t("A ouvir… toca para parar") : t("Adicionar por voz")} title={t("Dita vários produtos sem escrever")} disabled={importBusy} onClick={startVoiceImport}><Mic size={19}/></button></div></div>
+          <div className="add-main"><button type="submit" className="input-plus add-submit-left" aria-label={t("Adicionar artigo")} disabled={!name.trim()}><Plus size={22}/></button><input list="item-history-suggestions" value={name} onFocus={() => { setAddPanelExpanded(true); setProductInputFocused(true); }} onBlur={() => setProductInputFocused(false)} onChange={e => setName(e.target.value)} placeholder={t("Adicionar produto…")} aria-label={t("Nome do artigo")} maxLength={100}/><datalist id="item-history-suggestions">{suggestions.map(itemName => <option key={itemName} value={itemName}/>)}</datalist><div className="add-import-tools add-import-tools-inline" aria-label={t("Adicionar por imagem ou voz")}><div className="add-photo-tool"><button type="button" className="add-tool-button add-tool-photo" aria-label={t("Fotografar lista")} title={t("Fotografa uma lista para reconhecer os produtos")} aria-expanded={showPhotoSource} disabled={importBusy} onClick={() => setShowPhotoSource(true)}><Camera size={19}/></button></div><button type="button" className={listening ? "add-tool-button add-tool-voice recording" : "add-tool-button add-tool-voice"} aria-label={listening ? t("A ouvir… toca para parar") : t("Adicionar por voz")} title={t("Dita vários produtos sem escrever")} disabled={importBusy} onClick={startVoiceImport}><Mic size={19}/></button></div></div>
           {repeatSuggestions.length > 0 && !shoppingMode && <details className="repeat-inline-disclosure">
             <summary><span>{t("Repetir compras")}</span><small>{Math.min(repeatSuggestions.length, 4)}</small><ChevronDown size={15}/></summary>
             <div className="repeat-chips">{repeatSuggestions.slice(0, 4).map(item => <button type="button" className="repeat-chip" key={item._id} onClick={async () => { await repeatItem(item.name); setAddPanelExpanded(false); }}><Plus size={13}/>{item.name}</button>)}</div>
