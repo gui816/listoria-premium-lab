@@ -2356,7 +2356,7 @@ button { -webkit-tap-highlight-color: transparent; }
   .shopping-mode-fab:not(.supermarket-exit-fab) {
     position: fixed !important;
     right: 16px !important;
-    bottom: calc(270px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(365px + env(safe-area-inset-bottom, 0px)) !important;
     z-index: 70 !important;
     margin: 0 !important;
   }
@@ -2393,4 +2393,11 @@ button { -webkit-tap-highlight-color: transparent; }
   color: #8d9388;
   font-size: 11px;
   line-height: 1.2;
+}
+
+/* The supermarket action sits above the expanded composer, not over list rows. */
+@media (max-width: 680px) {
+  .shopping-mode-fab.add-panel-open:not(.supermarket-exit-fab) {
+    bottom: calc(365px + env(safe-area-inset-bottom, 0px)) !important;
+  }
 }
