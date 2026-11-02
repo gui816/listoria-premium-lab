@@ -41,6 +41,19 @@ Para builds Android através do GitHub Actions:
 
 O workflow injeta o secret em `VITE_GEMINI_API_KEY` apenas durante `npm run build`. Como o Vite incorpora variáveis `VITE_*` no JavaScript do cliente, a chave pode ser extraída do APK; usa uma chave exclusiva para esta app e configura limites/alertas de utilização na Google AI. A fotografia e a transcrição de voz são enviadas à Google para processamento. Para desenvolvimento local, define `VITE_GEMINI_API_KEY` no teu `.env.local`.
 
+
+## Estimativa indicativa do cabaz (Premium – fase inicial)
+
+A comparação usa a localização apenas depois de o utilizador tocar em **Estimar preço do cabaz**. A função procura estabelecimentos num raio de 10 km através do OpenStreetMap/Overpass e pede ao Gemini uma estimativa por cadeia. Os resultados são intervalos indicativos, não preços atuais nem garantias de poupança.
+
+Para ativar a funcionalidade no projeto Supabase:
+
+1. Confirma que o secret `GEMINI_API_KEY` está definido em **Project Settings → Edge Functions → Secrets** (ou através de `supabase secrets set GEMINI_API_KEY=...`).
+2. Publica a função: `supabase functions deploy listora-basket-estimate`.
+3. Confirma que a função está disponível no mesmo projeto indicado por `VITE_SUPABASE_URL`.
+
+A função não guarda coordenadas nem histórico. A descoberta de lojas depende da cobertura do OpenStreetMap e a estimativa é gerada por IA sem consultar catálogos ou preços em tempo real. Esta primeira entrega ainda não inclui cache persistente, histórico, controlo de quota por utilizador ou validação de uma subscrição Premium no servidor; não deve ser tratada como mecanismo de autorização de pagamentos.
+
 ## Deploy
 
 A aplicação pode ser distribuída como app Android através do APK gerado no GitHub Actions. Não é necessário publicar uma página web para criar listas ou partilhá-las: os familiares introduzem na app o código da lista. O build web continua disponível para desenvolvimento e testes, mas não é um requisito para a partilha. O URL Supabase e a chave publicável são dados de cliente e podem estar no bundle. **Nunca coloques uma chave `service_role` no frontend.**
