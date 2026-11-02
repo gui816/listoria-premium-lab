@@ -1013,9 +1013,6 @@ export default function App() {
         <button type="button" className={activeTab === "receipts" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "receipts"} onClick={() => setActiveTab("receipts")}><Receipt size={17}/> <span className="tab-label">{t("Faturas")}</span>{receipts.length > 0 && <span className="tab-count">{receipts.length}</span>}</button>
       </nav>}
       {activeTab === "shopping" && <>
-      <section className="list-header">
-        <div className="list-title-line"><div><div className="eyebrow">{t("A LISTA DA CASA")}</div><h1>{displayListName}</h1></div><span className={`sync-status ${connected ? "online" : ""}`} title={connected ? t("Sincronização ativa") : t("A ligar")}>{connected ? <Wifi size={15}/> : <WifiOff size={15}/>}<span>{connected ? t("Sincronizada") : t("A ligar…")}</span></span></div>
-      </section>
       {!shoppingMode && <section className="list-tools" aria-label={t("Gestão da lista")}>
         <div className="list-tools-saved">
           <details className="saved-lists-disclosure">
@@ -1035,7 +1032,7 @@ export default function App() {
         {CATEGORIES.map(c => <button key={c.id} className={filter === c.id ? "category-tab active" : "category-tab"} onClick={() => setFilter(c.id)}><span>{c.emoji}</span>{t(c.label)}{c.id === "all" && <span className="tab-count">{activeItems.length}</span>}</button>)}
       </nav>
       <section className={shoppingMode ? "items-section supermarket-items-section" : "items-section"}>
-        <div className="section-heading"><div><h2>{shoppingMode ? t("Por comprar") : t("Falta comprar")}</h2><span>{visibleItems.length} {visibleItems.length === 1 ? t("artigo") : t("artigos")}</span></div>{!shoppingMode && items.length > 0 && <div className="inline-shopping-progress" aria-label={`${doneItems.length} ${t("de")} ${items.length} ${t("comprados")}`}><span className="inline-progress-count"><Check size={13}/>{doneItems.length}/{items.length}</span><span className="inline-progress-track"><span style={{width:`${shoppingProgress}%`}}/></span></div>}</div>
+        <div className="section-heading"><h2>{shoppingMode ? t("Por comprar") : t("Falta comprar")}</h2>{!shoppingMode && items.length > 0 && <div className="inline-shopping-progress" aria-label={`${doneItems.length} ${t("de")} ${items.length} ${t("comprados")}`}><span className="inline-progress-count"><Check size={13}/>{doneItems.length}/{items.length}</span><span className="inline-progress-track"><span style={{width:`${shoppingProgress}%`}}/></span></div>}</div>
         {visibleItems.length === 0 ? <div className="empty-state"><span className="empty-illustration">{showDone ? "✨" : "🧺"}</span><h3>{showDone ? t("Ainda não há compras concluídas") : filter === "all" ? t("A lista está vazia") : t("Nada nesta categoria")}</h3><p>{showDone ? t("Quando marcares um artigo como comprado, aparece aqui.") : t("Adiciona o primeiro artigo no campo acima.")}</p></div> : (
           <div className={shoppingMode ? "items-list supermarket-list" : "items-list"}>{(shoppingMode && filter === "all" ? [...visibleItems].sort((a, b) => CATEGORIES.findIndex(cat => cat.id === a.category) - CATEGORIES.findIndex(cat => cat.id === b.category)) : visibleItems).map(item => {
             const cat = CATEGORIES.find(c => c.id === item.category) || CATEGORIES[5];
