@@ -240,10 +240,10 @@ export default function App() {
   const activeItems = useMemo(() => items.filter(i => !i.done), [items]);
   const doneItems = useMemo(() => items.filter(i => i.done), [items]);
   const repeatSuggestions = useMemo(() => {
-    const pendingNames = new Set(activeItems.map(item => item.name.trim().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLocaleLowerCase()));
+    const pendingNames = new Set(activeItems.map(item => item.name.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase()));
     const seen = new Set();
     return doneItems.filter(item => {
-      const key = item.name.trim().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLocaleLowerCase();
+      const key = item.name.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
       if (!key || pendingNames.has(key) || seen.has(key)) return false;
       seen.add(key);
       return true;
