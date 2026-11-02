@@ -1936,3 +1936,31 @@ button { -webkit-tap-highlight-color: transparent; }
   .template-preview-modal { padding: 22px 18px 18px; border-radius: 22px; }
   .template-preview-actions button { padding: 0 10px; font-size: 13px; }
 }
+
+
+.template-preview-items li { min-height: 48px; }
+.template-preview-item-meta { margin-left: auto; }
+.template-preview-remove {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  margin-left: 2px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #9a6a64;
+  cursor: pointer;
+}
+.template-preview-remove:active { background: #fff0ed; border-color: #f0d8d3; }
+.template-preview-remove:disabled { opacity: .4; cursor: wait; }
+.template-preview-empty {
+  margin: 12px 0 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f6f8f4;
+  color: #758078;
+  font-size: 13px;
+  line-height: 1.45;
+}
