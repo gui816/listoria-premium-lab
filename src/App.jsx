@@ -197,6 +197,7 @@ export default function App() {
   const [category, setCategory] = useState("auto");
   const [filter, setFilter] = useState("all");
   const [showDone, setShowDone] = useState(false);
+  const [showPurchasedInline, setShowPurchasedInline] = useState(false);
   const [shoppingMode, setShoppingMode] = useState(false);
   const [showShoppingNudge, setShowShoppingNudge] = useState(true);
   const [itemsSectionVisible, setItemsSectionVisible] = useState(false);
@@ -239,9 +240,9 @@ export default function App() {
   const activeItems = useMemo(() => items.filter(i => !i.done), [items]);
   const doneItems = useMemo(() => items.filter(i => i.done), [items]);
   const visibleItems = useMemo(() => {
-    const source = shoppingMode ? (showDone ? doneItems : activeItems) : (showDone ? items : activeItems);
+    const source = shoppingMode ? activeItems : (showDone ? items : activeItems);
     return source.filter(i => filter === "all" || i.category === filter);
-  }, [items, activeItems, doneItems, filter, showDone, shoppingMode]);
+  }, [items, activeItems, filter, showDone, shoppingMode]);
   const shoppingProgress = items.length ? Math.round((doneItems.length / items.length) * 100) : 0;
   const suggestions = useMemo(() => [...new Map([...items.map(item => item.name), ...itemHistory].map(value => [value.toLocaleLowerCase(), value])).values()].slice(0, 30), [items, itemHistory]);
 
@@ -1035,7 +1036,7 @@ export default function App() {
         {CATEGORIES.map(c => <button key={c.id} className={filter === c.id ? "category-tab active" : "category-tab"} onClick={() => setFilter(c.id)}><span>{c.emoji}</span>{t(c.label)}{c.id === "all" && <span className="tab-count">{activeItems.length}</span>}</button>)}
       </nav>
       <section className={shoppingMode ? "items-section supermarket-items-section" : "items-section"}>
-        <div className="section-heading"><div><h2>{shoppingMode ? (showDone ? t("Comprados") : t("Por comprar")) : showDone ? t("Já comprados") : t("Falta comprar")}</h2><span>{visibleItems.length} {visibleItems.length === 1 ? t("artigo") : t("artigos")}</span></div>{!shoppingMode && <button className="view-toggle" onClick={() => setShowDone(!showDone)}>{showDone ? t("Ver por comprar") : `${t("Ver comprados")} (${doneItems.length})`} <ChevronDown size={15} className={showDone ? "rotate" : ""}/></button>}</div>
+        <div className="section-heading"><div><h2>{shoppingMode ? t("Por comprar") : showDone ? t("Já comprados") : t("Falta comprar")}</h2><span>{visibleItems.length} {visibleItems.length === 1 ? t("artigo") : t("artigos")}</span></div>{!shoppingMode && <button className="view-toggle" onClick={() => setShowDone(!showDone)}>{showDone ? t("Ver por comprar") : `${t("Ver comprados")} (${doneItems.length})`} <ChevronDown size={15} className={showDone ? "rotate" : ""}/></button>}</div>
         {visibleItems.length === 0 ? <div className="empty-state"><span className="empty-illustration">{showDone ? "✨" : "🧺"}</span><h3>{showDone ? t("Ainda não há compras concluídas") : filter === "all" ? t("A lista está vazia") : t("Nada nesta categoria")}</h3><p>{showDone ? t("Quando marcares um artigo como comprado, aparece aqui.") : t("Adiciona o primeiro artigo no campo acima.")}</p></div> : (
           <div className={shoppingMode ? "items-list supermarket-list" : "items-list"}>{(shoppingMode && filter === "all" ? [...visibleItems].sort((a, b) => CATEGORIES.findIndex(cat => cat.id === a.category) - CATEGORIES.findIndex(cat => cat.id === b.category)) : visibleItems).map(item => {
             const cat = CATEGORIES.find(c => c.id === item.category) || CATEGORIES[5];
@@ -1046,6 +1047,20 @@ export default function App() {
             </article>;
           })}</div>
         )}
+        {shoppingMode && doneItems.length > 0 && <section className="supermarket-purchased">
+          <button type="button" className="supermarket-purchased-toggle" aria-expanded={showPurchasedInline} onClick={() => setShowPurchasedInline(value => !value)}>
+            <span><CheckCheck size={17}/><strong>{t("Comprados")} ({doneItems.filter(item => filter === "all" || item.category === filter).length})</strong></span>
+            <ChevronDown size={18} className={showPurchasedInline ? "rotate" : ""}/>
+          </button>
+          {showPurchasedInline && <div className="supermarket-purchased-list">{doneItems.filter(item => filter === "all" || item.category === filter).map(item => {
+            const cat = CATEGORIES.find(c => c.id === item.category) || CATEGORIES[5];
+            return <article className="shopping-item is-done" key={item._id}>
+              <button className="check-button checked" onClick={() => updateItem(item, { done: false })} aria-label={t("Marcar como por comprar")}><Check size={17}/></button>
+              <div className="item-copy"><span className="item-name">{item.name}</span><span className="item-meta"><span>{cat.emoji} {t(cat.label)}</span><span className="meta-dot">·</span><span>{t("Qtd.")} {item.quantity}</span></span></div>
+              <button className="delete-button" onClick={() => deleteItem(item)} aria-label={`${t("Remover")} ${item.name}`}><Trash2 size={17}/></button>
+            </article>;
+          })}</div>}
+        </section>}
         {doneItems.length > 0 && !showDone && !shoppingMode && <button className="clear-done" onClick={clearDone}><CheckCheck size={16}/> {t("Limpar artigos comprados")}</button>}
         {items.length > 0 && !shoppingMode && <button type="button" className="clear-all-items" onClick={clearAllItems}><Trash2 size={16}/> {t("Remover todos os produtos")}</button>}
       </section>
@@ -1055,6 +1070,10 @@ export default function App() {
         <form onSubmit={addItem}>
           {toast === t("Produto adicionado") && <div className="add-inline-feedback" role="status" aria-live="polite"><Check size={15}/><span>{toast}</span></div>}
           <div className="add-main"><button type="submit" className="input-plus add-submit-left" aria-label={t("Adicionar artigo")} disabled={!name.trim()}><Plus size={22}/></button><input list="item-history-suggestions" value={name} onFocus={() => setAddPanelExpanded(true)} onChange={e => setName(e.target.value)} placeholder={t("Adicionar produto…")} aria-label={t("Nome do artigo")} maxLength={100}/><datalist id="item-history-suggestions">{suggestions.map(itemName => <option key={itemName} value={itemName}/>)}</datalist><div className="add-import-tools add-import-tools-inline" aria-label={t("Adicionar por imagem ou voz")}><div className="add-photo-tool"><button type="button" className="add-tool-button add-tool-photo" aria-label={t("Fotografar lista")} title={t("Fotografa uma lista para reconhecer os produtos")} aria-expanded={showPhotoSource} disabled={importBusy} onClick={() => setShowPhotoSource(true)}><Camera size={19}/></button></div><button type="button" className={listening ? "add-tool-button add-tool-voice recording" : "add-tool-button add-tool-voice"} aria-label={listening ? t("A ouvir… toca para parar") : t("Adicionar por voz")} title={t("Dita vários produtos sem escrever")} disabled={importBusy} onClick={startVoiceImport}><Mic size={19}/></button></div></div>
+          {doneItems.length > 0 && !shoppingMode && <details className="repeat-inline-disclosure">
+            <summary><span>{t("Repetir compras")}</span><small>{doneItems.length}</small><ChevronDown size={15}/></summary>
+            <div className="repeat-chips">{[...new Map(doneItems.map(item => [item.name.toLocaleLowerCase(), item.name])).values()].slice(0, 8).map(itemName => <button type="button" className="repeat-chip" key={itemName} onClick={async () => { const added = await repeatItem(itemName); if (added) setAddPanelExpanded(false); }}><Plus size={13}/>{itemName}</button>)}</div>
+          </details>}
           <div className="quick-add-chips" aria-label={t("Sugestões rápidas")}>{(language === "pt-PT" ? ["Leite","Pão","Água"] : language === "en" ? ["Milk","Bread","Water"] : language === "es" ? ["Leche","Pan","Agua"] : language === "fr" ? ["Lait","Pain","Eau"] : language === "de" ? ["Milch","Brot","Wasser"] : language === "it" ? ["Latte","Pane","Acqua"] : language === "nl" ? ["Melk","Brood","Water"] : language === "pl" ? ["Mleko","Chleb","Woda"] : language === "ro" ? ["Lapte","Pâine","Apă"] : ["牛奶","面包","水"]).map(itemName => <button type="button" key={itemName} onClick={async () => { const added = await submitItem(itemName, 1, "auto", true); if (added) setAddPanelExpanded(false); }}><Plus size={13}/>{itemName}</button>)}<button type="button" className="quick-add-other" onClick={() => {setShowOtherProducts(v => !v); setOtherProductSearch("");}}><Plus size={13}/>{t("Outros")}</button></div>
           
           {showOtherProducts && <section className="other-products-panel"><div className="other-products-heading"><div><strong>{t("Escolhe outros produtos")}</strong><small>{t("Toca num produto para o adicionar à lista.")}</small></div><button type="button" aria-label={t("Fechar")} onClick={() => setShowOtherProducts(false)}><X size={18}/></button></div><input className="other-products-search" value={otherProductSearch} onChange={e => setOtherProductSearch(e.target.value)} placeholder={t("Pesquisar produtos…")}/>{(language === "pt-PT" ? [{category:"Carne e peixe",items:["Ovos","Frango","Carne picada","Bifes","Costeletas","Salsichas","Fiambre","Bacon","Peixe","Salmão","Atum","Camarão"]},{category:"Pequeno-almoço e cereais",items:["Cereais","Muesli","Aveia","Granola","Iogurtes","Queijo","Manteiga","Margarina","Compota","Mel"]},{category:"Fruta e legumes",items:["Maçãs","Bananas","Laranjas","Tomates","Batatas","Cebolas","Alface","Cenouras","Brócolos","Abacates"]},{category:"Despensa",items:["Arroz","Massa","Farinha","Açúcar","Sal","Azeite","Óleo","Feijão","Grão","Lentilhas","Tomate em lata","Caldo"]},{category:"Congelados",items:["Legumes congelados","Pizza","Gelado","Batatas fritas congeladas"]},{category:"Casa e higiene",items:["Detergente da roupa","Detergente da loiça","Papel higiénico","Papel de cozinha","Champô","Pasta de dentes"]}] : language === "en" ? [{category:"Meat and fish",items:["Eggs","Chicken","Minced beef","Steak","Pork chops","Sausages","Ham","Bacon","Fish","Salmon","Tuna","Prawns"]},{category:"Breakfast and cereals",items:["Cereal","Muesli","Oats","Granola","Yogurt","Cheese","Butter","Margarine","Jam","Honey"]},{category:"Fruit and vegetables",items:["Apples","Bananas","Oranges","Tomatoes","Potatoes","Onions","Lettuce","Carrots","Broccoli","Avocados"]},{category:"Pantry",items:["Rice","Pasta","Flour","Sugar","Salt","Olive oil","Cooking oil","Beans","Chickpeas","Lentils","Canned tomatoes","Stock cubes"]},{category:"Frozen",items:["Frozen vegetables","Pizza","Ice cream","Frozen chips"]},{category:"Home and personal care",items:["Laundry detergent","Dish soap","Toilet paper","Kitchen roll","Shampoo","Toothpaste"]}] : [{category:t("Carne e peixe"),items:[t("Ovos"),t("Frango"),t("Carne picada"),t("Bifes"),t("Costeletas"),t("Salsichas"),t("Fiambre"),t("Bacon"),t("Peixe"),t("Salmão"),t("Atum"),t("Camarão")]},{category:t("Pequeno-almoço e cereais"),items:[t("Cereais"),t("Muesli"),t("Aveia"),t("Granola"),t("Iogurtes"),t("Queijo"),t("Manteiga"),t("Margarina"),t("Compota"),t("Mel")]},{category:t("Fruta e legumes"),items:[t("Maçãs"),t("Bananas"),t("Laranjas"),t("Tomates"),t("Batatas"),t("Cebolas"),t("Alface"),t("Cenouras"),t("Brócolos"),t("Abacates")]},{category:t("Despensa"),items:[t("Arroz"),t("Massa"),t("Farinha"),t("Açúcar"),t("Sal"),t("Azeite"),t("Óleo"),t("Feijão"),t("Grão"),t("Lentilhas"),t("Tomate em lata"),t("Caldo")]},{category:t("Congelados"),items:[t("Legumes congelados"),t("Pizza"),t("Gelado"),t("Batatas fritas congeladas")]},{category:t("Casa e higiene"),items:[t("Detergente da roupa"),t("Detergente da loiça"),t("Papel higiénico"),t("Papel de cozinha"),t("Champô"),t("Pasta de dentes")]}]).map(group => ({...group, items:group.items.filter(item => item.toLocaleLowerCase().includes(otherProductSearch.toLocaleLowerCase()))})).filter(group => group.items.length > 0).map(group => <div className="other-products-group" key={group.category}><strong>{group.category}</strong><div>{group.items.map(item => <button type="button" key={item} onClick={async () => {const added=await submitItem(item, 1, "auto", true); if(added) { setShowOtherProducts(false); setAddPanelExpanded(false); }}}><Plus size={13}/>{item}</button>)}</div></div>)}</section>}
@@ -1063,10 +1082,7 @@ export default function App() {
           <div className="add-options"><div className="quantity-control"><label htmlFor="quantity">{t("Qtd.")}</label><input id="quantity" type="number" min="1" max="999" value={quantity} onChange={e => setQuantity(e.target.value)}/></div><span className="option-separator"/><label className="category-select-label" htmlFor="category-select">{t("Categoria")}</label><select id="category-select" value={category} onChange={e => setCategory(e.target.value)}><option value="auto">{t("Automática")}</option>{CATEGORIES.filter(c => c.id !== "all").map(c => <option key={c.id} value={c.id}>{c.emoji} {t(c.label)}</option>)}</select></div>
         </form>
       </section>
-      {doneItems.length > 0 && !shoppingMode && <section className="repeat-section" aria-label={t("Repetir compras")}>
-        <div className="repeat-heading">{t("Repetir compras")}</div>
-        <div className="repeat-chips">{[...new Map(doneItems.map(item => [item.name.toLocaleLowerCase(), item.name])).values()].slice(0, 5).map(itemName => <button type="button" className="repeat-chip" key={itemName} onClick={() => repeatItem(itemName)}><Plus size={13}/>{itemName}</button>)}</div>
-      </section>}
+
       {!showOnboarding && !shoppingMode && activeTab === "shopping" && activeItems.length > 0 && showShoppingNudge && !itemsSectionVisible && !addPanelExpanded && <button type="button" className="shopping-list-floating-nudge" onClick={() => document.querySelector(".items-section")?.scrollIntoView({behavior:"smooth",block:"start"})}><span className="shopping-nudge-icon"><ShoppingBasket size={25}/></span><span className="shopping-nudge-copy"><strong>{items.length} {t("produtos na lista")}</strong><small>{t("Desliza para ver")}</small></span><span className="shopping-nudge-divider"/><span className="shopping-nudge-chevron"><ChevronDown size={24}/><ChevronDown size={24}/></span><span className="shopping-nudge-close" aria-label={t("Fechar aviso")} onClick={e => {e.stopPropagation();setShowShoppingNudge(false);}}><X size={17}/></span></button>}
 
       </>}
