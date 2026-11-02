@@ -1007,10 +1007,10 @@ export default function App() {
           <button className="icon-action" onClick={() => setShowShare(true)} aria-label={t("Partilhar")} title={t("Partilhar")}><Share2 size={22}/></button>
         </div>
       </header>
-      <nav className="main-tabs segmented-tabs" aria-label={t("Secções da lista")}>
+      {(!shoppingMode || activeTab === "receipts") && <nav className="main-tabs segmented-tabs" aria-label={t("Secções da lista")}>
         <button type="button" className={activeTab === "shopping" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "shopping"} onClick={() => setActiveTab("shopping")}><ShoppingBasket size={17}/> <span className="tab-label">{t("Compras")}</span></button>
         <button type="button" className={activeTab === "receipts" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "receipts"} onClick={() => setActiveTab("receipts")}><Receipt size={17}/> <span className="tab-label">{t("Faturas")}</span>{receipts.length > 0 && <span className="tab-count">{receipts.length}</span>}</button>
-      </nav>
+      </nav>}
       {activeTab === "shopping" && <>
       <section className="list-header">
         <div className="list-title-line"><div><div className="eyebrow">{t("A LISTA DA CASA")}</div><h1>{displayListName}</h1></div><span className={`sync-status ${connected ? "online" : ""}`} title={connected ? t("Sincronização ativa") : t("A ligar")}>{connected ? <Wifi size={15}/> : <WifiOff size={15}/>}<span>{connected ? t("Sincronizada") : t("A ligar…")}</span></span></div>
