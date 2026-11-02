@@ -201,6 +201,8 @@ export default function App() {
   const [showShoppingNudge, setShowShoppingNudge] = useState(true);
   const [itemsSectionVisible, setItemsSectionVisible] = useState(false);
   const [templates, setTemplates] = useState(() => { try { return JSON.parse(localStorage.getItem("lista-familia-templates") || "[]"); } catch { return []; } });
+  const [templatePreview, setTemplatePreview] = useState(null);
+  const [templateImportBusy, setTemplateImportBusy] = useState(false);
   const [itemHistory, setItemHistory] = useState(() => { try { return JSON.parse(localStorage.getItem("lista-familia-item-history") || "[]"); } catch { return []; } });
   const initialInviteCode = new URLSearchParams(window.location.search).get("join") || "";
   const [joinCode, setJoinCode] = useState(() => (initialInviteCode || localStorage.getItem("lista-familia-code") || "").toUpperCase());
@@ -726,11 +728,22 @@ export default function App() {
   }
 
   async function useTemplate(template) {
-    for (const item of template.items) {
-      const ok = await submitItem(item.name, item.quantity || 1, item.category || "auto");
-      if (!ok) return;
+    setTemplatePreview(template);
+  }
+
+  async function confirmUseTemplate() {
+    if (!templatePreview || templateImportBusy) return;
+    setTemplateImportBusy(true);
+    try {
+      for (const item of templatePreview.items) {
+        const ok = await submitItem(item.name, item.quantity || 1, item.category || "auto");
+        if (!ok) return;
+      }
+      setTemplatePreview(null);
+      notify(t("Lista reutilizada"));
+    } finally {
+      setTemplateImportBusy(false);
     }
-    notify(t("Lista reutilizada"));
   }
 
   async function updateItem(item, changes) {
@@ -1062,6 +1075,24 @@ export default function App() {
         </button>
       </div>}
       </>}
+      {templatePreview && <div className="modal-backdrop template-preview-backdrop" onClick={() => !templateImportBusy && setTemplatePreview(null)}>
+        <section className="template-preview-modal" role="dialog" aria-modal="true" aria-labelledby="template-preview-title" onClick={e => e.stopPropagation()}>
+          <button type="button" className="modal-close" aria-label={t("Fechar")} disabled={templateImportBusy} onClick={() => setTemplatePreview(null)}><X size={20}/></button>
+          <div className="template-preview-icon"><ShoppingBasket size={25}/></div>
+          <span className="eyebrow">{t("LISTA GUARDADA")}</span>
+          <h2 id="template-preview-title">{templatePreview.name}</h2>
+          <p className="template-preview-description">{t("Confirma os produtos que queres adicionar à lista atual.")}</p>
+          <div className="template-preview-count">{templatePreview.items.length} {templatePreview.items.length === 1 ? t("artigo") : t("artigos")}</div>
+          <ul className="template-preview-items">{templatePreview.items.map((item,index) => {
+            const cat = CATEGORIES.find(c => c.id === item.category);
+            return <li key={item.id || index}><span className="template-preview-item-name">{item.name}</span><span className="template-preview-item-meta">{cat?.emoji ? cat.emoji+" " : ""}{item.quantity || 1} ×</span></li>;
+          })}</ul>
+          <div className="template-preview-actions">
+            <button type="button" className="template-preview-cancel" disabled={templateImportBusy} onClick={() => setTemplatePreview(null)}>{t("Cancelar")}</button>
+            <button type="button" className="template-preview-confirm" disabled={templateImportBusy || !templatePreview.items.length} onClick={confirmUseTemplate}>{templateImportBusy ? <><LoaderCircle size={16} className="spin"/>{t("A adicionar…")}</> : <><Plus size={17}/>{t("Adicionar produtos")}</>}</button>
+          </div>
+        </section>
+      </div>}
       {activeTab === "receipts" && <section className="receipts-section">
         <div className="receipts-heading"><div><span className="eyebrow">{t("ARQUIVO PARTILHADO")}</span><h1>{t("Faturas de compras")}</h1><p>{t("Comprovativos acessíveis a todos os membros desta lista.")}</p></div></div>
         {receiptAddMode === "choice" && !receiptExtractBusy && <div className="receipt-start-card">
