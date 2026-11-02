@@ -2339,3 +2339,15 @@ button { -webkit-tap-highlight-color: transparent; }
 @media (min-width: 681px) {
   .shopping-actions-dock { display: contents; }
 }
+
+
+/* Owned, actionable product suggestions (separate from Android/Gboard predictions). */
+.quick-suggestions { padding: 7px 0 9px 51px; }
+.quick-suggestions-heading { margin: 0 0 6px; color: #849083; font-size: 10px; font-weight: 750; letter-spacing: .04em; }
+.quick-suggestions .quick-add-chips { padding: 0; gap: 6px; }
+.quick-suggestions .quick-add-chips button { min-height: 34px; padding: 6px 11px; font-size: 12px; touch-action: manipulation; }
+.quick-suggestions .quick-add-chips button:active { background: #e6f0e4; border-color: #a9c8ac; transform: scale(.98); }
+@media (max-width: 680px) {
+  .floating-add-panel.expanded .quick-suggestions { padding: 6px 0 5px; }
+  .floating-add-panel.expanded .quick-suggestions .quick-add-chips { gap: 6px; }
+}
