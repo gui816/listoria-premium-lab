@@ -2380,3 +2380,17 @@ button { -webkit-tap-highlight-color: transparent; }
   margin-left: auto;
   visibility: visible;
 }
+
+.items-section .section-heading-title {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.items-section .section-heading-title > span {
+  color: #8d9388;
+  font-size: 11px;
+  line-height: 1.2;
+}
