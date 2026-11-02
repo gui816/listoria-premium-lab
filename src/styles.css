@@ -2310,6 +2310,7 @@ button { -webkit-tap-highlight-color: transparent; }
     align-items: stretch;
     gap: 8px;
     max-height: calc(100dvh - 16px - env(safe-area-inset-top, 0px));
+    justify-content: flex-end;
     pointer-events: none;
   }
   .shopping-actions-dock > * { pointer-events: auto; }
@@ -2332,6 +2333,7 @@ button { -webkit-tap-highlight-color: transparent; }
     width: 100%;
     max-width: none;
     max-height: min(68dvh, calc(100dvh - 24px));
+    min-height: 0;
     margin: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
