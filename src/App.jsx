@@ -270,6 +270,28 @@ export default function App() {
     };
   }, [productInputFocused]);
 
+  useEffect(() => {
+    if (!recentlyAddedItemId || !productInputFocused) return undefined;
+    let secondFrame = 0;
+    const frame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => {
+        const addedCard = document.querySelector(
+          `.shopping-item.is-recently-added[data-item-id="${CSS.escape(recentlyAddedItemId)}"]`
+        );
+        if (!addedCard) return;
+        addedCard.scrollIntoView({
+          behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth",
+          block: "center",
+          inline: "nearest"
+        });
+      });
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      if (secondFrame) cancelAnimationFrame(secondFrame);
+    };
+  }, [recentlyAddedItemId, productInputFocused]);
+
   const activeItems = useMemo(() => items.filter(i => !i.done), [items]);
   const doneItems = useMemo(() => items.filter(i => i.done), [items]);
   const repeatSuggestions = useMemo(() => {
@@ -1121,7 +1143,7 @@ export default function App() {
         {visibleItems.length === 0 ? <div className="empty-state"><span className="empty-illustration">{showDone ? "✨" : "🧺"}</span><h3>{showDone ? t("Ainda não há compras concluídas") : filter === "all" ? t("A lista está vazia") : t("Nada nesta categoria")}</h3><p>{showDone ? t("Quando marcares um artigo como comprado, aparece aqui.") : t("Adiciona o primeiro artigo no campo acima.")}</p></div> : (
           <div className={shoppingMode ? "items-list supermarket-list" : "items-list"}>{(shoppingMode && filter === "all" ? [...visibleItems].sort((a, b) => CATEGORIES.findIndex(cat => cat.id === a.category) - CATEGORIES.findIndex(cat => cat.id === b.category)) : visibleItems).map(item => {
             const cat = CATEGORIES.find(c => c.id === item.category) || CATEGORIES[5];
-            return <article className={`shopping-item ${item.done ? "is-done" : ""} ${String(item._id) === recentlyAddedItemId ? "is-recently-added" : ""}`} key={item._id}>
+            return <article data-item-id={String(item._id)} className={`shopping-item ${item.done ? "is-done" : ""} ${String(item._id) === recentlyAddedItemId ? "is-recently-added" : ""}`} key={item._id}>
               <button className={`check-button ${item.done ? "checked" : ""}`} onClick={() => updateItem(item, { done: !item.done })} aria-label={item.done ? t("Marcar como por comprar") : t("Marcar como comprado")}>{item.done && <Check size={17}/>}</button>
               <div className="item-copy"><span className="item-name">{item.name}</span><span className="item-meta"><span>{cat.emoji} {t(cat.label)}</span><span className="meta-dot">·</span><span>{t("Qtd.")} {item.quantity}</span></span></div>
               <button className="delete-button" onClick={() => deleteItem(item)} aria-label={`${t("Remover")} ${item.name}`}><Trash2 size={17}/></button>
