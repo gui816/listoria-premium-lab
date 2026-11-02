@@ -234,6 +234,7 @@ export default function App() {
   const [importError, setImportError] = useState("");
   const [listening, setListening] = useState(false);
   const [voiceModalOpen, setVoiceModalOpen] = useState(false);
+  const productNameInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const imageFileInputRef = useRef(null);
   const imageCameraInputRef = useRef(null);
@@ -783,7 +784,18 @@ export default function App() {
     if (!cleanName) return;
     const qty = Math.max(1, Math.min(999, Number.parseInt(quantity, 10) || 1));
     const added = await submitItem(cleanName, qty, category, true);
-    if (added) { setAddPanelExpanded(false); document.activeElement?.blur?.(); }
+    if (added) {
+      // Keep the rapid-entry flow active: clear the field, retain the composer,
+      // and restore focus so Android keeps the keyboard ready for the next item.
+      setAddPanelExpanded(true);
+      setProductInputFocused(true);
+      setKeyboardOpen(true);
+      requestAnimationFrame(() => {
+        const input = productNameInputRef.current;
+        if (!input) return;
+        input.focus({ preventScroll: true });
+      });
+    }
   }
 
   async function repeatItem(itemName) {
@@ -1139,7 +1151,7 @@ export default function App() {
       <section className={addPanelExpanded ? "add-panel floating-add-panel expanded" : "add-panel floating-add-panel"} hidden={shoppingMode}>
         <form onSubmit={addItem}>
           {toast === t("Produto adicionado") && <div className="add-inline-feedback" role="status" aria-live="polite"><Check size={15}/><span>{toast}</span></div>}
-          <div className="add-main"><button type="submit" className="input-plus add-submit-left" aria-label={t("Adicionar artigo")} disabled={!name.trim()}><Plus size={22}/></button><input list="item-history-suggestions" value={name} onFocus={() => { setAddPanelExpanded(true); setProductInputFocused(true); setKeyboardOpen(true); }} onBlur={() => { setProductInputFocused(false); setKeyboardOpen(false); }} onChange={e => setName(e.target.value)} placeholder={t("Adicionar produto…")} aria-label={t("Nome do artigo")} maxLength={100}/><datalist id="item-history-suggestions">{suggestions.map(itemName => <option key={itemName} value={itemName}/>)}</datalist><div className="add-import-tools add-import-tools-inline" aria-label={t("Adicionar por imagem ou voz")}><div className="add-photo-tool"><button type="button" className="add-tool-button add-tool-photo" aria-label={t("Fotografar lista")} title={t("Fotografa uma lista para reconhecer os produtos")} aria-expanded={showPhotoSource} disabled={importBusy} onClick={() => setShowPhotoSource(true)}><Camera size={19}/></button></div><button type="button" className={listening ? "add-tool-button add-tool-voice recording" : "add-tool-button add-tool-voice"} aria-label={listening ? t("A ouvir… toca para parar") : t("Adicionar por voz")} title={t("Dita vários produtos sem escrever")} disabled={importBusy} onClick={startVoiceImport}><Mic size={19}/></button></div></div>
+          <div className="add-main"><button type="submit" className="input-plus add-submit-left" aria-label={t("Adicionar artigo")} disabled={!name.trim()}><Plus size={22}/></button><input ref={productNameInputRef} list="item-history-suggestions" value={name} onFocus={() => { setAddPanelExpanded(true); setProductInputFocused(true); setKeyboardOpen(true); }} onBlur={e => { if (e.relatedTarget?.type === "submit") return; setProductInputFocused(false); setKeyboardOpen(false); }} onChange={e => setName(e.target.value)} placeholder={t("Adicionar produto…")} aria-label={t("Nome do artigo")} maxLength={100}/><datalist id="item-history-suggestions">{suggestions.map(itemName => <option key={itemName} value={itemName}/>)}</datalist><div className="add-import-tools add-import-tools-inline" aria-label={t("Adicionar por imagem ou voz")}><div className="add-photo-tool"><button type="button" className="add-tool-button add-tool-photo" aria-label={t("Fotografar lista")} title={t("Fotografa uma lista para reconhecer os produtos")} aria-expanded={showPhotoSource} disabled={importBusy} onClick={() => setShowPhotoSource(true)}><Camera size={19}/></button></div><button type="button" className={listening ? "add-tool-button add-tool-voice recording" : "add-tool-button add-tool-voice"} aria-label={listening ? t("A ouvir… toca para parar") : t("Adicionar por voz")} title={t("Dita vários produtos sem escrever")} disabled={importBusy} onClick={startVoiceImport}><Mic size={19}/></button></div></div>
           {repeatSuggestions.length > 0 && !shoppingMode && <details className="repeat-inline-disclosure">
             <summary><span>{t("Repetir compras")}</span><small>{Math.min(repeatSuggestions.length, 4)}</small><ChevronDown size={15}/></summary>
             <div className="repeat-chips">{repeatSuggestions.slice(0, 4).map(item => <button type="button" className="repeat-chip" key={item._id} onClick={async () => { await repeatItem(item.name); setAddPanelExpanded(false); }}><Plus size={13}/>{item.name}</button>)}</div>
