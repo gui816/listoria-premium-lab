@@ -2296,12 +2296,12 @@ button { -webkit-tap-highlight-color: transparent; }
     z-index: 70;
     left: max(12px, calc((100vw - 720px) / 2));
     right: max(12px, calc((100vw - 720px) / 2));
-    bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    bottom: calc(var(--listoria-keyboard-inset, 0px) + max(8px, env(safe-area-inset-bottom, 0px)));
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
-    max-height: calc(100dvh - 16px - env(safe-area-inset-top, 0px));
+    max-height: calc(var(--listoria-visual-viewport-height, 100dvh) - 16px - env(safe-area-inset-top, 0px));
     justify-content: flex-end;
     pointer-events: none;
   }
@@ -2324,7 +2324,7 @@ button { -webkit-tap-highlight-color: transparent; }
     flex: 0 1 auto;
     width: 100%;
     max-width: none;
-    max-height: min(68dvh, calc(100dvh - 24px));
+    max-height: min(68dvh, calc(var(--listoria-visual-viewport-height, 100dvh) - 24px));
     min-height: 0;
     margin: 0;
     overflow-y: auto;
