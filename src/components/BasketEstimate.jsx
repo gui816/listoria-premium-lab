@@ -105,6 +105,17 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
   }, [countryCode]);
 
   useEffect(() => {
+    if (!cacheKey || result) return;
+    try {
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || "null");
+      if (cached?.savedAt && Date.now() - cached.savedAt < CACHE_TTL && cached.data) {
+        setResult(cached.data);
+        setStale(false);
+      }
+    } catch {}
+  }, [cacheKey, result]);
+
+  useEffect(() => {
     if (!items?.length || !result) return;
     try {
       const saved = localStorage.getItem("listora-basket-last-signature");
