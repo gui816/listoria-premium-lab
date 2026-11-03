@@ -78,7 +78,8 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
       const entries = data || [];
       setSupermarkets(entries);
       const saved = localStorage.getItem("listora-supermarkets-" + countryCode);
-      let savedNames = null;\n      try { savedNames = saved ? JSON.parse(saved) : null; } catch { savedNames = null; }
+      let savedNames = null;
+      try { savedNames = saved ? JSON.parse(saved) : null; } catch { savedNames = null; }
       const validSaved = Array.isArray(savedNames)
         ? entries.filter((entry) => savedNames.includes(entry.name)).map((entry) => entry.name)
         : [];
