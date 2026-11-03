@@ -70,3 +70,18 @@ As tabelas não têm acesso direto concedido ao papel `anon`; a app usa funçõe
 - `src/App.jsx`: interface e chamadas RPC.
 - `src/lib/supabase.js`: cliente Supabase.
 - `supabase/migrations/`: schema, funções RPC e permissões.
+
+## Autenticação e contas Listora
+
+A autenticação usa Supabase Auth e mantém o modo de convidado para permitir começar sem registo.
+
+1. Executa primeiro as migrações existentes, incluindo o catálogo internacional, e depois `202611040001_user_accounts.sql`.
+2. Em **Authentication → Sign In / Providers**, ativa **Anonymous Sign-Ins**, **Email** e **Google**. Não é necessário ativar Apple.
+3. No provider Google, configura o Client ID e Client Secret OAuth e adiciona o URL de callback do Supabase às credenciais OAuth da Google.
+4. Em **Authentication → URL Configuration**, define o Site URL e os Redirect URLs usados pela aplicação (produção e desenvolvimento).
+5. Configura SMTP próprio em **Authentication → SMTP Settings** antes de produção, para confirmação de email e recuperação de password.
+6. A tabela `user_profiles` guarda nome, país e idade opcional, com RLS limitada ao próprio utilizador.
+
+A conversão de uma sessão anónima para email/password usa `auth.updateUser`, preservando o mesmo UUID do utilizador. A ligação Google usa `auth.linkIdentity`; confirma que o identity linking está permitido nas definições do projeto Supabase. O login normal usa email/password ou Google OAuth.
+
+**Importante:** esta primeira fase estabelece a identidade e o perfil, mas as listas continuam a ser autorizadas pelo código de partilha existente e o identificador de membro continua associado ao dispositivo. A migração da propriedade das listas para contas e membros autenticados será feita numa fase posterior, com um fluxo explícito para associar listas antigas à conta, sem quebrar os convites atuais.
