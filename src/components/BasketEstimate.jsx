@@ -1,32 +1,50 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase.js";
-import { Sparkles, LoaderCircle, RefreshCw, Globe2, ChevronDown } from "lucide-react";
+import {
+  Sparkles, LoaderCircle, RefreshCw, Globe2, ChevronDown, X, MapPin,
+  ShoppingBasket, ChevronRight, ArrowLeft, Clock3, CheckCircle2
+} from "lucide-react";
 
 const COUNTRY_STORAGE_KEY = "listora-country-code";
-const getInitialCountry = () => {
-  const saved = localStorage.getItem(COUNTRY_STORAGE_KEY);
-  if (saved) return saved.toUpperCase();
-  try {
-    const region = new Intl.Locale(navigator.language || "pt-PT").region;
-    return region || "PT";
-  } catch {
-    return "PT";
-  }
-};
+const CACHE_TTL = 6 * 60 * 60 * 1000;
 const money = (value, locale, currency) =>
   new Intl.NumberFormat(locale || "pt-PT", { style: "currency", currency: currency || "EUR" }).format(value);
 
+const getStoredCountry = () => {
+  try { return localStorage.getItem(COUNTRY_STORAGE_KEY)?.toUpperCase() || ""; }
+  catch { return ""; }
+};
+const normaliseItems = (items = []) => items.map((item) => ({
+  name: String(item.name || "").trim(),
+  quantity: Number(item.quantity) || 1,
+  unit: item.unit || "un"
+})).filter((item) => item.name).sort((a, b) => a.name.localeCompare(b.name));
+
 export default function BasketEstimate({ items, language = "pt-PT" }) {
   const [countries, setCountries] = useState([]);
-  const [countryCode, setCountryCode] = useState(getInitialCountry);
+  const [countryCode, setCountryCode] = useState(getStoredCountry);
+  const [countrySource, setCountrySource] = useState(getStoredCountry() ? "saved" : "unknown");
+  const [locationState, setLocationState] = useState("checking");
+  const [locationMessage, setLocationMessage] = useState("");
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [supermarkets, setSupermarkets] = useState([]);
   const [selected, setSelected] = useState([]);
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
   const [loadingCatalogue, setLoadingCatalogue] = useState(true);
   const [error, setError] = useState("");
+  const [open, setOpen] = useState(false);
+  const [selectedStore, setSelectedStore] = useState(null);
+  const [stale, setStale] = useState(false);
 
   const country = useMemo(() => countries.find((entry) => entry.code === countryCode), [countries, countryCode]);
+  const cleanItems = useMemo(() => normaliseItems(items), [items]);
+  const itemSignature = useMemo(() => JSON.stringify(cleanItems), [cleanItems]);
+  const cacheKey = useMemo(() => {
+    if (!countryCode || !selected.length || !cleanItems.length) return "";
+    return "listora-basket-estimate-v2:" + countryCode + ":" +
+      [...selected].sort().join("|") + ":" + itemSignature;
+  }, [countryCode, selected, itemSignature, cleanItems.length]);
 
   useEffect(() => {
     let active = true;
@@ -36,19 +54,21 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
         setLoadingCatalogue(false);
         return;
       }
-      const { data, error: queryError } = await supabase
-        .from("countries")
+      const { data, error: queryError } = await supabase.from("countries")
         .select("code,name,flag_emoji,currency_code,currency_locale,default_language")
         .order("display_order", { ascending: true });
       if (!active) return;
-      if (queryError) {
-        setError("Não foi possível carregar os países suportados.");
-      } else {
+      if (queryError) setError("Não foi possível carregar os países suportados.");
+      else {
         setCountries(data || []);
-        if (data?.length && !data.some((entry) => entry.code === countryCode)) {
-          const fallback = data.find((entry) => entry.code === "PT") || data[0];
-          setCountryCode(fallback.code);
-          localStorage.setItem(COUNTRY_STORAGE_KEY, fallback.code);
+        const saved = getStoredCountry();
+        if (saved && data?.some((entry) => entry.code === saved)) {
+          setCountryCode(saved);
+          setCountrySource("saved");
+          setLocationState("manual");
+        } else if (!saved) {
+          setCountryCode("");
+          setLocationState("prompt");
         }
       }
       setLoadingCatalogue(false);
@@ -60,14 +80,10 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
   useEffect(() => {
     if (!countryCode || !supabase) return;
     let active = true;
-    setResult(null);
-    setError("");
     const loadSupermarkets = async () => {
-      const { data, error: queryError } = await supabase
-        .from("supermarkets")
+      const { data, error: queryError } = await supabase.from("supermarkets")
         .select("id,name,price_position,website,display_order")
-        .eq("country_code", countryCode)
-        .order("display_order", { ascending: true });
+        .eq("country_code", countryCode).order("display_order", { ascending: true });
       if (!active) return;
       if (queryError) {
         setError("Não foi possível carregar os supermercados deste país.");
@@ -77,9 +93,8 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
       }
       const entries = data || [];
       setSupermarkets(entries);
-      const saved = localStorage.getItem("listora-supermarkets-" + countryCode);
       let savedNames = null;
-      try { savedNames = saved ? JSON.parse(saved) : null; } catch { savedNames = null; }
+      try { savedNames = JSON.parse(localStorage.getItem("listora-supermarkets-" + countryCode) || "null"); } catch {}
       const validSaved = Array.isArray(savedNames)
         ? entries.filter((entry) => savedNames.includes(entry.name)).map((entry) => entry.name)
         : [];
@@ -89,41 +104,111 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
     return () => { active = false; };
   }, [countryCode]);
 
+  useEffect(() => {
+    if (!items?.length || !result) return;
+    try {
+      const saved = localStorage.getItem("listora-basket-last-signature");
+      if (saved && saved !== itemSignature) setStale(true);
+    } catch {}
+  }, [itemSignature, items?.length, result]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event) => { if (event.key === "Escape" && !busy) setOpen(false); };
+    document.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [open, busy]);
+
+  const identifyCountry = async () => {
+    if (!navigator.geolocation) {
+      setLocationState("unavailable");
+      setLocationMessage("Este dispositivo não disponibiliza localização. Escolhe o país manualmente.");
+      setShowCountryPicker(true);
+      return;
+    }
+    setLocationState("locating");
+    setLocationMessage("");
+    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
+      try {
+        const url = new URL("https://api.bigdatacloud.net/data/reverse-geocode-client");
+        url.search = new URLSearchParams({
+          latitude: String(coords.latitude),
+          longitude: String(coords.longitude),
+          localityLanguage: language.startsWith("pt") ? "pt" : "en"
+        }).toString();
+        const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+        if (!response.ok) throw new Error("Não foi possível identificar o país.");
+        const place = await response.json();
+        const code = String(place.countryCode || "").toUpperCase();
+        if (!countries.some((entry) => entry.code === code)) {
+          setLocationState("unsupported");
+          setLocationMessage("Ainda não temos supermercados configurados para o país detetado. Podes escolher outro país.");
+          setShowCountryPicker(true);
+          return;
+        }
+        setCountryCode(code);
+        setCountrySource("location");
+        setLocationState("located");
+        setShowCountryPicker(false);
+        try { localStorage.setItem(COUNTRY_STORAGE_KEY, code); } catch {}
+      } catch {
+        setLocationState("unavailable");
+        setLocationMessage("Não conseguimos identificar o país pela localização. Escolhe-o manualmente.");
+        setShowCountryPicker(true);
+      }
+    }, (geoError) => {
+      setLocationState(geoError.code === 1 ? "denied" : "unavailable");
+      setLocationMessage(geoError.code === 1
+        ? "A localização não está autorizada. Podes ativá-la nas definições ou escolher o país manualmente."
+        : "Não foi possível obter a localização. Escolhe o país manualmente.");
+      setShowCountryPicker(true);
+    }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 60 * 60 * 1000 });
+  };
+
   const changeCountry = (nextCode) => {
     setCountryCode(nextCode);
-    localStorage.setItem(COUNTRY_STORAGE_KEY, nextCode);
+    setCountrySource("manual");
+    setLocationState("manual");
+    setShowCountryPicker(false);
     setResult(null);
+    setSelectedStore(null);
+    setStale(false);
     setError("");
+    try { localStorage.setItem(COUNTRY_STORAGE_KEY, nextCode); } catch {}
   };
 
   const toggleSupermarket = (name) => {
     setSelected((current) => {
       const next = current.includes(name) ? current.filter((entry) => entry !== name) : [...current, name];
-      localStorage.setItem("listora-supermarkets-" + countryCode, JSON.stringify(next));
-      setResult(null);
+      try { localStorage.setItem("listora-supermarkets-" + countryCode, JSON.stringify(next)); } catch {}
       return next;
     });
+    setResult(null);
+    setSelectedStore(null);
   };
 
-  const estimate = async () => {
-    if (!items?.length || busy) return;
-    if (!countryCode) {
-      setError("Seleciona o país para estimar o cabaz.");
-      return;
-    }
-    if (!selected.length) {
-      setError("Seleciona pelo menos um supermercado.");
-      return;
+  const estimate = async (force = false) => {
+    if (!cleanItems.length || busy || !countryCode || !selected.length) return;
+    if (!force && cacheKey) {
+      try {
+        const cached = JSON.parse(localStorage.getItem(cacheKey) || "null");
+        if (cached?.savedAt && Date.now() - cached.savedAt < CACHE_TTL && cached.data) {
+          setResult(cached.data);
+          setStale(false);
+          try { localStorage.setItem("listora-basket-last-signature", itemSignature); } catch {}
+          return;
+        }
+      } catch {}
     }
     setBusy(true);
     setError("");
     try {
       const { data, error: invokeError } = await supabase.functions.invoke("listora-basket-estimate", {
-        body: {
-          items: items.map((item) => ({ name: item.name, quantity: item.quantity || 1, unit: item.unit || "un" })),
-          countryCode,
-          supermarkets: selected
-        }
+        body: { items: cleanItems, countryCode, supermarkets: selected }
       });
       if (invokeError) {
         const detail = await invokeError.context?.json?.().catch(() => null);
@@ -131,6 +216,12 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
       }
       if (data?.error) throw new Error(data.error);
       setResult(data);
+      setSelectedStore(null);
+      setStale(false);
+      try {
+        if (cacheKey) localStorage.setItem(cacheKey, JSON.stringify({ savedAt: Date.now(), data }));
+        localStorage.setItem("listora-basket-last-signature", itemSignature);
+      } catch {}
     } catch (estimateError) {
       setError(estimateError.message || "Não foi possível estimar o cabaz.");
     } finally {
@@ -138,69 +229,125 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
     }
   };
 
+  const openModal = () => {
+    setOpen(true);
+    setError("");
+    if (result && !stale) return;
+    if (cacheKey) {
+      try {
+        const cached = JSON.parse(localStorage.getItem(cacheKey) || "null");
+        if (cached?.savedAt && Date.now() - cached.savedAt < CACHE_TTL && cached.data) {
+          setResult(cached.data);
+          setStale(false);
+          return;
+        }
+      } catch {}
+    }
+  };
+
   const formatMoney = (value) => money(value, country?.currency_locale || language, result?.currency || country?.currency_code || "EUR");
+  const stores = result?.stores || [];
+  const bestStore = stores.filter((store) => store.status === "estimated")
+    .sort((a, b) => a.estimatedTotal - b.estimatedTotal)[0];
+  const updatedAt = result?.generatedAt ? new Date(result.generatedAt) : null;
 
-  return <section className="basket-estimate">
-    <div className="basket-estimate-intro">
-      <span className="basket-estimate-icon"><Sparkles size={18} /></span>
-      <div>
-        <strong>Quanto poderá custar o teu cabaz?</strong>
-        <p>Escolhe o país e os supermercados que costumas utilizar. A estimativa é indicativa.</p>
+  return <>
+    <section className="basket-estimate">
+      <div className="basket-estimate-summary">
+        <span className="basket-estimate-icon"><Sparkles size={18}/></span>
+        <div className="basket-estimate-summary-copy">
+          <strong>Estimativa do cabaz</strong>
+          {bestStore && !stale ? <>
+            <b>{formatMoney(bestStore.estimatedTotal)} <small>· {bestStore.name}</small></b>
+            <span>{cleanItems.length} produtos · {country?.name || result?.country?.name}</span>
+          </> : <span>{cleanItems.length} produtos · Compara o custo estimado por supermercado</span>}
+        </div>
+        <button type="button" className="basket-estimate-open" onClick={openModal}>
+          {bestStore && !stale ? "Ver comparação" : "Comparar preços"} <ChevronRight size={16}/>
+        </button>
       </div>
-    </div>
+      {stale && <p className="basket-estimate-stale-note">A lista foi alterada. Atualiza a estimativa para refletir os produtos atuais.</p>}
+    </section>
 
-    <div className="basket-estimate-country" style={{ display: "grid", gap: 8, margin: "16px 0" }}>
-      <label htmlFor="basket-estimate-country" style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600 }}><Globe2 size={16} /> País</label>
-      <div className="basket-estimate-select-wrap" style={{ position: "relative" }}>
-        <select id="basket-estimate-country" value={countryCode} onChange={(event) => changeCountry(event.target.value)} disabled={loadingCatalogue || busy} style={{ width: "100%", minHeight: 44, padding: "10px 38px 10px 12px", border: "1px solid var(--border, #d1d5db)", borderRadius: 10, background: "var(--surface, #fff)", color: "inherit", font: "inherit", appearance: "none" }}>
-          {countries.map((entry) => <option key={entry.code} value={entry.code}>{entry.flag_emoji} {entry.name}</option>)}
-        </select>
-        <ChevronDown size={16} aria-hidden="true" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-      </div>
-    </div>
+    {open && <div className="basket-estimate-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setOpen(false); }}>
+      <section className="basket-estimate-modal" role="dialog" aria-modal="true" aria-labelledby="basket-estimate-title">
+        <header className="basket-estimate-modal-header">
+          <div><span className="basket-estimate-modal-kicker"><Sparkles size={14}/> COMPARAÇÃO INTELIGENTE</span><h2 id="basket-estimate-title">Quanto poderá custar o teu cabaz?</h2><p>{cleanItems.length} produtos na lista</p></div>
+          <button type="button" className="basket-estimate-modal-close" onClick={() => setOpen(false)} disabled={busy} aria-label="Fechar"><X size={20}/></button>
+        </header>
 
-    <div className="basket-estimate-supermarkets" style={{ margin: "16px 0" }}>
-      <div className="basket-estimate-supermarkets-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <strong>Supermercados</strong>
-        <span>{selected.length} selecionados</span>
-      </div>
-      <div className="basket-estimate-supermarkets-list" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {supermarkets.map((store) => (
-          <label key={store.id} className="basket-estimate-supermarket-option" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 10px", border: "1px solid var(--border, #d1d5db)", borderRadius: 999, fontSize: 13 }}>
-            <input type="checkbox" checked={selected.includes(store.name)} onChange={() => toggleSupermarket(store.name)} disabled={busy} />
-            <span>{store.name}</span>
-          </label>
-        ))}
-      </div>
-    </div>
-
-    {!result && <button type="button" className="basket-estimate-button" onClick={estimate} disabled={busy || loadingCatalogue || !items?.length || !selected.length}>
-      {busy ? <><LoaderCircle className="spin" size={17} /> A estimar o cabaz…</> : <><Sparkles size={17} /> Estimar preço do cabaz</>}
-    </button>}
-
-    {error && <p className="basket-estimate-error" role="alert">{error}</p>}
-
-    {result && <div className="basket-estimate-results">
-      <div className="basket-estimate-results-heading">
-        <strong>Estimativa em {result.country?.name || country?.name}</strong>
-        <button type="button" onClick={() => { setResult(null); setError(""); }} aria-label="Nova estimativa"><RefreshCw size={16} /></button>
-      </div>
-      {result.stores?.map((store, index) => (
-        <article className="basket-estimate-store" key={store.name + index}>
-          <div>
-            <strong>{store.name}</strong>
-            {store.website && <small><a href={store.website} target="_blank" rel="noreferrer">Website oficial</a> · confiança {store.confidence === "high" ? "alta" : store.confidence === "medium" ? "média" : "baixa"}</small>}
-          </div>
-          {store.status === "estimated" ? (
-            <div className="basket-estimate-price">
-              <strong>{formatMoney(store.estimatedTotal)}</strong>
-              <span>{formatMoney(store.estimatedRange.min)} – {formatMoney(store.estimatedRange.max)}</span>
+        <div className="basket-estimate-modal-content">
+          <div className="basket-estimate-location-row">
+            <div className="basket-estimate-location-label"><MapPin size={16}/><span>{country ? country.flag_emoji + " " + country.name : "País por definir"}</span>
+              {countrySource === "location" && <small><CheckCircle2 size={12}/> Detetado pela localização</small>}
             </div>
-          ) : <span className="basket-estimate-unavailable">Dados insuficientes</span>}
-        </article>
-      ))}
-      <p className="basket-estimate-disclaimer">{result.disclaimer}</p>
-      <button type="button" className="basket-estimate-retry" onClick={estimate} disabled={busy}>Atualizar estimativa</button>
+            <button type="button" className="basket-estimate-text-button" onClick={() => setShowCountryPicker((value) => !value)}>
+              {showCountryPicker ? "Cancelar" : "Alterar país"}
+            </button>
+          </div>
+
+          {!countryCode && <div className="basket-estimate-location-prompt">
+            <MapPin size={24}/><strong>Em que país estás a fazer compras?</strong>
+            <p>Podemos identificar o país através da localização do dispositivo.</p>
+            <button type="button" className="basket-estimate-button" onClick={identifyCountry} disabled={locationState === "locating" || loadingCatalogue}>
+              {locationState === "locating" ? <><LoaderCircle className="spin" size={17}/> A identificar…</> : <><MapPin size={17}/> Usar a minha localização</>}
+            </button>
+            <button type="button" className="basket-estimate-text-button" onClick={() => setShowCountryPicker(true)}>Escolher país manualmente</button>
+          </div>}
+
+          {showCountryPicker && <div className="basket-estimate-country-picker">
+            <label htmlFor="basket-estimate-country">Seleciona o país</label>
+            <div><select id="basket-estimate-country" value={countryCode} onChange={(event) => changeCountry(event.target.value)} disabled={loadingCatalogue || busy}>
+              <option value="">Selecionar…</option>
+              {countries.map((entry) => <option key={entry.code} value={entry.code}>{entry.flag_emoji} {entry.name}</option>)}
+            </select><ChevronDown size={16}/></div>
+          </div>}
+          {locationMessage && <p className="basket-estimate-location-message">{locationMessage}</p>}
+
+          {countryCode && <>
+            <div className="basket-estimate-supermarkets">
+              <div className="basket-estimate-section-heading"><strong>Supermercados</strong><span>{selected.length} selecionados</span></div>
+              <div className="basket-estimate-supermarkets-list">
+                {supermarkets.map((store) => <label key={store.id} className={selected.includes(store.name) ? "selected" : ""}>
+                  <input type="checkbox" checked={selected.includes(store.name)} onChange={() => toggleSupermarket(store.name)} disabled={busy}/>
+                  <span>{store.name}</span>
+                </label>)}
+              </div>
+            </div>
+
+            {!result && <button type="button" className="basket-estimate-button" onClick={() => estimate(false)} disabled={busy || loadingCatalogue || !cleanItems.length || !selected.length}>
+              {busy ? <><LoaderCircle className="spin" size={17}/> A estimar o cabaz…</> : <><Sparkles size={17}/> Estimar preço do cabaz</>}
+            </button>}
+
+            {error && <p className="basket-estimate-error" role="alert">{error}</p>}
+
+            {result && <>
+              <div className="basket-estimate-results-heading"><strong>Comparação do cabaz</strong><span>{updatedAt ? <><Clock3 size={12}/> {updatedAt.toLocaleString(language, { dateStyle: "short", timeStyle: "short" })}</> : null}</span></div>
+              {stale && <div className="basket-estimate-stale-banner">A lista mudou desde a última estimativa. Atualiza para comparar os produtos atuais.</div>}
+              <div className="basket-estimate-store-list">
+                {stores.map((store) => <button type="button" className={"basket-estimate-store-card" + (selectedStore?.name === store.name ? " active" : "")} key={store.name} onClick={() => setSelectedStore(store)}>
+                  <span className="basket-estimate-store-main"><strong>{store.name}</strong>{store.name === bestStore?.name && <small>Melhor estimativa</small>}</span>
+                  {store.status === "estimated" ? <span className="basket-estimate-store-total"><b>{formatMoney(store.estimatedTotal)}</b><small>{formatMoney(store.estimatedRange.min)} – {formatMoney(store.estimatedRange.max)}</small></span> : <small>Dados insuficientes</small>}
+                  <ChevronRight size={17}/>
+                </button>)}
+              </div>
+
+              {selectedStore && <div className="basket-estimate-product-detail">
+                <div className="basket-estimate-product-heading"><button type="button" onClick={() => setSelectedStore(null)}><ArrowLeft size={15}/> Comparação</button><strong>{selectedStore.name} · detalhe do cabaz</strong></div>
+                {selectedStore.items?.length ? selectedStore.items.map((product, index) => <div className="basket-estimate-product-row" key={product.name + index}>
+                  <span><strong>{product.name}</strong><small>{product.quantity} × {product.unit}{product.confidence ? " · confiança " + (product.confidence === "high" ? "alta" : product.confidence === "medium" ? "média" : "baixa") : ""}</small></span>
+                  <b>{formatMoney(product.estimatedSubtotal)}</b>
+                </div>) : <p className="basket-estimate-product-empty">O serviço ainda não devolveu detalhe por produto para esta estimativa. Atualiza para obter uma decomposição detalhada.</p>}
+                {selectedStore.items?.length > 0 && <div className="basket-estimate-product-total"><span>Total estimado</span><strong>{formatMoney(selectedStore.estimatedTotal)}</strong></div>}
+              </div>}
+              <p className="basket-estimate-disclaimer">{result.disclaimer}</p>
+              <button type="button" className="basket-estimate-retry" onClick={() => estimate(true)} disabled={busy}>
+                {busy ? <LoaderCircle className="spin" size={15}/> : <RefreshCw size={15}/>} Atualizar estimativa
+              </button>
+            </>}
+          </>}
+        </div>
+      </section>
     </div>}
-  </section>;
+  </>;
 }
