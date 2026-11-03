@@ -109,10 +109,26 @@ serve(async (req) => {
                       rangeMin: { type: "NUMBER" },
                       rangeMax: { type: "NUMBER" },
                       confidence: { type: "STRING", enum: ["low", "medium", "high"] },
-                      notes: { type: "STRING" }
+                      notes: { type: "STRING" },
+                      items: {
+                        type: "ARRAY",
+                        items: {
+                          type: "OBJECT",
+                          properties: {
+                            name: { type: "STRING" },
+                            quantity: { type: "NUMBER" },
+                            unit: { type: "STRING" },
+                            estimatedUnitPrice: { type: "NUMBER" },
+                            estimatedSubtotal: { type: "NUMBER" },
+                            confidence: { type: "STRING", enum: ["low", "medium", "high"] }
+                          },
+                          required: ["name", "quantity", "unit", "estimatedUnitPrice", "estimatedSubtotal", "confidence"],
+                          propertyOrdering: ["name", "quantity", "unit", "estimatedUnitPrice", "estimatedSubtotal", "confidence"]
+                        }
+                      }
                     },
                     required: ["name", "status", "confidence"],
-                    propertyOrdering: ["name", "status", "estimatedTotal", "rangeMin", "rangeMax", "confidence", "notes"]
+                    propertyOrdering: ["name", "status", "estimatedTotal", "rangeMin", "rangeMax", "confidence", "notes", "items"]
                   }
                 }
               },
