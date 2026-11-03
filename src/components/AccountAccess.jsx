@@ -92,7 +92,16 @@ export default function AccountAccess({ language = "pt-PT" }) {
     finally { setBusy(false); }
   }
 
-  async function resetPassword() {\n    resetMessages();\n    if (!email.trim()) { setError(isEnglish ? "Enter your email first." : "Indica primeiro o teu email."); return; }\n    setBusy(true);\n    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin });\n    if (resetError) setError(resetError.message); else setMessage(copy.resetSent);\n    setBusy(false);\n  }\n\n  async function googleAuth() {
+  async function resetPassword() {
+    resetMessages();
+    if (!email.trim()) { setError(isEnglish ? "Enter your email first." : "Indica primeiro o teu email."); return; }
+    setBusy(true);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin });
+    if (resetError) setError(resetError.message); else setMessage(copy.resetSent);
+    setBusy(false);
+  }
+
+  async function googleAuth() {
     resetMessages(); setBusy(true);
     try {
       const options = { redirectTo: window.location.href };
@@ -137,7 +146,8 @@ export default function AccountAccess({ language = "pt-PT" }) {
             <label>{copy.email}<input type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required/></label>
             <label>{copy.password}<input type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === "create" ? "new-password" : "current-password"} minLength={8} required/></label>
             {mode === "create" && <label>{copy.confirm}<input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} autoComplete="new-password" minLength={8} required/></label>}
-            <button type="submit" className="account-primary-button" disabled={busy}>{busy ? <LoaderCircle size={16} className="spin"/> : <Mail size={16}/>} {mode === "create" ? copy.save : copy.signIn}</button>\n            {mode === "signIn" && <button type="button" className="account-mode-toggle" onClick={resetPassword} disabled={busy}>{copy.forgot}</button>}
+            <button type="submit" className="account-primary-button" disabled={busy}>{busy ? <LoaderCircle size={16} className="spin"/> : <Mail size={16}/>} {mode === "create" ? copy.save : copy.signIn}</button>
+            {mode === "signIn" && <button type="button" className="account-mode-toggle" onClick={resetPassword} disabled={busy}>{copy.forgot}</button>}
           </form>
           <button type="button" className="account-mode-toggle" onClick={() => { setMode(mode === "create" ? "signIn" : "create"); resetMessages(); }}>{mode === "create" ? copy.existing : copy.new}</button>
         </>}
