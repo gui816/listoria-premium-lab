@@ -169,7 +169,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
     }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 60 * 60 * 1000 });
   };
 
-  useEffect(() => {\n    if (!countries.length || permissionCheckDone.current || countrySource !== "location") return;\n    permissionCheckDone.current = true;\n    if (!navigator.permissions?.query) return;\n    navigator.permissions.query({ name: "geolocation" }).then((permission) => {\n      if (permission.state === "granted") identifyCountry();\n    }).catch(() => {});\n  }, [countries.length, countrySource]);\n\n  const changeCountry = (nextCode) => {
+  useEffect(() => {\n    if (!countries.length || permissionCheckDone.current || countrySource === "manual" || countrySource === "saved") return;\n    permissionCheckDone.current = true;\n    if (!navigator.permissions?.query) return;\n    navigator.permissions.query({ name: "geolocation" }).then((permission) => {\n      if (permission.state === "granted") identifyCountry();\n    }).catch(() => {});\n  }, [countries.length, countrySource]);\n\n  const changeCountry = (nextCode) => {
     setCountryCode(nextCode);
     setCountrySource("manual");
     setLocationState("manual");
