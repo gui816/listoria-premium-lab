@@ -2698,3 +2698,10 @@ button { -webkit-tap-highlight-color: transparent; }
     flex:0 0 auto;
   }
 }
+
+
+/* Product matching transparency in the basket estimate detail. */
+.basket-estimate-matched-product{color:var(--green-dark)!important;font-weight:650}
+.basket-estimate-no-price{color:#9a6a32!important;font-size:11px!important;white-space:nowrap}
+.basket-estimate-product-row>span{flex:1;min-width:0}
+.basket-estimate-product-row>span small{line-height:1.45}
