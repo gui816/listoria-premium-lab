@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { createPortal } from "react-dom";
 import BasketEstimate from "./components/BasketEstimate.jsx";
+import AccountAccess from "./components/AccountAccess.jsx";
 import { supabase, isSupabaseConfigured } from "./lib/supabase.js";
 import {
   ArrowRight, ArrowLeft, Sparkles, Check, CheckCheck, ChevronDown, CircleHelp, Clipboard, Copy, Share2, Download, Repeat2, List,
@@ -150,6 +151,22 @@ function getDeviceId() { let id = localStorage.getItem("listora-device-id"); if 
 
 
 export default function App() {
+  const [authSession, setAuthSession] = useState(null);
+  useEffect(() => {
+    if (!supabase) return undefined;
+    let active = true;
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!active) return;
+      if (data.session) { setAuthSession(data.session); return; }
+      const { data: anonymousData, error: anonymousError } = await supabase.auth.signInAnonymously();
+      if (!anonymousError && active) setAuthSession(anonymousData.session);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (active) setAuthSession(session);
+    });
+    return () => { active = false; listener.subscription.unsubscribe(); };
+  }, []);
+
   const [language, setLanguage] = useState(() => {
     const saved = localStorage.getItem("lista-familia-language");
     if (saved && LANGUAGE_OPTIONS.some(([code]) => code === saved)) return saved;
@@ -1095,7 +1112,7 @@ export default function App() {
   if (!listCode || !list || !memberName) return (
     <main className="welcome-page">
       <div className="welcome-glow glow-one" /><div className="welcome-glow glow-two" />
-      <header className="welcome-top"><button type="button" className="welcome-home-brand" onClick={closeDiscover} aria-label={t("Voltar à página inicial")}><span className="brand-mark"><ShoppingBasket size={23}/></span><span>List<span className="brand-light">ora</span></span></button><div className="welcome-top-actions"><button type="button" className="discover-share-link" onClick={shareLandingPage}><Share2 size={15}/>{t("Partilhar com família e amigos")}</button><LanguagePicker language={language} onChange={setLanguage}/></div></header>
+      <header className="welcome-top"><button type="button" className="welcome-home-brand" onClick={closeDiscover} aria-label={t("Voltar à página inicial")}><span className="brand-mark"><ShoppingBasket size={23}/></span><span>List<span className="brand-light">ora</span></span></button><div className="welcome-top-actions"><AccountAccess language={language} /><button type="button" className="discover-share-link" onClick={shareLandingPage}><Share2 size={15}/>{t("Partilhar com família e amigos")}</button><LanguagePicker language={language} onChange={setLanguage}/></div></header>
       {showDiscover ? <section className="discover-content">
         <button type="button" className="discover-back" onClick={closeDiscover}><ArrowLeft size={17}/>{t("Voltar à página inicial")}</button>
         <div className="eyebrow"><Sparkles size={15}/>{t("CONHECE A LISTORA")}</div>
@@ -1150,6 +1167,7 @@ export default function App() {
           <div className="refined-brand-copy"><span className="brand-name">Listora</span><button type="button" className="list-name-inline" aria-expanded={showListMenu} onClick={() => setShowListMenu(v => !v)}>{displayListName}<ChevronDown size={15}/></button>{showListMenu && <div className="list-switch-menu"><strong>{t("Lista atual")}</strong><button type="button" onClick={() => {setShowListMenu(false); startGuidedTour();}}><CircleHelp size={16}/>{t("Visita guiada")}</button><button type="button" onClick={() => {setShowListMenu(false); setShowShare(true);}}><Share2 size={16}/>{t("Partilhar lista")}</button><button type="button" onClick={() => {setShowListMenu(false); leaveCurrentList();}}><LogOut size={16}/>{t("Sair da lista")}</button><button type="button" onClick={() => {setShowListMenu(false); leaveCurrentList();}}><Plus size={16}/>{t("Sair e criar nova lista")}</button></div>}</div>
         </div>
         <div className="topbar-actions">
+          <AccountAccess language={language} />
           <LanguagePicker language={language} onChange={setLanguage} />
           <button className="icon-action" onClick={() => setShowShare(true)} aria-label={t("Partilhar")} title={t("Partilhar")}><Share2 size={22}/></button>
         </div>
