@@ -71,7 +71,7 @@ values
 ('SK','Eslováquia','🇸🇰','EUR','sk-SK','sk',20),
 ('HU','Hungria','🇭🇺','HUF','hu-HU','hu',21),
 ('RO','Roménia','🇷🇴','RON','ro-RO','ro',22),
-('BG','Bulgária','🇧🇬','BGN','bg-BG','bg',23),
+('BG','Bulgária','🇧🇬','EUR','bg-BG','bg',23),
 ('GR','Grécia','🇬🇷','EUR','el-GR','el',24),
 ('HR','Croácia','🇭🇷','EUR','hr-HR','hr',25),
 ('SI','Eslovénia','🇸🇮','EUR','sl-SI','sl',26),
