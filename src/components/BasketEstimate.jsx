@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase.js";
 import {
   Sparkles, LoaderCircle, RefreshCw, Globe2, ChevronDown, X, MapPin,
@@ -23,7 +23,7 @@ const normaliseItems = (items = []) => items.map((item) => ({
 export default function BasketEstimate({ items, language = "pt-PT" }) {
   const [countries, setCountries] = useState([]);
   const [countryCode, setCountryCode] = useState(getStoredCountry);
-  const [countrySource, setCountrySource] = useState(getStoredCountry() ? "saved" : "unknown");
+  const [countrySource, setCountrySource] = useState(getStoredCountry() ? getStoredSource() : "unknown");\n  const permissionCheckDone = useRef(false);
   const [locationState, setLocationState] = useState("checking");
   const [locationMessage, setLocationMessage] = useState("");
   const [showCountryPicker, setShowCountryPicker] = useState(false);
@@ -169,7 +169,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
     }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 60 * 60 * 1000 });
   };
 
-  const changeCountry = (nextCode) => {
+  useEffect(() => {\n    if (!countries.length || permissionCheckDone.current || countrySource !== "location") return;\n    permissionCheckDone.current = true;\n    if (!navigator.permissions?.query) return;\n    navigator.permissions.query({ name: "geolocation" }).then((permission) => {\n      if (permission.state === "granted") identifyCountry();\n    }).catch(() => {});\n  }, [countries.length, countrySource]);\n\n  const changeCountry = (nextCode) => {
     setCountryCode(nextCode);
     setCountrySource("manual");
     setLocationState("manual");
