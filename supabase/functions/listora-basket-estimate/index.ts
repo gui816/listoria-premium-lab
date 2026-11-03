@@ -71,17 +71,31 @@ serve(async (req) => {
     const stores = (selected.length ? selected : catalogue.slice(0, 5)).slice(0, 12);
     const currency = country.currency_code;
     const prompt = [
-      "You are estimating a grocery basket for the specified country. You do NOT have live catalogue or store prices.",
-      "Estimate typical basket totals using general market knowledge, the country's currency, local product sizes and the supplied store positioning.",
-      "Do not claim prices were checked, do not invent promotions, and do not guarantee savings. If you cannot estimate responsibly, set status to insufficient_data.",
-      "Return one result for each supplied supermarket, in the exact currency provided. Keep min <= total <= max. Confidence must be low, medium or high. For every supermarket, also return an itemized estimate for EVERY basket item, preserving its name, quantity and unit. Each item must include estimatedUnitPrice and estimatedSubtotal in the selected currency, plus confidence. The sum of item subtotals should approximately match estimatedTotal.",
+      "You are a careful grocery product matcher and basket price ESTIMATOR for the specified country and supermarket.",
+      "IMPORTANT LIMITATION: You do not have live web browsing or live supermarket catalogue access in this function. Use your product and market knowledge to identify the closest plausible retail product, but NEVER claim that you searched a website, verified current stock, or checked a live catalogue. All prices you provide are estimates, not confirmed shelf or online prices.",
+      "",
+      "PRODUCT MATCHING - follow this order independently for EVERY basket item and EVERY supermarket:",
+      "1. EXACT MATCH: same brand, product name/line, variant, relevant attributes and package size.",
+      "2. SAME BRAND VARIANT: same brand and product family, closest available variant or package size.",
+      "3. EQUIVALENT OTHER BRAND: only if no credible same-brand match exists; choose the closest product with the same product type, variant, quality tier and use.",
+      "4. NO RELIABLE MATCH: if you cannot identify a credible equivalent, use no_reliable_match and do not invent a product or price.",
+      "Never jump to a competing brand when an exact or credible same-brand match is plausible. Never substitute a different product category. Do not silently treat a different size as the same pack: report its actual package size and normalize the price by kg, litre or unit where possible.",
+      "Brand, variety, fat percentage, dietary type, origin, preparation, freshness/frozen status and pack size are meaningful attributes when present in the requested name. Preserve them in matching.",
+      "Do not assume the same product or price exists in every supermarket. Match each supermarket separately. Store price positioning may inform a cautious estimate, but must never override product equivalence.",
+      "",
+      "PRICE ESTIMATION:",
+      "Estimate a plausible current typical price for the matched product in the specified country and supermarket. Do not invent promotions, loyalty discounts, availability, exact catalogue references or URLs. If price cannot be estimated responsibly, use null prices and no_reliable_match. Confidence must reflect uncertainty, not optimism.",
+      "Return one result for each supplied supermarket. Include every requested basket item exactly once and preserve requestedName, quantity and unit. For matched products return matchedProductName, brand when identifiable, packageSize, normalizedUnit (kg, L or un), matchType, matchConfidence, matchingNotes, estimatedUnitPrice and estimatedSubtotal. estimatedSubtotal is the total for the requested quantity. Use matchType exact_match, same_brand_variant, equivalent_other_brand or no_reliable_match. Use low, medium or high for confidence fields.",
+      "If ANY basket item has no reliable match or no responsible price estimate, set the supermarket status to insufficient_data and do not provide a misleading complete basket total. Still return the item-level matching results for transparency. Only use status estimated when every requested item has a credible match and price.",
+      "For status estimated, the sum of item estimatedSubtotal values must approximately equal estimatedTotal. Keep rangeMin <= estimatedTotal <= rangeMax. Use the exact currency supplied.",
+      "",
       "Country: " + country.name + " (" + country.code + "). Currency: " + currency + ". Language: " + country.default_language + ".",
-      "Basket: " + JSON.stringify(basket),
+      "Basket (user's exact requested products): " + JSON.stringify(basket),
       "Selected supermarkets: " + JSON.stringify(stores.map((store: any) => ({
         name: store.name,
         pricePosition: store.price_position
       }))),
-      "Return JSON: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes,items:[{name,quantity,unit,estimatedUnitPrice,estimatedSubtotal,confidence}]}]}."
+      "Return valid JSON only, using this schema: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes,items:[{requestedName,matchedProductName,brand,packageSize,normalizedUnit,matchType,matchConfidence,matchingNotes,quantity,unit,estimatedUnitPrice,estimatedSubtotal,confidence}]}]}. Use null for unavailable numeric prices and omit no requested items."
     ].join("\n");
 
     const ai = await fetch(
@@ -112,14 +126,61 @@ serve(async (req) => {
       const name = String(estimate?.name || "").trim();
       const store = known.get(name.toLocaleLowerCase());
       if (!store) return null;
-      if (estimate.status === "insufficient_data") {
-        return { name: store.name, website: store.website, status: "insufficient_data", confidence: "low" };
+
+      const itemResults = basket.map((item: any) => {
+        const matched = Array.isArray(estimate.items)
+          ? estimate.items.find((entry: any) =>
+              String(entry?.requestedName || entry?.name || "").trim().toLocaleLowerCase() === item.name.toLocaleLowerCase()
+            )
+          : null;
+        const matchTypes = ["exact_match", "same_brand_variant", "equivalent_other_brand", "no_reliable_match"];
+        const matchType = matchTypes.includes(matched?.matchType) ? matched.matchType : "no_reliable_match";
+        const unitPrice = Number(matched?.estimatedUnitPrice);
+        const subtotal = Number(matched?.estimatedSubtotal);
+        const validPrice = matchType !== "no_reliable_match" &&
+          Number.isFinite(unitPrice) && unitPrice > 0 &&
+          Number.isFinite(subtotal) && subtotal > 0;
+        const validMatch = validPrice && String(matched?.matchedProductName || "").trim().length > 0;
+        return {
+          name: item.name,
+          quantity: item.quantity,
+          unit: item.unit,
+          matchedProductName: validMatch ? String(matched.matchedProductName).trim().slice(0, 140) : null,
+          brand: validMatch && matched.brand ? String(matched.brand).trim().slice(0, 70) : null,
+          packageSize: validMatch && matched.packageSize ? String(matched.packageSize).trim().slice(0, 50) : null,
+          normalizedUnit: validMatch && ["kg", "L", "un"].includes(matched.normalizedUnit) ? matched.normalizedUnit : null,
+          matchType: validMatch ? matchType : "no_reliable_match",
+          matchConfidence: validMatch && ["low", "medium", "high"].includes(matched.matchConfidence)
+            ? matched.matchConfidence : "low",
+          matchingNotes: String(matched?.matchingNotes || "").slice(0, 180),
+          estimatedUnitPrice: validMatch ? round(unitPrice) : null,
+          estimatedSubtotal: validMatch ? round(subtotal) : null,
+          confidence: validMatch && ["low", "medium", "high"].includes(matched.confidence) ? matched.confidence : "low"
+        };
+      });
+
+      const hasCompleteMatches = itemResults.length === basket.length &&
+        itemResults.every((item: any) => item.matchType !== "no_reliable_match" &&
+          Number.isFinite(item.estimatedSubtotal));
+      if (!hasCompleteMatches || estimate.status === "insufficient_data") {
+        return {
+          name: store.name,
+          website: store.website,
+          status: "insufficient_data",
+          confidence: "low",
+          notes: String(estimate.notes || "Não foi possível identificar todos os produtos com confiança suficiente.").slice(0, 180),
+          items: itemResults
+        };
       }
+
       const total = Number(estimate.estimatedTotal);
       const min = Number(estimate.rangeMin);
       const max = Number(estimate.rangeMax);
       if (![total, min, max].every(Number.isFinite) || min <= 0 || min > total || total > max || max > 100000000) {
-        return { name: store.name, website: store.website, status: "insufficient_data", confidence: "low" };
+        return {
+          name: store.name, website: store.website, status: "insufficient_data", confidence: "low",
+          notes: "A estimativa total devolvida não é consistente.", items: itemResults
+        };
       }
       return {
         name: store.name,
@@ -129,22 +190,7 @@ serve(async (req) => {
         estimatedRange: { min: round(min), max: round(max) },
         confidence: ["low", "medium", "high"].includes(estimate.confidence) ? estimate.confidence : "low",
         notes: String(estimate.notes || "").slice(0, 180),
-        items: basket.map((item: any) => {
-          const matched = Array.isArray(estimate.items)
-            ? estimate.items.find((entry: any) => String(entry?.name || "").trim().toLocaleLowerCase() === item.name.toLocaleLowerCase())
-            : null;
-          const unitPrice = Number(matched?.estimatedUnitPrice);
-          const subtotal = Number(matched?.estimatedSubtotal);
-          const valid = Number.isFinite(unitPrice) && unitPrice >= 0 && Number.isFinite(subtotal) && subtotal >= 0;
-          return {
-            name: item.name,
-            quantity: item.quantity,
-            unit: item.unit,
-            estimatedUnitPrice: valid ? round(unitPrice) : null,
-            estimatedSubtotal: valid ? round(subtotal) : null,
-            confidence: ["low", "medium", "high"].includes(matched?.confidence) ? matched.confidence : "low"
-          };
-        })
+        items: itemResults
       };
     }).filter(Boolean);
 
