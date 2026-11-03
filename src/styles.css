@@ -2630,3 +2630,71 @@ button { -webkit-tap-highlight-color: transparent; }
   }
   .other-products-modal-backdrop .other-products-search{top:64px;}
 }
+
+
+/* Desktop: keep the product composer as a slim one-line floating bar.
+   Reveal secondary controls only when the user actively expands the composer. */
+@media (min-width:681px) {
+  .shopping-actions-dock {
+    width:min(960px,calc(100vw - 64px));
+    gap:8px;
+  }
+  .shopping-actions-dock > .add-panel.floating-add-panel {
+    padding:5px 12px;
+    max-height:none;
+    overflow:visible;
+    border-radius:16px;
+  }
+  .shopping-actions-dock > .add-panel.floating-add-panel .add-main {
+    min-height:42px;
+    gap:9px;
+  }
+  .shopping-actions-dock > .add-panel.floating-add-panel .add-main input {
+    padding:7px 0;
+    font-size:14px;
+  }
+  .shopping-actions-dock > .add-panel.floating-add-panel .add-main > .input-plus {
+    width:34px;
+    height:34px;
+    flex:0 0 34px;
+  }
+  .shopping-actions-dock > .add-panel.floating-add-panel .repeat-inline-disclosure,
+  .shopping-actions-dock > .add-panel.floating-add-panel .quick-suggestions,
+  .shopping-actions-dock > .add-panel.floating-add-panel .add-options,
+  .shopping-actions-dock > .add-panel.floating-add-panel .ai-import-status,
+  .shopping-actions-dock > .add-panel.floating-add-panel .add-inline-feedback {
+    display:none;
+  }
+  .shopping-actions-dock > .add-panel.floating-add-panel.expanded {
+    max-height:min(42vh,360px);
+    overflow-y:auto;
+    padding:9px 13px 7px;
+  }
+  .shopping-actions-dock > .add-panel.floating-add-panel.expanded .repeat-inline-disclosure,
+  .shopping-actions-dock > .add-panel.floating-add-panel.expanded .quick-suggestions,
+  .shopping-actions-dock > .add-panel.floating-add-panel.expanded .add-options {
+    display:block;
+  }
+  .shopping-actions-dock > .add-panel.floating-add-panel.expanded .add-options {
+    display:flex;
+  }
+
+  /* The saved-list row is a single full-width line: saved lists left, save action right. */
+  .list-tools {
+    display:block;
+  }
+  .list-tools-saved {
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .list-tools-saved .saved-lists-disclosure {
+    flex:1 1 auto;
+    width:auto;
+  }
+  .list-tools-saved .save-template-button {
+    margin-left:auto;
+    flex:0 0 auto;
+  }
+}
