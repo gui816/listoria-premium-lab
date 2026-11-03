@@ -2495,3 +2495,56 @@ button { -webkit-tap-highlight-color: transparent; }
  .basket-estimate-modal-header h2{font-size:19px}
  .basket-estimate-modal-content{padding:15px 18px calc(22px + env(safe-area-inset-bottom))}
 }
+
+
+/* Explain how product naming quality affects AI estimate accuracy. */
+.basket-estimate-quality-hint{
+  max-width:540px;
+  margin:7px 0 0 !important;
+  padding:8px 10px;
+  border-left:3px solid #a8c7a3;
+  border-radius:0 8px 8px 0;
+  background:#f5f8f1;
+  color:#697765 !important;
+  font-size:11px !important;
+  line-height:1.45 !important;
+}
+
+/* Keep the add-product composer and supermarket action floating on desktop too. */
+@media (min-width:681px) {
+  .shopping-actions-dock {
+    position:fixed;
+    z-index:70;
+    left:50%;
+    bottom:22px;
+    transform:translateX(-50%);
+    width:min(760px,calc(100vw - 48px));
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:9px;
+    pointer-events:none;
+  }
+  .shopping-actions-dock > * { pointer-events:auto; }
+  .shopping-actions-dock > .shopping-mode-fab {
+    position:relative;
+    align-self:flex-end;
+    margin:0 0 0 auto;
+    min-height:44px;
+    z-index:1;
+  }
+  .shopping-actions-dock > .add-panel.floating-add-panel {
+    position:relative;
+    width:100%;
+    max-width:none;
+    margin:0;
+    max-height:min(42vh,360px);
+    overflow-y:auto;
+    box-shadow:0 12px 36px rgba(31,55,38,.16),0 3px 10px rgba(31,55,38,.07);
+    border:1.5px solid #bdd8c2;
+    border-radius:20px;
+    background:rgba(255,254,250,.97);
+    backdrop-filter:blur(12px);
+  }
+  .app-shell { padding-bottom:190px; }
+}
