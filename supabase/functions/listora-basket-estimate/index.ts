@@ -173,21 +173,26 @@ serve(async (req) => {
         };
       }
 
-      const total = Number(estimate.estimatedTotal);
+      const modelTotal = Number(estimate.estimatedTotal);
       const min = Number(estimate.rangeMin);
       const max = Number(estimate.rangeMax);
-      if (![total, min, max].every(Number.isFinite) || min <= 0 || min > total || total > max || max > 100000000) {
+      const itemizedTotal = round(itemResults.reduce((sum: number, item: any) => sum + item.estimatedSubtotal, 0));
+      if (![modelTotal, min, max, itemizedTotal].every(Number.isFinite) ||
+          modelTotal <= 0 || itemizedTotal <= 0 || min <= 0 || max > 100000000 ||
+          min > max || Math.abs(modelTotal - itemizedTotal) > Math.max(0.5, itemizedTotal * 0.15)) {
         return {
           name: store.name, website: store.website, status: "insufficient_data", confidence: "low",
-          notes: "A estimativa total devolvida não é consistente.", items: itemResults
+          notes: "Os preços por produto e o total do cabaz não são suficientemente consistentes.", items: itemResults
         };
       }
+      // Derive the displayed total from the itemized prices so the breakdown always adds up.
+      const total = itemizedTotal;
       return {
         name: store.name,
         website: store.website,
         status: "estimated",
-        estimatedTotal: round(total),
-        estimatedRange: { min: round(min), max: round(max) },
+        estimatedTotal: total,
+        estimatedRange: { min: round(Math.min(min, total)), max: round(Math.max(max, total)) },
         confidence: ["low", "medium", "high"].includes(estimate.confidence) ? estimate.confidence : "low",
         notes: String(estimate.notes || "").slice(0, 180),
         items: itemResults
