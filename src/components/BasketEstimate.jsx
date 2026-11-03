@@ -47,7 +47,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
   const itemSignature = useMemo(() => JSON.stringify(cleanItems), [cleanItems]);
   const cacheKey = useMemo(() => {
     if (!countryCode || !selected.length || !cleanItems.length) return "";
-    return "listora-basket-estimate-v3:" + countryCode + ":
+    return "listora-basket-estimate-v4:" + countryCode + ":
       [...selected].sort().join("|") + ":" + itemSignature;
   }, [countryCode, selected, itemSignature, cleanItems.length]);
 
@@ -297,7 +297,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
     {open && <div className="basket-estimate-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setOpen(false); }}>
       <section className="basket-estimate-modal" role="dialog" aria-modal="true" aria-labelledby="basket-estimate-title">
         <header className="basket-estimate-modal-header">
-          <div><span className="basket-estimate-modal-kicker"><Sparkles size={14}/> COMPARAÇÃO INTELIGENTE</span><h2 id="basket-estimate-title">Quanto poderá custar o teu cabaz?</h2><p>{cleanItems.length} produtos na lista</p><p className="basket-estimate-quality-hint">A IA procura primeiro o produto exato, depois alternativas da mesma marca e só depois equivalentes de outras marcas. Os preços continuam a ser estimativas, não preços de catálogo verificados.</p></div>
+          <div><span className="basket-estimate-modal-kicker"><Sparkles size={14}/> COMPARAÇÃO INTELIGENTE</span><h2 id="basket-estimate-title">Quanto poderá custar o teu cabaz?</h2><p>{cleanItems.length} produtos na lista</p><p className="basket-estimate-quality-hint">A IA pesquisa na Web os produtos e preços disponíveis, procurando primeiro correspondências exatas e depois alternativas equivalentes. Quando não encontra preços verificáveis, apresenta estimativas.</p></div>
           <button type="button" className="basket-estimate-modal-close" onClick={() => setOpen(false)} disabled={busy} aria-label="Fechar"><X size={20}/></button>
         </header>
 
@@ -348,6 +348,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
 
             {result && <>
               <div className="basket-estimate-results-heading"><strong>Comparação do cabaz</strong><span>{updatedAt ? <><Clock3 size={12}/> {updatedAt.toLocaleString(language, { dateStyle: "short", timeStyle: "short" })}</> : null}</span></div>
+              {result.groundingSources?.length > 0 && <div className="basket-estimate-sources"><strong>Fontes consultadas</strong><div>{result.groundingSources.map((source, index) => <a key={source.url + index} href={source.url} target="_blank" rel="noreferrer">{source.title || new URL(source.url).hostname}</a>)}</div></div>}
               {stale && <div className="basket-estimate-stale-banner">A lista mudou desde a última estimativa. Atualiza para comparar os produtos atuais.</div>}
               <div className="basket-estimate-store-list">
                 {stores.map((store) => <button type="button" className={"basket-estimate-store-card" + (selectedStore?.name === store.name ? " active" : "")} key={store.name} onClick={() => setSelectedStore(store)}>
