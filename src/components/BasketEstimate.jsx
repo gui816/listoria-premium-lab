@@ -23,7 +23,8 @@ const normaliseItems = (items = []) => items.map((item) => ({
 export default function BasketEstimate({ items, language = "pt-PT" }) {
   const [countries, setCountries] = useState([]);
   const [countryCode, setCountryCode] = useState(getStoredCountry);
-  const [countrySource, setCountrySource] = useState(getStoredCountry() ? getStoredSource() : "unknown");\n  const permissionCheckDone = useRef(false);
+  const [countrySource, setCountrySource] = useState(getStoredCountry() ? getStoredSource() : "unknown");
+  const permissionCheckDone = useRef(false);
   const [locationState, setLocationState] = useState("checking");
   const [locationMessage, setLocationMessage] = useState("");
   const [showCountryPicker, setShowCountryPicker] = useState(false);
@@ -180,7 +181,16 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
     }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 60 * 60 * 1000 });
   };
 
-  useEffect(() => {\n    if (!countries.length || permissionCheckDone.current || countrySource === "manual" || countrySource === "saved") return;\n    permissionCheckDone.current = true;\n    if (!navigator.permissions?.query) return;\n    navigator.permissions.query({ name: "geolocation" }).then((permission) => {\n      if (permission.state === "granted") identifyCountry();\n    }).catch(() => {});\n  }, [countries.length, countrySource]);\n\n  const changeCountry = (nextCode) => {
+  useEffect(() => {
+    if (!countries.length || permissionCheckDone.current || countrySource === "manual" || countrySource === "saved") return;
+    permissionCheckDone.current = true;
+    if (!navigator.permissions?.query) return;
+    navigator.permissions.query({ name: "geolocation" }).then((permission) => {
+      if (permission.state === "granted") identifyCountry();
+    }).catch(() => {});
+  }, [countries.length, countrySource]);
+
+  const changeCountry = (nextCode) => {
     setCountryCode(nextCode);
     setCountrySource("manual");
     setLocationState("manual");
