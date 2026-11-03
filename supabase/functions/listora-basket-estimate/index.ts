@@ -215,7 +215,7 @@ serve(async (req) => {
         .filter((source: any, index: number, all: any[]) => all.findIndex((entry: any) => entry.url === source.url) === index)
         .slice(0, 20),
       stores: results,
-      disclaimer: "Estimativa gerada por IA. O valor apresentado pode não corresponder exatamente ao preço de catálogo ou incluir todos os descontos e promoções aplicáveis."
+      disclaimer: "Estimativa recolhida por IA. O valor apresentado pode não corresponder exatamente ao preço de catálogo ou incluir todos os descontos e promoções aplicáveis."
     });
   } catch (error) {
     console.error("listora-basket-estimate error:", error);
