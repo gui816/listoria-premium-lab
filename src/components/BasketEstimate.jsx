@@ -47,7 +47,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
   const itemSignature = useMemo(() => JSON.stringify(cleanItems), [cleanItems]);
   const cacheKey = useMemo(() => {
     if (!countryCode || !selected.length || !cleanItems.length) return "";
-    return "listora-basket-estimate-v2:" + countryCode + ":" +
+    return "listora-basket-estimate-v3:" + countryCode + ":
       [...selected].sort().join("|") + ":" + itemSignature;
   }, [countryCode, selected, itemSignature, cleanItems.length]);
 
@@ -359,10 +359,27 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
 
               {selectedStore && <div className="basket-estimate-product-detail">
                 <div className="basket-estimate-product-heading"><button type="button" onClick={() => setSelectedStore(null)}><ArrowLeft size={15}/> Comparação</button><strong>{selectedStore.name} · detalhe do cabaz</strong></div>
-                {selectedStore.items?.length ? selectedStore.items.map((product, index) => <div className="basket-estimate-product-row" key={product.name + index}>
-                  <span><strong>{product.name}</strong><small>{product.quantity} × {product.unit}{product.confidence ? " · confiança " + (product.confidence === "high" ? "alta" : product.confidence === "medium" ? "média" : "baixa") : ""}</small></span>
-                  <b>{formatMoney(product.estimatedSubtotal)}</b>
-                </div>) : <p className="basket-estimate-product-empty">O serviço ainda não devolveu detalhe por produto para esta estimativa. Atualiza para obter uma decomposição detalhada.</p>}
+                {selectedStore.notes && <p className="basket-estimate-product-empty">{selectedStore.notes}</p>}
+                {selectedStore.items?.length ? selectedStore.items.map((product, index) => {
+                  const matchLabels = {
+                    exact_match: "Correspondência exata",
+                    same_brand_variant: "Mesma marca · variante/formato próximo",
+                    equivalent_other_brand: "Alternativa equivalente · outra marca",
+                    no_reliable_match: "Sem correspondência fiável"
+                  };
+                  return <div className="basket-estimate-product-row" key={product.name + index}>
+                    <span>
+                      <strong>{product.name}</strong>
+                      <small>{product.quantity} × {product.unit} · {matchLabels[product.matchType] || "Correspondência por validar"}</small>
+                      {product.matchedProductName && <small className="basket-estimate-matched-product">Produto considerado: {product.matchedProductName}{product.packageSize ? " · " + product.packageSize : ""}</small>}
+                      {product.matchingNotes && <small>{product.matchingNotes}</small>}
+                      {product.matchConfidence && <small>Confiança na correspondência: {product.matchConfidence === "high" ? "alta" : product.matchConfidence === "medium" ? "média" : "baixa"}</small>}
+                    </span>
+                    {Number.isFinite(product.estimatedSubtotal)
+                      ? <b>{formatMoney(product.estimatedSubtotal)}</b>
+                      : <b className="basket-estimate-no-price">Sem preço fiável</b>}
+                  </div>;
+                }) : <p className="basket-estimate-product-empty">O serviço ainda não devolveu detalhe por produto para esta estimativa. Atualiza para obter uma decomposição detalhada.</p>}
                 {selectedStore.items?.length > 0 && <div className="basket-estimate-product-total"><span>Total estimado</span><strong>{formatMoney(selectedStore.estimatedTotal)}</strong></div>}
               </div>}
               <p className="basket-estimate-disclaimer">{result.disclaimer}</p>
