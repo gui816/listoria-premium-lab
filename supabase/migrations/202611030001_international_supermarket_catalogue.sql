@@ -93,7 +93,7 @@ values
 ('LT','Lituânia','🇱🇹','EUR','lt-LT','lt',42),
 ('AD','Andorra','🇦🇩','EUR','ca-AD','ca',43),
 ('MC','Mónaco','🇲🇨','EUR','fr-MC','fr',44),
-('SM','São Marino','🇸🇲','EUR','it-SM','it',45),
+('SM','San Marino','🇸🇲','EUR','it-SM','it',45),
 ('LI','Liechtenstein','🇱🇮','CHF','de-LI','de',46),
 ('VA','Vaticano','🇻🇦','EUR','it-VA','it',47),
 ('BR','Brasil','🇧🇷','BRL','pt-BR','pt-BR',100),
@@ -141,6 +141,7 @@ values
 ('SE','ICA','ica','https://www.ica.se','mid',1),('SE','Coop','coop','https://www.coop.se','mid',2),('SE','Willys','willys','https://www.willys.se','budget',3),('SE','Hemköp','hemkop','https://www.hemkop.se','mid',4),('SE','Lidl','lidl','https://www.lidl.se','budget',5),
 ('NO','REMA 1000','rema-1000','https://www.rema.no','budget',1),('NO','Kiwi','kiwi','https://kiwi.no','budget',2),('NO','Coop','coop','https://www.coop.no','mid',3),('NO','Meny','meny','https://meny.no','premium',4),('NO','Spar','spar','https://spar.no','mid',5),
 ('FI','S-market','s-market','https://www.s-kaupat.fi','mid',1),('FI','Prisma','prisma','https://www.s-kaupat.fi','mid',2),('FI','K-Citymarket','k-citymarket','https://www.k-ruoka.fi','mid',3),('FI','K-Supermarket','k-supermarket','https://www.k-ruoka.fi','mid',4),('FI','Lidl','lidl','https://www.lidl.fi','budget',5),
+('IS','Bónus','bonus','https://bonus.is','budget',1),('IS','Krónan','kronan','https://kronan.is','budget',2),('IS','Hagkaup','hagkaup','https://www.hagkaup.is','premium',3),('IS','Nettó','netto','https://netto.is','mid',4),
 -- Central and Eastern Europe
 ('PL','Biedronka','biedronka','https://www.biedronka.pl','budget',1),('PL','Lidl','lidl','https://www.lidl.pl','budget',2),('PL','Dino','dino','https://marketdino.pl','mid',3),('PL','Kaufland','kaufland','https://www.kaufland.pl','mid',4),('PL','Carrefour','carrefour','https://www.carrefour.pl','mid',5),('PL','Aldi','aldi','https://www.aldi.pl','budget',6),
 ('CZ','Albert','albert','https://www.albert.cz','mid',1),('CZ','Lidl','lidl','https://www.lidl.cz','budget',2),('CZ','Kaufland','kaufland','https://www.kaufland.cz','mid',3),('CZ','Penny','penny','https://www.penny.cz','budget',4),('CZ','Billa','billa','https://www.billa.cz','mid',5),
