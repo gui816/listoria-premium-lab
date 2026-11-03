@@ -2516,35 +2516,51 @@ button { -webkit-tap-highlight-color: transparent; }
     position:fixed;
     z-index:70;
     left:50%;
+    right:auto;
     bottom:22px;
     transform:translateX(-50%);
-    width:min(760px,calc(100vw - 48px));
+    width:min(960px,calc(100vw - 64px));
     display:flex;
     flex-direction:column;
     align-items:stretch;
-    gap:9px;
+    gap:12px;
     pointer-events:none;
   }
   .shopping-actions-dock > * { pointer-events:auto; }
   .shopping-actions-dock > .shopping-mode-fab {
-    position:relative;
+    position:relative !important;
+    inset:auto !important;
+    display:inline-flex;
     align-self:flex-end;
-    margin:0 0 0 auto;
+    flex:0 0 auto;
+    width:auto;
+    height:auto;
     min-height:44px;
+    max-height:none;
+    margin:0 !important;
+    transform:none;
     z-index:1;
   }
   .shopping-actions-dock > .add-panel.floating-add-panel {
-    position:relative;
+    position:relative !important;
+    inset:auto !important;
+    flex:0 1 auto;
     width:100%;
     max-width:none;
-    margin:0;
-    max-height:min(42vh,360px);
+    min-height:0;
+    margin:0 !important;
+    max-height:min(38vh,320px);
     overflow-y:auto;
+    overscroll-behavior:contain;
     box-shadow:0 12px 36px rgba(31,55,38,.16),0 3px 10px rgba(31,55,38,.07);
     border:1.5px solid #bdd8c2;
     border-radius:20px;
     background:rgba(255,254,250,.97);
     backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
   }
-  .app-shell { padding-bottom:190px; }
+  .shopping-actions-dock > .add-panel.floating-add-panel .add-main {
+    min-height:48px;
+  }
+  .app-shell { padding-bottom:220px; }
 }
