@@ -168,7 +168,23 @@ serve(async (req) => {
         estimatedTotal: round(total),
         estimatedRange: { min: round(min), max: round(max) },
         confidence: ["low", "medium", "high"].includes(estimate.confidence) ? estimate.confidence : "low",
-        notes: String(estimate.notes || "").slice(0, 180)
+        notes: String(estimate.notes || "").slice(0, 180),
+        items: basket.map((item: any) => {
+          const matched = Array.isArray(estimate.items)
+            ? estimate.items.find((entry: any) => String(entry?.name || "").trim().toLocaleLowerCase() === item.name.toLocaleLowerCase())
+            : null;
+          const unitPrice = Number(matched?.estimatedUnitPrice);
+          const subtotal = Number(matched?.estimatedSubtotal);
+          const valid = Number.isFinite(unitPrice) && unitPrice >= 0 && Number.isFinite(subtotal) && subtotal >= 0;
+          return {
+            name: item.name,
+            quantity: item.quantity,
+            unit: item.unit,
+            estimatedUnitPrice: valid ? round(unitPrice) : null,
+            estimatedSubtotal: valid ? round(subtotal) : null,
+            confidence: ["low", "medium", "high"].includes(matched?.confidence) ? matched.confidence : "low"
+          };
+        })
       };
     }).filter(Boolean);
 
