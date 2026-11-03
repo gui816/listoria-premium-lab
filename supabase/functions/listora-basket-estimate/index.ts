@@ -163,7 +163,7 @@ serve(async (req) => {
       currencyLocale: country.currency_locale,
       method: "ai_estimate",
       stores: results,
-      disclaimer: "Estimativa indicativa gerada por IA. Não corresponde a preços consultados em lojas ou catálogos atuais e pode diferir do valor real."
+      disclaimer: "Estimativa gerada por IA. O valor apresentado pode não corresponder exatamente ao preço de catálogo ou incluir todos os descontos e promoções aplicáveis."
     });
   } catch (error) {
     console.error("listora-basket-estimate error:", error);
