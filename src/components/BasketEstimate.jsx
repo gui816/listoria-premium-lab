@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase.js";
 import {
-  Sparkles, LoaderCircle, RefreshCw, Globe2, ChevronDown, X, MapPin,
+  Sparkles, LoaderCircle, Globe2, ChevronDown, X, MapPin,
   ShoppingBasket, ChevronRight, ArrowLeft, Clock3, CheckCircle2
 } from "lucide-react";
 
@@ -366,9 +366,6 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
                 {selectedStore.items?.length > 0 && <div className="basket-estimate-product-total"><span>Total estimado</span><strong>{formatMoney(selectedStore.estimatedTotal)}</strong></div>}
               </div>}
               <p className="basket-estimate-disclaimer">{result.disclaimer}</p>
-              <button type="button" className="basket-estimate-retry" onClick={() => estimate(true)} disabled={busy}>
-                {busy ? <LoaderCircle className="spin" size={15}/> : <RefreshCw size={15}/>} Atualizar estimativa
-              </button>
             </>}
           </>}
         </div>
