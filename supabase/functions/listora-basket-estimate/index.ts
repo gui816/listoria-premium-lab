@@ -74,14 +74,14 @@ serve(async (req) => {
       "You are estimating a grocery basket for the specified country. You do NOT have live catalogue or store prices.",
       "Estimate typical basket totals using general market knowledge, the country's currency, local product sizes and the supplied store positioning.",
       "Do not claim prices were checked, do not invent promotions, and do not guarantee savings. If you cannot estimate responsibly, set status to insufficient_data.",
-      "Return one result for each supplied supermarket, in the exact currency provided. Keep min <= total <= max. Confidence must be low, medium or high.",
+      "Return one result for each supplied supermarket, in the exact currency provided. Keep min <= total <= max. Confidence must be low, medium or high. For every supermarket, also return an itemized estimate for EVERY basket item, preserving its name, quantity and unit. Each item must include estimatedUnitPrice and estimatedSubtotal in the selected currency, plus confidence. The sum of item subtotals should approximately match estimatedTotal.",
       "Country: " + country.name + " (" + country.code + "). Currency: " + currency + ". Language: " + country.default_language + ".",
       "Basket: " + JSON.stringify(basket),
       "Selected supermarkets: " + JSON.stringify(stores.map((store: any) => ({
         name: store.name,
         pricePosition: store.price_position
       }))),
-      "Return JSON: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes}]}."
+      "Return JSON: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes,items:[{name,quantity,unit,estimatedUnitPrice,estimatedSubtotal,confidence}]}]}."
     ].join("\n");
 
     const ai = await fetch(
