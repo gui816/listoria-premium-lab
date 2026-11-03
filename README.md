@@ -44,15 +44,18 @@ O workflow injeta o secret em `VITE_GEMINI_API_KEY` apenas durante `npm run buil
 
 ## Estimativa indicativa do cabaz (Premium – fase inicial)
 
-A comparação usa a localização apenas depois de o utilizador tocar em **Estimar preço do cabaz**. A função procura estabelecimentos num raio de 10 km através do OpenStreetMap/Overpass e pede ao Gemini uma estimativa por cadeia. Os resultados são intervalos indicativos, não preços atuais nem garantias de poupança.
+A comparação utiliza um catálogo de países e supermercados mantido no Supabase. O utilizador escolhe o país e as cadeias que pretende comparar; a função envia essa seleção e os artigos ao Gemini para produzir intervalos de preço indicativos. Não é necessário pedir acesso à localização nem consultar OpenStreetMap/Overpass.
+
+O catálogo inicial inclui mercados da Europa, América do Sul, Estados Unidos e Canadá. Os países, moedas e supermercados são configuráveis através da migração `supabase/migrations/202611030001_international_supermarket_catalogue.sql`. A seleção do país e das cadeias fica guardada localmente no dispositivo nesta fase.
 
 Para ativar a funcionalidade no projeto Supabase:
 
-1. Confirma que o secret `GEMINI_API_KEY` está definido em **Project Settings → Edge Functions → Secrets** (ou através de `supabase secrets set GEMINI_API_KEY=...`).
-2. Publica a função: `supabase functions deploy listora-basket-estimate`.
-3. Confirma que a função está disponível no mesmo projeto indicado por `VITE_SUPABASE_URL`.
+1. Executa a migração `202611030001_international_supermarket_catalogue.sql` no SQL Editor.
+2. Confirma que o secret `GEMINI_API_KEY` está definido em **Project Settings → Edge Functions → Secrets**.
+3. Publica a função: `supabase functions deploy listora-basket-estimate`.
+4. Confirma que a função está disponível no mesmo projeto indicado por `VITE_SUPABASE_URL`.
 
-A função não guarda coordenadas nem histórico. A descoberta de lojas depende da cobertura do OpenStreetMap e a estimativa é gerada por IA sem consultar catálogos ou preços em tempo real. Esta primeira entrega ainda não inclui cache persistente, histórico, controlo de quota por utilizador ou validação de uma subscrição Premium no servidor; não deve ser tratada como mecanismo de autorização de pagamentos.
+A função utiliza as variáveis de ambiente internas `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` para consultar o catálogo. A chave de serviço nunca deve ser exposta no frontend. As estimativas não consultam preços atuais nem garantem poupanças; a disponibilidade das cadeias pode variar por região. Esta fase ainda não inclui preços reais, histórico, cache, controlo de quota ou validação de subscrição Premium no servidor.
 
 ## Deploy
 
