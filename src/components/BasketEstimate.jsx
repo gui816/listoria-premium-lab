@@ -78,7 +78,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
       const entries = data || [];
       setSupermarkets(entries);
       const saved = localStorage.getItem("listora-supermarkets-" + countryCode);
-      const savedNames = saved ? JSON.parse(saved) : null;
+      let savedNames = null;\n      try { savedNames = saved ? JSON.parse(saved) : null; } catch { savedNames = null; }
       const validSaved = Array.isArray(savedNames)
         ? entries.filter((entry) => savedNames.includes(entry.name)).map((entry) => entry.name)
         : [];
@@ -148,24 +148,24 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
       </div>
     </div>
 
-    <div className="basket-estimate-country">
-      <label htmlFor="basket-estimate-country"><Globe2 size={16} /> País</label>
-      <div className="basket-estimate-select-wrap">
-        <select id="basket-estimate-country" value={countryCode} onChange={(event) => changeCountry(event.target.value)} disabled={loadingCatalogue || busy}>
+    <div className="basket-estimate-country" style={{ display: "grid", gap: 8, margin: "16px 0" }}>
+      <label htmlFor="basket-estimate-country" style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600 }}><Globe2 size={16} /> País</label>
+      <div className="basket-estimate-select-wrap" style={{ position: "relative" }}>
+        <select id="basket-estimate-country" value={countryCode} onChange={(event) => changeCountry(event.target.value)} disabled={loadingCatalogue || busy} style={{ width: "100%", minHeight: 44, padding: "10px 38px 10px 12px", border: "1px solid var(--border, #d1d5db)", borderRadius: 10, background: "var(--surface, #fff)", color: "inherit", font: "inherit", appearance: "none" }}>
           {countries.map((entry) => <option key={entry.code} value={entry.code}>{entry.flag_emoji} {entry.name}</option>)}
         </select>
-        <ChevronDown size={16} aria-hidden="true" />
+        <ChevronDown size={16} aria-hidden="true" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
       </div>
     </div>
 
-    <div className="basket-estimate-supermarkets">
-      <div className="basket-estimate-supermarkets-heading">
+    <div className="basket-estimate-supermarkets" style={{ margin: "16px 0" }}>
+      <div className="basket-estimate-supermarkets-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <strong>Supermercados</strong>
         <span>{selected.length} selecionados</span>
       </div>
-      <div className="basket-estimate-supermarkets-list">
+      <div className="basket-estimate-supermarkets-list" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {supermarkets.map((store) => (
-          <label key={store.id} className="basket-estimate-supermarket-option">
+          <label key={store.id} className="basket-estimate-supermarket-option" style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 10px", border: "1px solid var(--border, #d1d5db)", borderRadius: 999, fontSize: 13 }}>
             <input type="checkbox" checked={selected.includes(store.name)} onChange={() => toggleSupermarket(store.name)} disabled={busy} />
             <span>{store.name}</span>
           </label>
