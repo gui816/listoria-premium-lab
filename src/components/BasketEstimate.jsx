@@ -297,7 +297,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
     {open && <div className="basket-estimate-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setOpen(false); }}>
       <section className="basket-estimate-modal" role="dialog" aria-modal="true" aria-labelledby="basket-estimate-title">
         <header className="basket-estimate-modal-header">
-          <div><span className="basket-estimate-modal-kicker"><Sparkles size={14}/> COMPARAÇÃO INTELIGENTE</span><h2 id="basket-estimate-title">Quanto poderá custar o teu cabaz?</h2><p>{cleanItems.length} produtos na lista</p></div>
+          <div><span className="basket-estimate-modal-kicker"><Sparkles size={14}/> COMPARAÇÃO INTELIGENTE</span><h2 id="basket-estimate-title">Quanto poderá custar o teu cabaz?</h2><p>{cleanItems.length} produtos na lista</p><p className="basket-estimate-quality-hint">Quanto mais detalhado for o nome do produto, melhor será a estimativa. Ex.: “Leite meio-gordo 1 L” em vez de apenas “Leite”.</p></div>
           <button type="button" className="basket-estimate-modal-close" onClick={() => setOpen(false)} disabled={busy} aria-label="Fechar"><X size={20}/></button>
         </header>
 
