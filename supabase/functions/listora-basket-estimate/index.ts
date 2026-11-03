@@ -72,7 +72,7 @@ serve(async (req) => {
     const currency = country.currency_code;
     const prompt = [
       "You are a careful grocery product matcher and basket price ESTIMATOR for the specified country and supermarket.",
-      "IMPORTANT LIMITATION: You do not have live web browsing or live supermarket catalogue access in this function. Use your product and market knowledge to identify the closest plausible retail product, but NEVER claim that you searched a website, verified current stock, or checked a live catalogue. All prices you provide are estimates, not confirmed shelf or online prices.",
+      "LIVE RESEARCH: You have Google Search grounding. For each supermarket, actively search the official supermarket website and reliable indexed product pages for the requested product before estimating. Prioritize the supermarket website/domain supplied in the supermarket data. Search using the exact product name, brand, variant and package size. Use live search evidence to identify product names, package sizes and visible prices. Do not claim stock or availability unless the source explicitly confirms it. If no reliable product or price evidence is found, you may provide a clearly labelled market estimate only when responsible; otherwise use no_reliable_match. Never invent URLs, promotions or catalogue references.",
       "",
       "PRODUCT MATCHING - follow this order independently for EVERY basket item and EVERY supermarket:",
       "1. EXACT MATCH: same brand, product name/line, variant, relevant attributes and package size.",
@@ -84,7 +84,7 @@ serve(async (req) => {
       "Do not assume the same product or price exists in every supermarket. Match each supermarket separately. Store price positioning may inform a cautious estimate, but must never override product equivalence.",
       "",
       "PRICE ESTIMATION:",
-      "Estimate a plausible current typical price for the matched product in the specified country and supermarket. Do not invent promotions, loyalty discounts, availability, exact catalogue references or URLs. If price cannot be estimated responsibly, use null prices and no_reliable_match. Confidence must reflect uncertainty, not optimism.",
+      "PRICE EVIDENCE: Prefer a current price found through Google Search on the supermarket official website. Distinguish observed prices from estimates in matchingNotes: identify whether the price was found online or estimated. Never present an estimated price as a verified price. Do not assume promotions or loyalty discounts apply. If a live price is not found, estimate cautiously only when there is enough evidence about the exact product or a credible equivalent; otherwise return no_reliable_match. Confidence must reflect the strength and freshness of evidence.",
       "Return one result for each supplied supermarket. Include every requested basket item exactly once and preserve requestedName, quantity and unit. For matched products return matchedProductName, brand when identifiable, packageSize, normalizedUnit (kg, L or un), matchType, matchConfidence, matchingNotes, estimatedUnitPrice and estimatedSubtotal. estimatedSubtotal is the total for the requested quantity. Use matchType exact_match, same_brand_variant, equivalent_other_brand or no_reliable_match. Use low, medium or high for confidence fields.",
       "If ANY basket item has no reliable match or no responsible price estimate, set the supermarket status to insufficient_data and do not provide a misleading complete basket total. Still return the item-level matching results for transparency. Only use status estimated when every requested item has a credible match and price.",
       "For status estimated, the sum of item estimatedSubtotal values must approximately equal estimatedTotal. Keep rangeMin <= estimatedTotal <= rangeMax. Use the exact currency supplied.",
@@ -93,22 +93,23 @@ serve(async (req) => {
       "Basket (user's exact requested products): " + JSON.stringify(basket),
       "Selected supermarkets: " + JSON.stringify(stores.map((store: any) => ({
         name: store.name,
+        website: store.website,
         pricePosition: store.price_position
       }))),
       "Return valid JSON only, using this schema: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes,items:[{requestedName,matchedProductName,brand,packageSize,normalizedUnit,matchType,matchConfidence,matchingNotes,quantity,unit,estimatedUnitPrice,estimatedSubtotal,confidence}]}]}. Use null for unavailable numeric prices and omit no requested items."
     ].join("\n");
 
     const ai = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(geminiKey),
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(geminiKey),
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
+          tools: [{ google_search: {} }],
           generationConfig: {
             responseMimeType: "application/json",
-            temperature: 0.2,
-
+            thinkingConfig: { thinkingLevel: "medium" }
           }
         }),
         signal: AbortSignal.timeout(45000)
@@ -117,7 +118,8 @@ serve(async (req) => {
 
     const payload = await ai.json().catch(() => ({}));
     if (!ai.ok) return json({ error: payload?.error?.message || "O serviço de estimativa devolveu um erro." }, 502);
-    const raw = payload?.candidates?.[0]?.content?.parts?.map((part: any) => part.text || "").join("") || "";
+    const candidate = payload?.candidates?.[0];
+    const raw = candidate?.content?.parts?.map((part: any) => part.text || "").join("") || "";
     let parsed: any;
     try { parsed = JSON.parse(raw); } catch { return json({ error: "Não foi possível interpretar a estimativa." }, 502); }
 
@@ -204,7 +206,14 @@ serve(async (req) => {
       country: { code: country.code, name: country.name },
       currency: country.currency_code,
       currencyLocale: country.currency_locale,
-      method: "ai_estimate",
+      method: "ai_grounded_estimate",
+      model: "gemini-3.8-flash",
+      groundingSources: (candidate?.groundingMetadata?.groundingChunks || [])
+        .map((chunk: any) => chunk?.web)
+        .filter((web: any) => web?.uri)
+        .map((web: any) => ({ title: String(web.title || web.uri).slice(0, 160), url: web.uri }))
+        .filter((source: any, index: number, all: any[]) => all.findIndex((entry: any) => entry.url === source.url) === index)
+        .slice(0, 20),
       stores: results,
       disclaimer: "Estimativa gerada por IA. O valor apresentado pode não corresponder exatamente ao preço de catálogo ou incluir todos os descontos e promoções aplicáveis."
     });
