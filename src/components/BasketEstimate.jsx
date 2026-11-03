@@ -1,27 +1,205 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase.js";
-import { MapPin, Sparkles, LoaderCircle, RefreshCw } from "lucide-react";
-const money=(n,lang)=>new Intl.NumberFormat(lang||"pt-PT",{style:"currency",currency:"EUR"}).format(n);
-export default function BasketEstimate({items,language="pt-PT"}){
- const [result,setResult]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState("");
- const estimate=()=>{
-  if(!items?.length||busy)return;setBusy(true);setError("");
-  if(!navigator.geolocation){setError("Este dispositivo não disponibiliza a localização.");setBusy(false);return;}
-  navigator.geolocation.getCurrentPosition(async({coords})=>{
-   try{
-    const {data,error:invokeError}=await supabase.functions.invoke("listora-basket-estimate",{body:{items:items.map(x=>({name:x.name,quantity:x.quantity||1,unit:x.unit||"un"})),location:{latitude:coords.latitude,longitude:coords.longitude,radiusKm:10},currency:"EUR",language}});
-    if(invokeError){const detail=await invokeError.context?.json?.().catch(()=>null);throw new Error(detail?.error||invokeError.message);}
-    if(data?.error)throw new Error(data.error);setResult(data);
-   }catch(e){setError(e.message||"Não foi possível estimar o cabaz.");}finally{setBusy(false);}
-  },e=>{setError(e.code===1?"A localização foi recusada. Permite o acesso nas definições do navegador e tenta novamente.":"Não foi possível obter a localização. Confirma que o GPS está ativo.");setBusy(false);},{enableHighAccuracy:false,timeout:15000,maximumAge:300000});
- };
- return <section className="basket-estimate">
-  <div className="basket-estimate-intro"><span className="basket-estimate-icon"><Sparkles size={18}/></span><div><strong>Quanto poderá custar o teu cabaz?</strong><p>Compara estimativas nas cadeias encontradas até 10 km de distância.</p></div></div>
-  {!result&&<button type="button" className="basket-estimate-button" onClick={estimate} disabled={busy||!items?.length}>{busy?<><LoaderCircle className="spin" size={17}/> A procurar lojas e a estimar…</>:<><MapPin size={17}/> Estimar preço do cabaz</>}</button>}
-  {error&&<p className="basket-estimate-error" role="alert">{error}</p>}
-  {result&&<div className="basket-estimate-results"><div className="basket-estimate-results-heading"><strong>Estimativa por supermercado</strong><button type="button" onClick={()=>{setResult(null);setError("");}} aria-label="Nova estimativa"><RefreshCw size={16}/></button></div>
-   {result.stores?.map((s,i)=><article className="basket-estimate-store" key={s.chain+i}><div><strong>{s.chain}</strong><small>{s.nearbyStores} {s.nearbyStores===1?"loja encontrada":"lojas encontradas"} · confiança {s.confidence==="high"?"alta":s.confidence==="medium"?"média":"baixa"}</small></div>{s.status==="estimated"?<div className="basket-estimate-price"><strong>{money(s.estimatedTotal,language)}</strong><span>{money(s.estimatedRange.min,language)} – {money(s.estimatedRange.max,language)}</span></div>:<span className="basket-estimate-unavailable">Dados insuficientes</span>}</article>)}
-   <p className="basket-estimate-disclaimer">{result.disclaimer}</p><p className="basket-estimate-coverage">{result.coverageNote}</p><button type="button" className="basket-estimate-retry" onClick={estimate} disabled={busy}>Atualizar estimativa</button>
-  </div>}
- </section>;
+import { Sparkles, LoaderCircle, RefreshCw, Globe2, ChevronDown } from "lucide-react";
+
+const COUNTRY_STORAGE_KEY = "listora-country-code";
+const getInitialCountry = () => {
+  const saved = localStorage.getItem(COUNTRY_STORAGE_KEY);
+  if (saved) return saved.toUpperCase();
+  try {
+    const region = new Intl.Locale(navigator.language || "pt-PT").region;
+    return region || "PT";
+  } catch {
+    return "PT";
+  }
+};
+const money = (value, locale, currency) =>
+  new Intl.NumberFormat(locale || "pt-PT", { style: "currency", currency: currency || "EUR" }).format(value);
+
+export default function BasketEstimate({ items, language = "pt-PT" }) {
+  const [countries, setCountries] = useState([]);
+  const [countryCode, setCountryCode] = useState(getInitialCountry);
+  const [supermarkets, setSupermarkets] = useState([]);
+  const [selected, setSelected] = useState([]);
+  const [result, setResult] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [loadingCatalogue, setLoadingCatalogue] = useState(true);
+  const [error, setError] = useState("");
+
+  const country = useMemo(() => countries.find((entry) => entry.code === countryCode), [countries, countryCode]);
+
+  useEffect(() => {
+    let active = true;
+    const loadCountries = async () => {
+      if (!supabase) {
+        setError("O catálogo de países não está disponível. Confirma a configuração do Supabase.");
+        setLoadingCatalogue(false);
+        return;
+      }
+      const { data, error: queryError } = await supabase
+        .from("countries")
+        .select("code,name,flag_emoji,currency_code,currency_locale,default_language")
+        .order("display_order", { ascending: true });
+      if (!active) return;
+      if (queryError) {
+        setError("Não foi possível carregar os países suportados.");
+      } else {
+        setCountries(data || []);
+        if (data?.length && !data.some((entry) => entry.code === countryCode)) {
+          const fallback = data.find((entry) => entry.code === "PT") || data[0];
+          setCountryCode(fallback.code);
+          localStorage.setItem(COUNTRY_STORAGE_KEY, fallback.code);
+        }
+      }
+      setLoadingCatalogue(false);
+    };
+    loadCountries();
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!countryCode || !supabase) return;
+    let active = true;
+    setResult(null);
+    setError("");
+    const loadSupermarkets = async () => {
+      const { data, error: queryError } = await supabase
+        .from("supermarkets")
+        .select("id,name,price_position,website,display_order")
+        .eq("country_code", countryCode)
+        .order("display_order", { ascending: true });
+      if (!active) return;
+      if (queryError) {
+        setError("Não foi possível carregar os supermercados deste país.");
+        setSupermarkets([]);
+        setSelected([]);
+        return;
+      }
+      const entries = data || [];
+      setSupermarkets(entries);
+      const saved = localStorage.getItem("listora-supermarkets-" + countryCode);
+      const savedNames = saved ? JSON.parse(saved) : null;
+      const validSaved = Array.isArray(savedNames)
+        ? entries.filter((entry) => savedNames.includes(entry.name)).map((entry) => entry.name)
+        : [];
+      setSelected(validSaved.length ? validSaved : entries.slice(0, 5).map((entry) => entry.name));
+    };
+    loadSupermarkets();
+    return () => { active = false; };
+  }, [countryCode]);
+
+  const changeCountry = (nextCode) => {
+    setCountryCode(nextCode);
+    localStorage.setItem(COUNTRY_STORAGE_KEY, nextCode);
+    setResult(null);
+    setError("");
+  };
+
+  const toggleSupermarket = (name) => {
+    setSelected((current) => {
+      const next = current.includes(name) ? current.filter((entry) => entry !== name) : [...current, name];
+      localStorage.setItem("listora-supermarkets-" + countryCode, JSON.stringify(next));
+      setResult(null);
+      return next;
+    });
+  };
+
+  const estimate = async () => {
+    if (!items?.length || busy) return;
+    if (!countryCode) {
+      setError("Seleciona o país para estimar o cabaz.");
+      return;
+    }
+    if (!selected.length) {
+      setError("Seleciona pelo menos um supermercado.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke("listora-basket-estimate", {
+        body: {
+          items: items.map((item) => ({ name: item.name, quantity: item.quantity || 1, unit: item.unit || "un" })),
+          countryCode,
+          supermarkets: selected
+        }
+      });
+      if (invokeError) {
+        const detail = await invokeError.context?.json?.().catch(() => null);
+        throw new Error(detail?.error || invokeError.message);
+      }
+      if (data?.error) throw new Error(data.error);
+      setResult(data);
+    } catch (estimateError) {
+      setError(estimateError.message || "Não foi possível estimar o cabaz.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const formatMoney = (value) => money(value, country?.currency_locale || language, result?.currency || country?.currency_code || "EUR");
+
+  return <section className="basket-estimate">
+    <div className="basket-estimate-intro">
+      <span className="basket-estimate-icon"><Sparkles size={18} /></span>
+      <div>
+        <strong>Quanto poderá custar o teu cabaz?</strong>
+        <p>Escolhe o país e os supermercados que costumas utilizar. A estimativa é indicativa.</p>
+      </div>
+    </div>
+
+    <div className="basket-estimate-country">
+      <label htmlFor="basket-estimate-country"><Globe2 size={16} /> País</label>
+      <div className="basket-estimate-select-wrap">
+        <select id="basket-estimate-country" value={countryCode} onChange={(event) => changeCountry(event.target.value)} disabled={loadingCatalogue || busy}>
+          {countries.map((entry) => <option key={entry.code} value={entry.code}>{entry.flag_emoji} {entry.name}</option>)}
+        </select>
+        <ChevronDown size={16} aria-hidden="true" />
+      </div>
+    </div>
+
+    <div className="basket-estimate-supermarkets">
+      <div className="basket-estimate-supermarkets-heading">
+        <strong>Supermercados</strong>
+        <span>{selected.length} selecionados</span>
+      </div>
+      <div className="basket-estimate-supermarkets-list">
+        {supermarkets.map((store) => (
+          <label key={store.id} className="basket-estimate-supermarket-option">
+            <input type="checkbox" checked={selected.includes(store.name)} onChange={() => toggleSupermarket(store.name)} disabled={busy} />
+            <span>{store.name}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+
+    {!result && <button type="button" className="basket-estimate-button" onClick={estimate} disabled={busy || loadingCatalogue || !items?.length || !selected.length}>
+      {busy ? <><LoaderCircle className="spin" size={17} /> A estimar o cabaz…</> : <><Sparkles size={17} /> Estimar preço do cabaz</>}
+    </button>}
+
+    {error && <p className="basket-estimate-error" role="alert">{error}</p>}
+
+    {result && <div className="basket-estimate-results">
+      <div className="basket-estimate-results-heading">
+        <strong>Estimativa em {result.country?.name || country?.name}</strong>
+        <button type="button" onClick={() => { setResult(null); setError(""); }} aria-label="Nova estimativa"><RefreshCw size={16} /></button>
+      </div>
+      {result.stores?.map((store, index) => (
+        <article className="basket-estimate-store" key={store.name + index}>
+          <div>
+            <strong>{store.name}</strong>
+            {store.website && <small><a href={store.website} target="_blank" rel="noreferrer">Website oficial</a> · confiança {store.confidence === "high" ? "alta" : store.confidence === "medium" ? "média" : "baixa"}</small>}
+          </div>
+          {store.status === "estimated" ? (
+            <div className="basket-estimate-price">
+              <strong>{formatMoney(store.estimatedTotal)}</strong>
+              <span>{formatMoney(store.estimatedRange.min)} – {formatMoney(store.estimatedRange.max)}</span>
+            </div>
+          ) : <span className="basket-estimate-unavailable">Dados insuficientes</span>}
+        </article>
+      ))}
+      <p className="basket-estimate-disclaimer">{result.disclaimer}</p>
+      <button type="button" className="basket-estimate-retry" onClick={estimate} disabled={busy}>Atualizar estimativa</button>
+    </div>}
+  </section>;
 }
