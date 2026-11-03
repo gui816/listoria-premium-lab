@@ -14,6 +14,10 @@ const getStoredCountry = () => {
   try { return localStorage.getItem(COUNTRY_STORAGE_KEY)?.toUpperCase() || ""; }
   catch { return ""; }
 };
+const getStoredSource = () => {
+  try { return localStorage.getItem("listora-country-source") || "saved"; }
+  catch { return "saved"; }
+};
 const normaliseItems = (items = []) => items.map((item) => ({
   name: String(item.name || "").trim(),
   quantity: Number(item.quantity) || 1,
@@ -65,7 +69,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
         const saved = getStoredCountry();
         if (saved && data?.some((entry) => entry.code === saved)) {
           setCountryCode(saved);
-          setCountrySource("saved");
+          setCountrySource(getStoredSource());
           setLocationState("manual");
         } else if (!saved) {
           setCountryCode("");
