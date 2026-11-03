@@ -14,7 +14,8 @@ export default function AccountAccess({ language = "pt-PT" }) {
     success:"Account updated successfully.", mismatch:"Passwords do not match.",
     required:"Complete all required fields.", error:"Could not complete the request.",
     loading:"Please wait…", profile:"Your account", signed:"Signed in",
-    anonymousInfo:"Your current guest session is kept when you add an email and password."
+    anonymousInfo:"Your current guest session is kept when you add an email and password.",
+    forgot:"Forgot password?", resetSent:"Password reset email sent.", reset:"Send reset email"
   } : {
     account:"Conta", anonymous:"Conta de convidado", signIn:"Iniciar sessão", create:"Criar conta",
     name:"Nome", email:"Email", password:"Password", confirm:"Confirmar password",
@@ -25,7 +26,8 @@ export default function AccountAccess({ language = "pt-PT" }) {
     success:"Conta atualizada com sucesso.", mismatch:"As passwords não coincidem.",
     required:"Preenche todos os campos obrigatórios.", error:"Não foi possível concluir a operação.",
     loading:"Aguarda…", profile:"A tua conta", signed:"Sessão iniciada",
-    anonymousInfo:"A tua sessão de convidado é preservada quando adicionas email e password."
+    anonymousInfo:"A tua sessão de convidado é preservada quando adicionas email e password.",
+    forgot:"Esqueceste-te da password?", resetSent:"Email de recuperação enviado.", reset:"Enviar email de recuperação"
   };
   const [open, setOpen] = useState(false);
   const [session, setSession] = useState(null);
@@ -90,7 +92,7 @@ export default function AccountAccess({ language = "pt-PT" }) {
     finally { setBusy(false); }
   }
 
-  async function googleAuth() {
+  async function resetPassword() {\n    resetMessages();\n    if (!email.trim()) { setError(isEnglish ? "Enter your email first." : "Indica primeiro o teu email."); return; }\n    setBusy(true);\n    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin });\n    if (resetError) setError(resetError.message); else setMessage(copy.resetSent);\n    setBusy(false);\n  }\n\n  async function googleAuth() {
     resetMessages(); setBusy(true);
     try {
       const options = { redirectTo: window.location.href };
@@ -130,12 +132,12 @@ export default function AccountAccess({ language = "pt-PT" }) {
             {mode === "create" && <>
               <label>{copy.name}<input value={name} onChange={e => setName(e.target.value)} autoComplete="name" maxLength={60} required/></label>
               <label>{copy.country}<select value={country} onChange={e => setCountry(e.target.value)} required><option value="">—</option>{countries.map(item => <option key={item.code} value={item.code}>{item.flag_emoji || ""} {item.name}</option>)}</select></label>
-              <label>{copy.age}<input type="number" min="13" max="120" value={age} onChange={e => setAge(e.target.value}/></label>
+              <label>{copy.age}<input type="number" min="13" max="120" value={age} onChange={e => setAge(e.target.value)}/></label>
             </>}
             <label>{copy.email}<input type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required/></label>
             <label>{copy.password}<input type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === "create" ? "new-password" : "current-password"} minLength={8} required/></label>
             {mode === "create" && <label>{copy.confirm}<input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} autoComplete="new-password" minLength={8} required/></label>}
-            <button type="submit" className="account-primary-button" disabled={busy}>{busy ? <LoaderCircle size={16} className="spin"/> : <Mail size={16}/>} {mode === "create" ? copy.save : copy.signIn}</button>
+            <button type="submit" className="account-primary-button" disabled={busy}>{busy ? <LoaderCircle size={16} className="spin"/> : <Mail size={16}/>} {mode === "create" ? copy.save : copy.signIn}</button>\n            {mode === "signIn" && <button type="button" className="account-mode-toggle" onClick={resetPassword} disabled={busy}>{copy.forgot}</button>}
           </form>
           <button type="button" className="account-mode-toggle" onClick={() => { setMode(mode === "create" ? "signIn" : "create"); resetMessages(); }}>{mode === "create" ? copy.existing : copy.new}</button>
         </>}
