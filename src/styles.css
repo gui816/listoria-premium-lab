@@ -2705,3 +2705,10 @@ button { -webkit-tap-highlight-color: transparent; }
 .basket-estimate-no-price{color:#9a6a32!important;font-size:11px!important;white-space:nowrap}
 .basket-estimate-product-row>span{flex:1;min-width:0}
 .basket-estimate-product-row>span small{line-height:1.45}
+
+
+/* Grounded product research sources */
+.basket-estimate-sources{margin:14px 0;padding:11px 12px;border:1px solid var(--border,#e5e7df);border-radius:12px;background:var(--surface-subtle,#fafbf8)}
+.basket-estimate-sources>strong{display:block;margin-bottom:7px;font-size:11px;color:var(--text,#30352d)}
+.basket-estimate-sources>div{display:flex;flex-wrap:wrap;gap:6px 12px}
+.basket-estimate-sources a{max-width:100%;overflow-wrap:anywhere;color:var(--accent,#557b43);font-size:11px;text-decoration:underline;text-underline-offset:2px}
