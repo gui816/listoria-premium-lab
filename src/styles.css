@@ -2564,3 +2564,69 @@ button { -webkit-tap-highlight-color: transparent; }
   }
   .app-shell { padding-bottom:220px; }
 }
+
+
+/* Other product catalogue opens as a focused dialog, never expands the composer. */
+.other-products-modal-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:110;
+  display:grid;
+  place-items:center;
+  padding:clamp(12px,3vh,28px) 16px;
+  background:rgba(24,35,26,.48);
+  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(5px);
+}
+.other-products-modal-backdrop .other-products-panel{
+  position:relative;
+  width:min(100%,680px);
+  max-height:min(82dvh,760px);
+  margin:0;
+  padding:22px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  border:1px solid #dce7d5;
+  border-radius:24px;
+  background:#fffefa;
+  box-shadow:0 24px 80px rgba(18,35,22,.28);
+}
+.other-products-modal-backdrop .other-products-heading{
+  position:sticky;
+  top:-22px;
+  z-index:2;
+  margin:-22px -22px 16px;
+  padding:22px 22px 14px;
+  background:rgba(255,254,250,.97);
+  border-bottom:1px solid #edf0e8;
+  border-radius:24px 24px 0 0;
+}
+.other-products-modal-backdrop .other-products-search{
+  position:sticky;
+  top:72px;
+  z-index:1;
+  width:100%;
+  background:#fffefa;
+}
+.other-products-modal-backdrop .other-products-group{
+  padding:14px 0;
+}
+@media(max-width:680px){
+  .other-products-modal-backdrop{
+    align-items:end;
+    padding:10px 10px max(10px,env(safe-area-inset-bottom,0px));
+  }
+  .other-products-modal-backdrop .other-products-panel{
+    width:100%;
+    max-height:min(82dvh,720px);
+    padding:17px;
+    border-radius:22px;
+  }
+  .other-products-modal-backdrop .other-products-heading{
+    top:-17px;
+    margin:-17px -17px 13px;
+    padding:17px 17px 12px;
+    border-radius:22px 22px 0 0;
+  }
+  .other-products-modal-backdrop .other-products-search{top:64px;}
+}
