@@ -1225,7 +1225,7 @@ export default function App() {
         <div className="supermarket-summary-bottom"><span>{t("Progresso das compras", { done: doneItems.length, total: items.length })}</span></div>
       </section>}
       <nav className="category-tabs" aria-label={t("Filtrar por categoria")} tabIndex={0}>
-        {CATEGORIES.map(c => <button key={c.id} className={filter === c.id ? "category-tab active" : "category-tab"} onClick={() => setFilter(c.id)}><span>{c.emoji}</span>{t(c.label)}{c.id === "all" && <span className="tab-count">{activeItems.length}</span>}</button>)}
+        {CATEGORIES.map(c => <button key={c.id} className={filter === c.id ? "category-tab active" : "category-tab"} onClick={() => setFilter(c.id)}><span>{c.emoji}</span>{t(c.label)}<span className="tab-count">{c.id === "all" ? activeItems.length : activeItems.filter(item => item.category === c.id).length}</span></button>)}
       </nav>
       <section className={shoppingMode ? "items-section supermarket-items-section" : "items-section"}>
         <div className="section-heading"><div className="section-heading-title"><h2>{shoppingMode ? t("Por comprar") : t("Falta comprar")}</h2><span>{visibleItems.length} {visibleItems.length === 1 ? t("artigo") : t("artigos")}</span></div>{!shoppingMode && items.length > 0 && <div className="inline-shopping-progress" aria-label={`${doneItems.length} ${t("de")} ${items.length} ${t("comprados")}`}><span className="inline-progress-count"><Check size={13}/>{doneItems.length}/{items.length}</span><span className="inline-progress-track"><span style={{width:`${shoppingProgress}%`}}/></span></div>}</div>
