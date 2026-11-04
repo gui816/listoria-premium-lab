@@ -62,6 +62,52 @@ export default function AccountAccess({ language = "pt-PT" }) {
   }, []);
 
   useEffect(() => {
+    if (!supabase || typeof window === "undefined") return;
+
+    // A failed OAuth identity-linking attempt is returned by Supabase as URL
+    // parameters after the browser has left this component. In that case the
+    // original linkIdentity() promise no longer exists to run its fallback.
+    const callbackParams = new URLSearchParams(window.location.search);
+    const callbackErrorCode = callbackParams.get("error_code");
+    if (callbackErrorCode !== "identity_already_exists") return;
+
+    // Remove the one-time error before starting a fresh OAuth login. This
+    // prevents the callback handler from processing the same error again.
+    const cleanUrl = new URL(window.location.href);
+    ["error", "error_code", "error_description"].forEach(key => cleanUrl.searchParams.delete(key));
+    window.history.replaceState(window.history.state, document.title, cleanUrl.toString());
+
+    let cancelled = false;
+    setBusy(true);
+    (async () => {
+      try {
+        // Wait until Supabase has restored the anonymous session left behind
+        // by the failed link operation, then authenticate the existing Google
+        // account instead of trying to link that identity a second time.
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (cancelled) return;
+        if (data.session?.user && !data.session.user.is_anonymous) {
+          setBusy(false);
+          return;
+        }
+        const { error: signInError } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: { redirectTo: cleanUrl.toString() }
+        });
+        if (signInError) throw signInError;
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || copy.error);
+          setBusy(false);
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
     if (!open || !supabase) return;
     supabase.from("countries").select("code,name,flag_emoji").eq("enabled", true).order("display_order")
       .then(({ data }) => setCountries(data || []));
