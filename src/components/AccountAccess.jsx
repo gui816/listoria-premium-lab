@@ -9,7 +9,7 @@ export default function AccountAccess({ language = "pt-PT" }) {
     account:"Account", anonymous:"Guest account", signIn:"Sign in", create:"Create account",
     name:"Name", email:"Email", password:"Password", confirm:"Confirm password",
     country:"Country", age:"Age (optional)", google:"Continue with Google",
-    emailAction:"Continue with email", existing:"Already have an account? Sign in",
+    emailAction:"Continue with email", requiredLegend:"* Required fields · Age is optional", requiredMark:"Required", existing:"Already have an account? Sign in",
     new:"New to Listora? Create an account", save:"Save account", close:"Close",
     logout:"Sign out", upgrade:"Create an account to keep your lists and access them on other devices.",
     success:"Account updated successfully.", mismatch:"Passwords do not match.",
@@ -21,7 +21,7 @@ export default function AccountAccess({ language = "pt-PT" }) {
     account:"Conta", anonymous:"Conta de convidado", signIn:"Iniciar sessão", create:"Criar conta",
     name:"Nome", email:"Email", password:"Password", confirm:"Confirmar password",
     country:"País", age:"Idade (opcional)", google:"Continuar com Google",
-    emailAction:"Continuar com email", existing:"Já tens conta? Inicia sessão",
+    emailAction:"Continuar com email", requiredLegend:"* Campos obrigatórios · Idade opcional", requiredMark:"Obrigatório", existing:"Já tens conta? Inicia sessão",
     new:"Ainda não tens conta? Cria uma conta", save:"Guardar conta", close:"Fechar",
     logout:"Terminar sessão", upgrade:"Cria uma conta para manteres as tuas listas e acederes noutros dispositivos.",
     success:"Conta atualizada com sucesso.", mismatch:"As passwords não coincidem.",
@@ -138,15 +138,18 @@ export default function AccountAccess({ language = "pt-PT" }) {
           <p className="account-modal-subtitle">{isAnonymous ? copy.upgrade : copy.anonymousInfo}</p>
           <button type="button" className="account-google-button" disabled={busy} onClick={googleAuth}><Chrome size={17}/>{copy.google}</button>
           <div className="account-divider"><span>{copy.emailAction}</span></div>
+          <p className="account-required-note"><span aria-hidden="true">*</span> {copy.requiredLegend}</p>
           <form className="account-form" onSubmit={submit}>
+            <div className="account-form-fields">
             {mode === "create" && <>
-              <label>{copy.name}<input value={name} onChange={e => setName(e.target.value)} autoComplete="name" maxLength={60} required/></label>
-              <label>{copy.country}<select value={country} onChange={e => setCountry(e.target.value)} required><option value="">—</option>{countries.map(item => <option key={item.code} value={item.code}>{item.flag_emoji || ""} {item.name}</option>)}</select></label>
+              <label><span>{copy.name} <span className="account-required-mark" aria-label={copy.requiredMark}>*</span></span><input value={name} onChange={e => setName(e.target.value)} autoComplete="name" maxLength={60} required/></label>
+              <label><span>{copy.country} <span className="account-required-mark" aria-label={copy.requiredMark}>*</span></span><select value={country} onChange={e => setCountry(e.target.value)} required><option value="">—</option>{countries.map(item => <option key={item.code} value={item.code}>{item.flag_emoji || ""} {item.name}</option>)}</select></label>
               <label>{copy.age}<input type="number" min="13" max="120" value={age} onChange={e => setAge(e.target.value)}/></label>
             </>}
-            <label>{copy.email}<input type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required/></label>
-            <label>{copy.password}<input type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === "create" ? "new-password" : "current-password"} minLength={8} required/></label>
-            {mode === "create" && <label>{copy.confirm}<input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} autoComplete="new-password" minLength={8} required/></label>}
+            <label><span>{copy.email} <span className="account-required-mark" aria-label={copy.requiredMark}>*</span></span><input type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required/></label>
+            <label><span>{copy.password} <span className="account-required-mark" aria-label={copy.requiredMark}>*</span></span><input type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === "create" ? "new-password" : "current-password"} minLength={8} required/></label>
+            {mode === "create" && <label><span>{copy.confirm} <span className="account-required-mark" aria-label={copy.requiredMark}>*</span></span><input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} autoComplete="new-password" minLength={8} required/></label>}
+            </div>
             <button type="submit" className="account-primary-button" disabled={busy}>{busy ? <LoaderCircle size={16} className="spin"/> : <Mail size={16}/>} {mode === "create" ? copy.save : copy.signIn}</button>
             {mode === "signIn" && <button type="button" className="account-mode-toggle" onClick={resetPassword} disabled={busy}>{copy.forgot}</button>}
           </form>
