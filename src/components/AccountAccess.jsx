@@ -16,7 +16,9 @@ export default function AccountAccess({ language = "pt-PT" }) {
     required:"Complete all required fields.", error:"Could not complete the request.",
     loading:"Please wait…", profile:"Your account", signed:"Signed in",
     anonymousInfo:"Your current guest session is kept when you add an email and password.",
-    forgot:"Forgot password?", resetSent:"Password reset email sent.", reset:"Send reset email"
+    forgot:"Forgot password?", resetSent:"Password reset email sent.", reset:"Send reset email",
+    unconfirmed:"Your email address has not been confirmed. Check your inbox or request a new confirmation email.",
+    resend:"Resend confirmation email", resendSent:"Confirmation email sent. Check your inbox and spam folder."
   } : {
     account:"Conta", anonymous:"Conta de convidado", signIn:"Iniciar sessão", create:"Criar conta",
     name:"Nome", email:"Email", password:"Password", confirm:"Confirmar password",
@@ -28,7 +30,9 @@ export default function AccountAccess({ language = "pt-PT" }) {
     required:"Preenche todos os campos obrigatórios.", error:"Não foi possível concluir a operação.",
     loading:"Aguarda…", profile:"A tua conta", signed:"Sessão iniciada",
     anonymousInfo:"A tua sessão de convidado é preservada quando adicionas email e password.",
-    forgot:"Esqueceste-te da password?", resetSent:"Email de recuperação enviado.", reset:"Enviar email de recuperação"
+    forgot:"Esqueceste-te da password?", resetSent:"Email de recuperação enviado.", reset:"Enviar email de recuperação",
+    unconfirmed:"Ainda não validaste o teu endereço de email. Verifica a tua caixa de entrada ou pede um novo email de confirmação.",
+    resend:"Reenviar email de validação", resendSent:"Email de validação reenviado. Verifica também a pasta de spam."
   };
   const [open, setOpen] = useState(false);
   const [session, setSession] = useState(null);
@@ -43,6 +47,7 @@ export default function AccountAccess({ language = "pt-PT" }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false);
 
   useEffect(() => {
     if (!supabase) return undefined;
@@ -94,6 +99,7 @@ export default function AccountAccess({ language = "pt-PT" }) {
     event.preventDefault();
     resetMessages();
     if (!supabase) return;
+    setNeedsEmailConfirmation(false);
     if (mode === "create" && (!name.trim() || !email.trim() || !password || !country)) {
       setError(copy.required); return;
     }
@@ -117,6 +123,7 @@ export default function AccountAccess({ language = "pt-PT" }) {
           setPassword("");
           setConfirm("");
           setMode("signIn");
+          setNeedsEmailConfirmation(!data.session);
           setMessage(data.session
             ? (isEnglish ? "Your account is ready. You are signed in." : "A tua conta está criada e a sessão foi iniciada.")
             : (isEnglish
@@ -125,11 +132,43 @@ export default function AccountAccess({ language = "pt-PT" }) {
         }
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-        if (signInError) throw signInError;
+        if (signInError) {
+          const confirmationRequired = signInError.code === "email_not_confirmed" ||
+            /email not confirmed|email_not_confirmed/i.test(signInError.message || "");
+          if (confirmationRequired) {
+            setNeedsEmailConfirmation(true);
+            setError(copy.unconfirmed);
+            return;
+          }
+          throw signInError;
+        }
         setMessage(copy.success);
       }
     } catch (err) { setError(err?.message || copy.error); }
     finally { setBusy(false); }
+  }
+
+  async function resendConfirmation() {
+    resetMessages();
+    if (!email.trim()) {
+      setError(isEnglish ? "Enter your email first." : "Indica primeiro o teu email.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email: email.trim(),
+        options: { emailRedirectTo: window.location.origin }
+      });
+      if (resendError) throw resendError;
+      setMessage(copy.resendSent);
+      setNeedsEmailConfirmation(false);
+    } catch (err) {
+      setError(err?.message || copy.error);
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function resetPassword() {
@@ -192,6 +231,7 @@ export default function AccountAccess({ language = "pt-PT" }) {
             </div>
             <button type="submit" className="account-primary-button" disabled={busy}>{busy ? <LoaderCircle size={16} className="spin"/> : <Mail size={16}/>} {mode === "create" ? copy.save : copy.signIn}</button>
             {mode === "signIn" && <button type="button" className="account-mode-toggle" onClick={resetPassword} disabled={busy}>{copy.forgot}</button>}
+            {mode === "signIn" && needsEmailConfirmation && <button type="button" className="account-primary-button account-resend-confirmation" onClick={resendConfirmation} disabled={busy}>{busy ? <LoaderCircle size={16} className="spin"/> : <Mail size={16}/>} {copy.resend}</button>}
           </form>
           <button type="button" className="account-mode-toggle" onClick={() => { setMode(mode === "create" ? "signIn" : "create"); resetMessages(); }}>{mode === "create" ? copy.existing : copy.new}</button>
         </>}
