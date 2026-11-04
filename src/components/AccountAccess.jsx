@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabase.js";
 import { UserRound, X, Mail, Lock, Chrome, LoaderCircle, LogOut, CheckCircle2 } from "lucide-react";
 
@@ -125,7 +126,7 @@ export default function AccountAccess({ language = "pt-PT" }) {
     <button type="button" className="account-access-trigger" onClick={() => { setOpen(true); resetMessages(); }} aria-label={copy.account}>
       <UserRound size={17}/><span>{signedIn ? copy.profile : copy.account}</span>
     </button>
-    {open && <div className="account-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setOpen(false); }}>
+    {open && createPortal(<div className="account-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setOpen(false); }}>
       <section className="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
         <button type="button" className="account-modal-close" aria-label={copy.close} onClick={() => setOpen(false)}><X size={19}/></button>
         <div className="account-modal-icon"><UserRound size={24}/></div>
@@ -154,6 +155,6 @@ export default function AccountAccess({ language = "pt-PT" }) {
         {message && <p className="account-success"><CheckCircle2 size={15}/>{message}</p>}
         {error && <p className="account-error" role="alert">{error}</p>}
       </section>
-    </div>}
+    </div>, document.body)}
   </>;
 }
