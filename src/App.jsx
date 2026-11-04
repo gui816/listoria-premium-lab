@@ -155,15 +155,38 @@ export default function App() {
   useEffect(() => {
     if (!supabase) return undefined;
     let active = true;
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!active) return;
-      if (data.session) { setAuthSession(data.session); return; }
+    let anonymousSignInStarted = false;
+
+    // Wait for Supabase to finish restoring the URL callback session (Google OAuth,
+    // email confirmation, etc.) before creating a guest session. Starting an
+    // anonymous sign-in too early can race with OAuth and replace the real session.
+    const ensureGuestSession = async () => {
+      if (!active || anonymousSignInStarted) return;
+      anonymousSignInStarted = true;
+      const { data: current } = await supabase.auth.getSession();
+      if (!active || current.session) return;
       const { data: anonymousData, error: anonymousError } = await supabase.auth.signInAnonymously();
-      if (!anonymousError && active) setAuthSession(anonymousData.session);
+      if (active && !anonymousError && anonymousData.session) setAuthSession(anonymousData.session);
+      if (anonymousError) anonymousSignInStarted = false;
+    };
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active) return;
+      setAuthSession(session);
+      if (event === "INITIAL_SESSION" && !session) {
+        // Supabase emits INITIAL_SESSION after URL-based auth restoration has run.
+        void ensureGuestSession();
+      }
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (active) setAuthSession(session);
+
+    // Also read the current session in case INITIAL_SESSION was emitted immediately
+    // before the listener became active. Never create a guest if OAuth restored one.
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setAuthSession(data.session);
+      if (!data.session) void ensureGuestSession();
     });
+
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, []);
 
