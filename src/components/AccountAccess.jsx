@@ -85,9 +85,19 @@ export default function AccountAccess({ language = "pt-PT" }) {
           if (profileError) throw profileError;
           setMessage(copy.success);
         } else {
-          const { error: signUpError } = await supabase.auth.signUp({ email: email.trim(), password, options: { data: metadata, emailRedirectTo: window.location.origin } });
+          const { data, error: signUpError } = await supabase.auth.signUp({ email: email.trim(), password, options: { data: metadata, emailRedirectTo: window.location.origin } });
           if (signUpError) throw signUpError;
-          setMessage(isEnglish ? "Check your email to confirm your account." : "Verifica o teu email para confirmares a conta.");
+
+          // With email confirmation enabled Supabase creates the user but does not
+          // establish an authenticated session until the email link is verified.
+          setPassword("");
+          setConfirm("");
+          setMode("signIn");
+          setMessage(data.session
+            ? (isEnglish ? "Your account is ready. You are signed in." : "A tua conta está criada e a sessão foi iniciada.")
+            : (isEnglish
+              ? "Account created. Check your inbox and confirm your email before signing in."
+              : "Conta criada! Enviámos um email de confirmação. Valida o endereço antes de iniciares sessão."));
         }
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
