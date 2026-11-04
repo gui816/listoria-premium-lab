@@ -46,9 +46,26 @@ export default function AccountAccess({ language = "pt-PT" }) {
 
   useEffect(() => {
     if (!supabase) return undefined;
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
-    return () => listener.subscription.unsubscribe();
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted) setSession(data.session);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, next) => {
+      if (!mounted) return;
+      // Refresh the user record after OAuth redirects so provider identities
+      // and profile metadata are reflected in the account button immediately.
+      if (next?.user) {
+        const { data } = await supabase.auth.getUser();
+        if (mounted && data?.user) setSession({ ...next, user: data.user });
+        else if (mounted) setSession(next);
+      } else if (mounted) {
+        setSession(null);
+      }
+    });
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -59,7 +76,12 @@ export default function AccountAccess({ language = "pt-PT" }) {
 
   const user = session?.user;
   const identities = user?.identities || [];
-  const hasPermanentIdentity = Boolean(user?.email || identities.some(identity => identity.provider && identity.provider !== "anonymous"));
+  const authProvider = user?.app_metadata?.provider;
+  const hasPermanentIdentity = Boolean(
+    (user?.email && authProvider !== "anonymous") ||
+    (authProvider && authProvider !== "anonymous") ||
+    identities.some(identity => identity.provider && identity.provider !== "anonymous")
+  );
   const isAnonymous = Boolean(user && !hasPermanentIdentity);
   const signedIn = Boolean(user && hasPermanentIdentity);
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.user_metadata?.display_name || user?.email?.split("@")[0] || copy.profile;
