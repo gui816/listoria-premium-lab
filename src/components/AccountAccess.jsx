@@ -51,28 +51,14 @@ export default function AccountAccess({ language = "pt-PT" }) {
 
   useEffect(() => {
     if (!supabase) return undefined;
-    let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted) setSession(data.session);
-    });
+    // INITIAL_SESSION is emitted after Supabase has restored persisted sessions
+    // and processed OAuth callback URLs. Use the auth event stream as the single
+    // source of truth; a parallel getSession() can resolve later with stale data
+    // and overwrite the freshly restored Google session.
     const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => {
-      if (!mounted) return;
       setSession(next);
-      // Refresh outside the auth callback to avoid holding Supabase's auth lock.
-      if (next?.user) {
-        window.setTimeout(async () => {
-          const { data } = await supabase.auth.getUser();
-          if (mounted && data?.user) {
-            const { data: current } = await supabase.auth.getSession();
-            if (mounted && current.session) setSession({ ...current.session, user: data.user });
-          }
-        }, 0);
-      }
     });
-    return () => {
-      mounted = false;
-      listener.subscription.unsubscribe();
-    };
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -84,13 +70,12 @@ export default function AccountAccess({ language = "pt-PT" }) {
   const user = session?.user;
   const identities = user?.identities || [];
   const authProvider = user?.app_metadata?.provider;
-  const hasPermanentIdentity = Boolean(
-    (user?.email && authProvider !== "anonymous") ||
-    (authProvider && authProvider !== "anonymous") ||
-    identities.some(identity => identity.provider && identity.provider !== "anonymous")
-  );
-  const isAnonymous = Boolean(user && !hasPermanentIdentity);
-  const signedIn = Boolean(user && hasPermanentIdentity);
+  // Supabase exposes is_anonymous explicitly. Provider metadata and identities
+  // can lag while an OAuth identity is being linked, so do not infer this state
+  // from those secondary fields when the authoritative claim is available.
+  const isAnonymous = Boolean(user && (user.is_anonymous === true ||
+    (user.is_anonymous == null && authProvider === "anonymous" && !identities.some(identity => identity.provider && identity.provider !== "anonymous"))));
+  const signedIn = Boolean(user && !isAnonymous);
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.user_metadata?.display_name || user?.email?.split("@")[0] || copy.profile;
   const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "";
   const resetMessages = () => { setError(""); setMessage(""); };
@@ -181,14 +166,34 @@ export default function AccountAccess({ language = "pt-PT" }) {
   }
 
   async function googleAuth() {
-    resetMessages(); setBusy(true);
+    resetMessages();
+    setBusy(true);
     try {
+      const { data: currentData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const currentUser = currentData.session?.user;
       const options = { redirectTo: window.location.href };
-      const result = isAnonymous
-        ? await supabase.auth.linkIdentity({ provider: "google", options })
-        : await supabase.auth.signInWithOAuth({ provider: "google", options });
-      if (result.error) throw result.error;
-    } catch (err) { setError(err?.message || copy.error); setBusy(false); }
+
+      if (currentUser?.is_anonymous) {
+        const { error: linkError } = await supabase.auth.linkIdentity({ provider: "google", options });
+        if (linkError) {
+          // If this Google identity belongs to an existing account, switch to
+          // that account instead of leaving the visitor on an anonymous session.
+          const identityConflict = linkError.code === "identity_already_exists" ||
+            /identity.*already (?:exists|linked)|already linked to (?:another|a different) user/i.test(linkError.message || "");
+          if (!identityConflict) throw linkError;
+          const { error: signInError } = await supabase.auth.signInWithOAuth({ provider: "google", options });
+          if (signInError) throw signInError;
+          return;
+        }
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithOAuth({ provider: "google", options });
+        if (signInError) throw signInError;
+      }
+    } catch (err) {
+      setError(err?.message || copy.error);
+      setBusy(false);
+    }
   }
 
   async function signOut() {
