@@ -50,16 +50,18 @@ export default function AccountAccess({ language = "pt-PT" }) {
     supabase.auth.getSession().then(({ data }) => {
       if (mounted) setSession(data.session);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, next) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => {
       if (!mounted) return;
-      // Refresh the user record after OAuth redirects so provider identities
-      // and profile metadata are reflected in the account button immediately.
+      setSession(next);
+      // Refresh outside the auth callback to avoid holding Supabase's auth lock.
       if (next?.user) {
-        const { data } = await supabase.auth.getUser();
-        if (mounted && data?.user) setSession({ ...next, user: data.user });
-        else if (mounted) setSession(next);
-      } else if (mounted) {
-        setSession(null);
+        window.setTimeout(async () => {
+          const { data } = await supabase.auth.getUser();
+          if (mounted && data?.user) {
+            const { data: current } = await supabase.auth.getSession();
+            if (mounted && current.session) setSession({ ...current.session, user: data.user });
+          }
+        }, 0);
       }
     });
     return () => {
