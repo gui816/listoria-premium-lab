@@ -179,14 +179,9 @@ export default function App() {
       }
     });
 
-    // Also read the current session in case INITIAL_SESSION was emitted immediately
-    // before the listener became active. Never create a guest if OAuth restored one.
-    supabase.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      setAuthSession(data.session);
-      if (!data.session) void ensureGuestSession();
-    });
-
+    // Supabase emits INITIAL_SESSION after restoring persisted sessions and processing
+    // URL-based OAuth callbacks. Do not race that restoration with a second getSession().
+    
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, []);
 
