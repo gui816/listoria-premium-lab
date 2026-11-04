@@ -57,8 +57,13 @@ export default function AccountAccess({ language = "pt-PT" }) {
       .then(({ data }) => setCountries(data || []));
   }, [open]);
 
-  const isAnonymous = Boolean(session?.user?.is_anonymous);
-  const signedIn = Boolean(session?.user && !isAnonymous);
+  const user = session?.user;
+  const identities = user?.identities || [];
+  const hasPermanentIdentity = Boolean(user?.email || identities.some(identity => identity.provider && identity.provider !== "anonymous"));
+  const isAnonymous = Boolean(user && !hasPermanentIdentity);
+  const signedIn = Boolean(user && hasPermanentIdentity);
+  const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.user_metadata?.display_name || user?.email?.split("@")[0] || copy.profile;
+  const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "";
   const resetMessages = () => { setError(""); setMessage(""); };
 
   async function submit(event) {
@@ -123,16 +128,17 @@ export default function AccountAccess({ language = "pt-PT" }) {
   }
 
   return <>
-    <button type="button" className="account-access-trigger" onClick={() => { setOpen(true); resetMessages(); }} aria-label={copy.account}>
-      <UserRound size={17}/><span>{signedIn ? copy.profile : copy.account}</span>
+    <button type="button" className={`account-access-trigger${signedIn ? " is-signed-in" : ""}`} onClick={() => { setOpen(true); resetMessages(); }} aria-label={signedIn ? displayName : copy.account} title={signedIn ? user.email || displayName : copy.account}>
+      {signedIn && avatarUrl ? <img className="account-avatar" src={avatarUrl} alt="" referrerPolicy="no-referrer"/> : <UserRound size={17}/>}
+      <span className="account-trigger-label">{signedIn ? displayName : copy.account}</span>
     </button>
     {open && createPortal(<div className="account-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setOpen(false); }}>
       <section className="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
         <button type="button" className="account-modal-close" aria-label={copy.close} onClick={() => setOpen(false)}><X size={19}/></button>
-        <div className="account-modal-icon"><UserRound size={24}/></div>
-        <h2 id="account-modal-title">{signedIn ? copy.profile : isAnonymous ? copy.account : copy.signIn}</h2>
+        <div className="account-modal-icon">{signedIn && avatarUrl ? <img className="account-modal-avatar" src={avatarUrl} alt="" referrerPolicy="no-referrer"/> : <UserRound size={24}/>}</div>
+        <h2 id="account-modal-title">{signedIn ? displayName : isAnonymous ? copy.account : copy.signIn}</h2>
         {signedIn ? <>
-          <p className="account-modal-subtitle">{copy.signed}: {session.user.email}</p>
+          <p className="account-modal-subtitle">{session.user.email}</p>
           <button type="button" className="account-primary-button" disabled={busy} onClick={signOut}><LogOut size={16}/>{copy.logout}</button>
         </> : <>
           <p className="account-modal-subtitle">{isAnonymous ? copy.upgrade : copy.anonymousInfo}</p>
