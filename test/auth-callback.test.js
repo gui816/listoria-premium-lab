@@ -5,7 +5,8 @@ import { completeAuthCallback } from "../src/lib/auth-callback.js";
 function setup(href) {
   const location = { href };
   const history = { state: null, replaced: "", replaceState(_state, _title, url) { this.replaced = url; } };
-  const storage = new Map();
+  const values = new Map();
+  const storage = { setItem(key, value) { values.set(key, value); }, getItem(key) { return values.get(key) || null; }, removeItem(key) { values.delete(key); }, has(key) { return values.has(key); }, get(key) { return values.get(key); } };
   return { location, history, storage };
 }
 
