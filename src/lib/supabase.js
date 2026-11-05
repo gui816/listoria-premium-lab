@@ -6,5 +6,5 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseKey);
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseKey, { realtime: { params: { eventsPerSecond: 5 } } })
+  ? createClient(supabaseUrl, supabaseKey, { realtime: { params: { eventsPerSecond: 5 } }, auth: { flowType: "pkce", detectSessionInUrl: false } })
   : null;
