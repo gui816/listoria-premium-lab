@@ -6,7 +6,7 @@ function cleanCallbackUrl(url, history) {
   const hash = new URLSearchParams(next.hash.replace(/^#/, ""));
   ["access_token", "refresh_token", "expires_in", "expires_at", "token_type", "type", "error", "error_code", "error_description"].forEach((key) => hash.delete(key));
   next.hash = hash.toString() ? "#" + hash.toString() : "";
-  history.replaceState(history.state, document.title, next.pathname + next.search + next.hash);
+  history.replaceState(history.state, "", next.pathname + next.search + next.hash);
 }
 
 export async function completeAuthCallback({ supabase, location, history, storage }) {
