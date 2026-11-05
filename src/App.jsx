@@ -824,6 +824,7 @@ export default function App() {
       const itemsFound = await callGemini({ image: { mimeType: file.type, data: base64 } });
       if (!itemsFound.length) throw new Error("Não consegui identificar produtos. Tenta uma fotografia mais nítida.");
       setImportPreview(itemsFound);
+          setVoiceModalOpen(false);
     } catch (err) { setImportError(err.message || "Não foi possível interpretar a imagem."); }
     finally { setImportBusy(false); if (imageInputRef.current) imageInputRef.current.value = ""; }
   }
