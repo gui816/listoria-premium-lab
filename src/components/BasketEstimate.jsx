@@ -280,12 +280,12 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
       <div className="basket-estimate-summary">
         <span className="basket-estimate-icon"><Sparkles size={22}/></span>
         <div className="basket-estimate-summary-copy">
-          <small className="basket-estimate-eyebrow">POUPA NAS COMPRAS · COM IA</small>
+          
           <strong>Quanto custa o teu cabaz?</strong>
           {bestStore && !stale ? <>
             <b>{formatMoney(bestStore.estimatedTotal)} <small>· {bestStore.name}</small></b>
-            <span>{cleanItems.length} produtos · Melhor estimativa encontrada</span>
-          </> : <span>{cleanItems.length} produtos prontos a comparar entre supermercados.</span>}
+            <span>Compara supermercados</span>
+          </> : <span>Compara supermercados</span>}
         </div>
         <button type="button" className="basket-estimate-open" onClick={openModal}>
           <Sparkles size={16}/><span>{bestStore && !stale ? "Ver comparação" : "Estimar cabaz"}</span><ChevronRight size={17}/>
