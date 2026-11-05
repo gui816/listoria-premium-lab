@@ -64,26 +64,36 @@ export default function AccountAccess({ language = "pt-PT" }) {
   useEffect(() => {
     if (!supabase || typeof window === "undefined") return;
 
-    // A failed OAuth identity-linking attempt is returned by Supabase as URL
-    // parameters after the browser has left this component. In that case the
-    // original linkIdentity() promise no longer exists to run its fallback.
-    const callbackParams = new URLSearchParams(window.location.search);
-    const callbackErrorCode = callbackParams.get("error_code");
+    // Supabase can return OAuth errors in either the query string or the URL
+    // fragment. The identity-linking conflict commonly arrives as:
+    // #error=server_error&error_code=identity_already_exists
+    const searchParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const callbackErrorCode =
+      searchParams.get("error_code") || hashParams.get("error_code");
     if (callbackErrorCode !== "identity_already_exists") return;
 
-    // Remove the one-time error before starting a fresh OAuth login. This
-    // prevents the callback handler from processing the same error again.
+    // Remove the one-time error from both URL sections before starting a new
+    // OAuth flow, so this callback cannot be handled repeatedly.
     const cleanUrl = new URL(window.location.href);
-    ["error", "error_code", "error_description"].forEach(key => cleanUrl.searchParams.delete(key));
-    window.history.replaceState(window.history.state, document.title, cleanUrl.toString());
+    ["error", "error_code", "error_description"].forEach(key => {
+      cleanUrl.searchParams.delete(key);
+      hashParams.delete(key);
+    });
+    cleanUrl.hash = hashParams.toString() ? hashParams.toString() : "";
+    window.history.replaceState(
+      window.history.state,
+      document.title,
+      cleanUrl.pathname + cleanUrl.search + cleanUrl.hash
+    );
 
     let cancelled = false;
     setBusy(true);
     (async () => {
       try {
-        // Wait until Supabase has restored the anonymous session left behind
-        // by the failed link operation, then authenticate the existing Google
-        // account instead of trying to link that identity a second time.
+        // Restore the guest session first. If the Google identity is already
+        // owned by another Supabase user, authenticate that existing user
+        // instead of attempting to link the identity again.
         const { data, error: sessionError } = await supabase.auth.getSession();
         if (sessionError) throw sessionError;
         if (cancelled) return;
@@ -91,9 +101,22 @@ export default function AccountAccess({ language = "pt-PT" }) {
           setBusy(false);
           return;
         }
+
+        // A Google identity that already belongs to another Supabase user
+        // cannot be linked to the current anonymous user. Supabase keeps the
+        // anonymous session when it reports identity_already_exists, so an
+        // OAuth attempt without clearing that session can repeat the same
+        // identity-linking path. Sign out locally first, then perform a clean
+        // sign-in to the existing Google account. Family lists are addressed
+        // by share code and are not owned by this anonymous auth user.
+        if (data.session?.user?.is_anonymous) {
+          const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
+          if (signOutError) throw signOutError;
+        }
+
         const { error: signInError } = await supabase.auth.signInWithOAuth({
           provider: "google",
-          options: { redirectTo: cleanUrl.toString() }
+          options: { redirectTo: cleanUrl.origin + cleanUrl.pathname + cleanUrl.search }
         });
         if (signInError) throw signInError;
       } catch (err) {
@@ -228,6 +251,11 @@ export default function AccountAccess({ language = "pt-PT" }) {
           const identityConflict = linkError.code === "identity_already_exists" ||
             /identity.*already (?:exists|linked)|already linked to (?:another|a different) user/i.test(linkError.message || "");
           if (!identityConflict) throw linkError;
+          // The current anonymous session would make Supabase treat the
+          // next OAuth attempt as another identity-linking operation. End only
+          // this local guest session before signing into the existing account.
+          const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
+          if (signOutError) throw signOutError;
           const { error: signInError } = await supabase.auth.signInWithOAuth({ provider: "google", options });
           if (signInError) throw signInError;
           return;
