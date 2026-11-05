@@ -241,29 +241,21 @@ export default function AccountAccess({ language = "pt-PT" }) {
       const { data: currentData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
       const currentUser = currentData.session?.user;
-      const options = { redirectTo: window.location.href };
 
+      // Guest lists are share-code based, not owned by the anonymous auth user.
+      // Start a normal Google sign-in directly instead of first attempting
+      // linkIdentity: existing Google identities would otherwise trigger a
+      // second account chooser after the identity_already_exists callback.
       if (currentUser?.is_anonymous) {
-        const { error: linkError } = await supabase.auth.linkIdentity({ provider: "google", options });
-        if (linkError) {
-          // If this Google identity belongs to an existing account, switch to
-          // that account instead of leaving the visitor on an anonymous session.
-          const identityConflict = linkError.code === "identity_already_exists" ||
-            /identity.*already (?:exists|linked)|already linked to (?:another|a different) user/i.test(linkError.message || "");
-          if (!identityConflict) throw linkError;
-          // The current anonymous session would make Supabase treat the
-          // next OAuth attempt as another identity-linking operation. End only
-          // this local guest session before signing into the existing account.
-          const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
-          if (signOutError) throw signOutError;
-          const { error: signInError } = await supabase.auth.signInWithOAuth({ provider: "google", options });
-          if (signInError) throw signInError;
-          return;
-        }
-      } else {
-        const { error: signInError } = await supabase.auth.signInWithOAuth({ provider: "google", options });
-        if (signInError) throw signInError;
+        const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
+        if (signOutError) throw signOutError;
       }
+
+      const { error: signInError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.href }
+      });
+      if (signInError) throw signInError;
     } catch (err) {
       setError(err?.message || copy.error);
       setBusy(false);
