@@ -829,10 +829,10 @@ export default function App() {
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
       recognitionRef.current = recognition;
-      recognition.onstart = () => setListening(true);
+      recognition.onstart = () => { setImportError(""); setListening(true); };
       recognition.onerror = event => {
         setListening(false);
-        setVoiceModalOpen(false);
+        setVoiceModalOpen(true);
         const message = event.error === "not-allowed" || event.error === "service-not-allowed"
           ? t("O acesso ao microfone foi recusado. Permite o microfone nas definições do navegador.")
           : event.error === "network"
@@ -842,7 +842,7 @@ export default function App() {
               : t("Não foi possível reconhecer a voz. Neste navegador, podes usar o microfone do teclado para ditar no campo do produto.");
         setImportError(message);
       };
-      recognition.onnomatch = () => { setImportError(t("Não percebemos os produtos ditos. Tenta falar um pouco mais devagar.")); };
+      recognition.onnomatch = () => { setListening(false); setVoiceModalOpen(true); setImportError(t("Não percebemos os produtos ditos. Tenta falar um pouco mais devagar.")); };
       recognition.onend = () => setListening(false);
       recognition.onresult = async event => {
         const transcript = event.results?.[0]?.[0]?.transcript?.trim();
@@ -852,8 +852,8 @@ export default function App() {
           const itemsFound = await callGemini({ text: transcript });
           if (!itemsFound.length) throw new Error("Não foram identificados produtos na frase. Tenta novamente.");
           setImportPreview(itemsFound);
-        } catch (err) { setImportError(err.message || "Não foi possível interpretar a voz."); }
-        finally { setImportBusy(false); setVoiceModalOpen(false); }
+        } catch (err) { setImportError(err.message || "Não foi possível interpretar a voz."); setVoiceModalOpen(true); }
+        finally { setImportBusy(false); }
       };
       recognition.start();
     } catch {
@@ -1256,7 +1256,7 @@ export default function App() {
         {doneItems.length > 0 && !showDone && !shoppingMode && <button className="clear-done" onClick={clearDone}><CheckCheck size={16}/> {t("Limpar artigos comprados")}</button>}
         {items.length > 0 && !shoppingMode && <button type="button" className="clear-all-items" onClick={clearAllItems}><Trash2 size={16}/> {t("Remover todos os produtos")}</button>}
       </section>
-      <div className="shopping-actions-dock">
+      <div className={`shopping-actions-dock${keyboardOpen ? " keyboard-open" : ""}`}>
       {!showOnboarding && !shoppingMode && activeTab === "shopping" && items.length > 0 && !keyboardOpen && !showOtherProducts && <button type="button" className="shopping-mode-fab" onClick={() => { setShoppingMode(true); setShowDone(false); }}><ShoppingBasket size={18} strokeWidth={2.2}/><span>{t("Modo supermercado")}</span></button>}
       {!showOnboarding && shoppingMode && activeTab === "shopping" && <button type="button" className="shopping-mode-fab supermarket-exit-fab" onClick={() => { setShoppingMode(false); setShowDone(false); }}><X size={18} strokeWidth={2.4}/><span>{t("Sair do modo supermercado")}</span></button>}
       <section className={`add-panel floating-add-panel${addPanelExpanded ? " expanded" : ""}${keyboardOpen ? " keyboard-open" : ""}`} hidden={shoppingMode}>
@@ -1353,7 +1353,7 @@ export default function App() {
         {receipts.length === 0 ? <div className="empty-state"><span className="empty-illustration">🧾</span><h3>{t("Ainda não há faturas")}</h3><p>{t("Adiciona o primeiro comprovativo para ficar disponível a toda a família.")}</p></div> : <div className="receipt-list">{receipts.map(receipt => <article className="receipt-card" key={receipt.id}><div className="receipt-card-icon"><Receipt size={21}/></div><div className="receipt-card-main"><strong>{receipt.storeName}</strong><span>{new Date(receipt.purchasedAt + "T12:00:00").toLocaleDateString(language === "en" ? "en-GB" : language)} · {receipt.memberName || t("Membro")}</span>{receipt.notes && <p>{receipt.notes}</p>}</div><div className="receipt-card-side"><strong>{Number(receipt.total).toLocaleString(language === "en" ? "en-GB" : language,{style:"currency",currency:"EUR"})}</strong>{receipt.filePath && <button type="button" onClick={() => openReceipt(receipt)} aria-label={t("Abrir comprovativo")}><ExternalLink size={17}/></button>}<button type="button" onClick={() => removeReceipt(receipt)} aria-label={t("Apagar fatura")}><Trash2 size={16}/></button></div></article>)}</div>}
       </section>}
       <footer className="app-footer"><span><Leaf size={15}/> {t("Menos esquecimentos, mais tempo juntos.")}</span><button onClick={leaveCurrentList}>{t("Sair da lista")} / {t("Criar nova")}</button></footer>
-      {voiceModalOpen && (listening || (importBusy && importSource === "voice")) && <div className="modal-backdrop voice-modal-backdrop" onClick={() => { recognitionRef.current?.stop(); setListening(false); setVoiceModalOpen(false); }}>
+      {voiceModalOpen && createPortal(<div className="modal-backdrop voice-modal-backdrop" onClick={() => { recognitionRef.current?.stop(); setListening(false); setVoiceModalOpen(false); }}>
         <section className="share-modal voice-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="voice-modal-title">
           <button type="button" className="modal-close" aria-label={t("Fechar")} onClick={() => { recognitionRef.current?.stop(); setListening(false); setVoiceModalOpen(false); }}><X size={20}/></button>
           <div className="voice-status-row"><div className={"voice-modal-icon " + (importBusy ? "is-processing" : "is-listening")}>{importBusy ? <LoaderCircle className="spin" size={26}/> : <Mic size={26}/>}</div>
@@ -1364,9 +1364,11 @@ export default function App() {
           {listening && <div className="voice-wave"><span/><span/><span/><span/><span/><span/><span/><span/><span/></div>}
           {importBusy && <div className="voice-processing-note"><LoaderCircle className="spin" size={16}/>{t("A analisar o que disseste…")}</div>}
           {listening && <button type="button" className="primary-button voice-stop-button" onClick={() => { recognitionRef.current?.stop(); setListening(false); setVoiceModalOpen(false); }}><X size={17}/>{t("Parar gravação")}</button>}
+          {importError && <div className="voice-modal-error" role="alert">{importError}</div>}
+          {importError && !importBusy && <div className="voice-modal-actions"><button type="button" className="primary-button" onClick={startVoiceImport}><Mic size={16}/>{t("Tentar novamente")}</button><button type="button" className="secondary-button" onClick={() => { setVoiceModalOpen(false); setImportError(""); productNameInputRef.current?.focus({ preventScroll: true }); }}>{t("Usar teclado")}</button></div>}
         </section>
-      </div>}
-      {showPhotoSource && <div className="modal-backdrop photo-source-backdrop" onClick={() => setShowPhotoSource(false)}><section className="share-modal photo-source-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="photo-source-title"><button type="button" className="modal-close" aria-label={t("Cancelar")} onClick={() => setShowPhotoSource(false)}><X size={19}/></button><div className="share-graphic"><Camera size={25}/></div><h2 id="photo-source-title">{t("Câmara ou galeria")}</h2><p>{t("Escolhe como queres adicionar os produtos")}</p><div className="photo-source-options"><button type="button" className="photo-source-option" onClick={() => {setShowPhotoSource(false); imageCameraInputRef.current?.click();}}><span className="photo-source-option-icon"><Camera size={20}/></span><span><strong>{t("Abrir câmara")}</strong><small>{t("Fotografar uma lista de compras em papel, manuscrita ou num quadro.")}</small></span></button><button type="button" className="photo-source-option" onClick={() => {setShowPhotoSource(false); imageFileInputRef.current?.click();}}><span className="photo-source-option-icon"><Upload size={20}/></span><span><strong>{t("Escolher ficheiro")}</strong><small>{t("Seleciona uma fotografia da galeria. A importação de PDF e Excel ainda não está disponível nesta opção.")}</small></span></button></div><button type="button" className="secondary-button photo-source-cancel" onClick={() => setShowPhotoSource(false)}>{t("Cancelar")}</button></section></div>}
+      </div>, document.body)}
+      {showPhotoSource && createPortal(<div className="modal-backdrop photo-source-backdrop" onClick={() => setShowPhotoSource(false)}><section className="share-modal photo-source-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="photo-source-title"><button type="button" className="modal-close" aria-label={t("Cancelar")} onClick={() => setShowPhotoSource(false)}><X size={19}/></button><div className="share-graphic"><Camera size={25}/></div><h2 id="photo-source-title">{t("Câmara ou galeria")}</h2><p>{t("Escolhe como queres adicionar os produtos")}</p><div className="photo-source-options"><button type="button" className="photo-source-option" onClick={() => {setShowPhotoSource(false); imageCameraInputRef.current?.click();}}><span className="photo-source-option-icon"><Camera size={20}/></span><span><strong>{t("Abrir câmara")}</strong><small>{t("Fotografar uma lista de compras em papel, manuscrita ou num quadro.")}</small></span></button><button type="button" className="photo-source-option" onClick={() => {setShowPhotoSource(false); imageFileInputRef.current?.click();}}><span className="photo-source-option-icon"><Upload size={20}/></span><span><strong>{t("Escolher ficheiro")}</strong><small>{t("Seleciona uma fotografia da galeria. A importação de PDF e Excel ainda não está disponível nesta opção.")}</small></span></button></div><button type="button" className="secondary-button photo-source-cancel" onClick={() => setShowPhotoSource(false)}>{t("Cancelar")}</button></section></div>, document.body)}
       {importPreview.length > 0 && <div className="modal-backdrop" onClick={() => !importBusy && setImportPreview([])}><section className="share-modal import-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="import-title"><button className="modal-close" onClick={() => !importBusy && setImportPreview([])} aria-label={t("Fechar")}><X size={20}/></button><div className="share-graphic"><ShoppingBasket size={28}/></div><h2 id="import-title">{t("Confirmar produtos")}</h2><p>{importSource === "photo" ? "Revê os produtos reconhecidos na fotografia." : "Revê os produtos reconhecidos por voz."} Podes corrigir os nomes e quantidades antes de adicionar.</p><div className="import-preview-list">{importPreview.map((item, index) => <div className="import-preview-row" key={index}><input aria-label={`Produto ${index + 1}`} value={item.name} maxLength={100} onChange={e => editPreviewItem(index, { name: e.target.value })}/><input aria-label={`Quantidade de ${item.name}`} type="number" min="1" max="999" value={item.quantity} onChange={e => editPreviewItem(index, { quantity: e.target.value })}/><button type="button" aria-label={`Remover ${item.name}`} onClick={() => setImportPreview(previous => previous.filter((_, i) => i !== index))}><X size={17}/></button></div>)}</div>{importError && <p className="error-message">{importError}</p>}<button className="primary-button" disabled={importBusy || !importPreview.some(item => item.name.trim())} onClick={confirmImport}>{importBusy ? <LoaderCircle className="spin" size={17}/> : <Check size={17}/>} {importBusy ? "A adicionar…" : `Adicionar ${importPreview.length} produtos`}</button><button className="secondary-button" disabled={importBusy} onClick={() => setImportPreview([])}>{t("Cancelar")}</button></section></div>}
       {showOnboarding && <div className="modal-backdrop onboarding-backdrop" onClick={() => { setShowOnboarding(false); localStorage.setItem("listora-onboarding-v3-complete", "1"); }}>
         <section className="share-modal onboarding-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
