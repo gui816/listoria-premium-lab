@@ -340,6 +340,23 @@ export default function App() {
       document.documentElement.style.removeProperty("--listoria-visual-viewport-height");
     };
   }, [productInputFocused]);
+  useEffect(() => {
+    const dock = document.querySelector(".shopping-actions-dock");
+    if (!dock) return undefined;
+    const root = document.documentElement;
+    const updateDockHeight = () => {
+      root.style.setProperty("--listoria-dock-height", `${Math.ceil(dock.getBoundingClientRect().height)}px`);
+    };
+    updateDockHeight();
+    if (typeof ResizeObserver === "undefined") return () => root.style.removeProperty("--listoria-dock-height");
+    const observer = new ResizeObserver(updateDockHeight);
+    observer.observe(dock);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--listoria-dock-height");
+    };
+  }, [keyboardOpen, addPanelExpanded, shoppingMode, activeTab, items.length, showOtherProducts]);
+
 
   useEffect(() => {
     if (!recentlyAddedItemId || !productInputFocused) return undefined;
