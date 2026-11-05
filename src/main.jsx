@@ -1,6 +1,8 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
+import { supabase } from "./lib/supabase.js";
+import { completeAuthCallback } from "./lib/auth-callback.js";
 import "./styles.css";
 
 class AppErrorBoundary extends React.Component {
@@ -42,6 +44,22 @@ if ("serviceWorker" in navigator && import.meta.env.PROD) {
   });
 }
 
-createRoot(document.getElementById("root")).render(
-  <React.StrictMode><AppErrorBoundary><App /></AppErrorBoundary></React.StrictMode>
-);
+async function mountListora() {
+  try {
+    await completeAuthCallback({
+      supabase,
+      location: window.location,
+      history: window.history,
+      storage: window.sessionStorage
+    });
+  } catch (error) {
+    try { window.sessionStorage.setItem("listora-auth-callback-error", error?.message || "Não foi possível concluir o login."); } catch {}
+    console.error("Listora auth callback failed:", error);
+  }
+
+  createRoot(document.getElementById("root")).render(
+    <React.StrictMode><AppErrorBoundary><App /></AppErrorBoundary></React.StrictMode>
+  );
+}
+
+void mountListora();
