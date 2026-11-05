@@ -3038,3 +3038,61 @@ button { -webkit-tap-highlight-color: transparent; }
   .discover-back, .discover-feature { transition: none; }
   .discover-feature:hover, .discover-back:hover { transform: none; }
 }
+
+/* Basket estimate is a core Listora differentiator: give it clear visual priority. */
+.basket-estimate {
+  margin: 2px 0 24px;
+  padding: 20px 22px;
+  border: 1px solid #cbdcc7;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 92% 12%, rgba(213, 232, 204, .72), transparent 34%),
+    linear-gradient(115deg, #edf5e9 0%, #fbfcf7 58%, #fffefa 100%);
+  box-shadow: 0 8px 24px rgba(38, 91, 58, .08), inset 0 1px 0 rgba(255,255,255,.9);
+}
+.basket-estimate-summary { gap: 16px; }
+.basket-estimate-icon {
+  width: 52px;
+  height: 52px;
+  flex-basis: 52px;
+  border-radius: 16px;
+  background: #dcebd7;
+  box-shadow: inset 0 0 0 1px rgba(43, 112, 73, .08);
+}
+.basket-estimate-summary-copy { gap: 4px; }
+.basket-estimate-eyebrow {
+  color: #397b56;
+  font-size: 9px;
+  line-height: 1.2;
+  font-weight: 850;
+  letter-spacing: .12em;
+}
+.basket-estimate-summary-copy>strong { font-size: 17px; letter-spacing: -.025em; }
+.basket-estimate-summary-copy>b { font-size: 20px; }
+.basket-estimate-summary-copy>span { font-size: 12px; line-height: 1.4; }
+.basket-estimate-open {
+  min-height: 44px;
+  padding: 0 15px;
+  border-radius: 12px;
+  background: #216744;
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 4px 12px rgba(33, 103, 68, .16);
+  transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.basket-estimate-open:hover {
+  background: #185638;
+  box-shadow: 0 7px 16px rgba(33, 103, 68, .22);
+  transform: translateY(-1px);
+}
+@media (max-width: 680px) {
+  .basket-estimate { margin: 0 0 20px; padding: 16px; border-radius: 18px; }
+  .basket-estimate-summary { align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .basket-estimate-icon { width: 46px; height: 46px; flex-basis: 46px; }
+  .basket-estimate-summary-copy { flex: 1 1 calc(100% - 62px); padding-top: 1px; }
+  .basket-estimate-summary-copy>strong { font-size: 16px; }
+  .basket-estimate-summary-copy>b { font-size: 19px; }
+  .basket-estimate-summary-copy>span { font-size: 11px; }
+  .basket-estimate-open { width: 100%; justify-content: center; min-height: 44px; margin-top: 2px; }
+}
