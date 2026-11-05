@@ -46,3 +46,12 @@ test("does nothing when the URL has no auth callback", async () => {
   assert.deepEqual(result, { handled: false, error: null });
   assert.equal(env.history.replaced, "");
 });
+
+test("surfaces provider-denied callbacks and removes auth parameters", async () => {
+  const env = setup("https://example.test/?error=access_denied&error_description=User+cancelled");
+  const result = await completeAuthCallback({ supabase: { auth: {} }, ...env });
+  assert.equal(result.handled, true);
+  assert.equal(result.error, "User cancelled");
+  assert.equal(env.storage.get("listora-auth-callback-error"), "User cancelled");
+  assert.equal(env.history.replaced, "/");
+});
