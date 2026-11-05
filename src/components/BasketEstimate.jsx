@@ -278,16 +278,17 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
   return <>
     <section className="basket-estimate">
       <div className="basket-estimate-summary">
-        <span className="basket-estimate-icon"><Sparkles size={18}/></span>
+        <span className="basket-estimate-icon"><Sparkles size={22}/></span>
         <div className="basket-estimate-summary-copy">
-          <strong>Estimativa do cabaz</strong>
+          <small className="basket-estimate-eyebrow">POUPA NAS COMPRAS · COM IA</small>
+          <strong>Quanto custa o teu cabaz?</strong>
           {bestStore && !stale ? <>
             <b>{formatMoney(bestStore.estimatedTotal)} <small>· {bestStore.name}</small></b>
-            <span>{cleanItems.length} produtos · {country?.name || result?.country?.name}</span>
-          </> : <span>{cleanItems.length} produtos · Compara o custo estimado por supermercado</span>}
+            <span>{cleanItems.length} produtos · Melhor estimativa encontrada</span>
+          </> : <span>{cleanItems.length} produtos prontos a comparar entre supermercados.</span>}
         </div>
         <button type="button" className="basket-estimate-open" onClick={openModal}>
-          {bestStore && !stale ? "Ver comparação" : "Comparar preços"} <ChevronRight size={16}/>
+          <Sparkles size={16}/><span>{bestStore && !stale ? "Ver comparação" : "Estimar cabaz"}</span><ChevronRight size={17}/>
         </button>
       </div>
       {stale && <p className="basket-estimate-stale-note">A lista foi alterada. Atualiza a estimativa para refletir os produtos atuais.</p>}
