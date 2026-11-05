@@ -101,6 +101,19 @@ export default function AccountAccess({ language = "pt-PT" }) {
           setBusy(false);
           return;
         }
+
+        // A Google identity that already belongs to another Supabase user
+        // cannot be linked to the current anonymous user. Supabase keeps the
+        // anonymous session when it reports identity_already_exists, so an
+        // OAuth attempt without clearing that session can repeat the same
+        // identity-linking path. Sign out locally first, then perform a clean
+        // sign-in to the existing Google account. Family lists are addressed
+        // by share code and are not owned by this anonymous auth user.
+        if (data.session?.user?.is_anonymous) {
+          const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
+          if (signOutError) throw signOutError;
+        }
+
         const { error: signInError } = await supabase.auth.signInWithOAuth({
           provider: "google",
           options: { redirectTo: cleanUrl.origin + cleanUrl.pathname + cleanUrl.search }
@@ -238,6 +251,11 @@ export default function AccountAccess({ language = "pt-PT" }) {
           const identityConflict = linkError.code === "identity_already_exists" ||
             /identity.*already (?:exists|linked)|already linked to (?:another|a different) user/i.test(linkError.message || "");
           if (!identityConflict) throw linkError;
+          // The current anonymous session would make Supabase treat the
+          // next OAuth attempt as another identity-linking operation. End only
+          // this local guest session before signing into the existing account.
+          const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
+          if (signOutError) throw signOutError;
           const { error: signInError } = await supabase.auth.signInWithOAuth({ provider: "google", options });
           if (signInError) throw signInError;
           return;
