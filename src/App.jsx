@@ -355,7 +355,7 @@ export default function App() {
       observer.disconnect();
       root.style.removeProperty("--listoria-dock-height");
     };
-  }, [keyboardOpen, addPanelExpanded, shoppingMode, activeTab, items.length, showOtherProducts]);
+  }, [list, listCode, memberName, keyboardOpen, addPanelExpanded, shoppingMode, activeTab, items.length, showOtherProducts]);
 
 
   useEffect(() => {
