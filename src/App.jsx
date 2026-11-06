@@ -5,7 +5,7 @@ import BasketEstimate from "./components/BasketEstimate.jsx";
 import AccountAccess from "./components/AccountAccess.jsx";
 import { supabase, isSupabaseConfigured } from "./lib/supabase.js";
 import {
-  ArrowRight, ArrowLeft, Sparkles, Check, CheckCheck, ChevronDown, CircleHelp, Clipboard, Copy, Share2, Download, Repeat2, List,
+  ArrowRight, ArrowLeft, Sparkles, Check, CheckCheck, ChevronDown, CircleHelp, Clipboard, Copy, Share2, Download, Repeat2, List, Store,
   Camera, Mic, Leaf, LoaderCircle, Plus, ShoppingBasket, Trash2, Users, LogOut, Wifi, WifiOff, X, FileText, Receipt, Upload, ExternalLink, Zap, Smartphone, Bell
 } from "lucide-react";
 
