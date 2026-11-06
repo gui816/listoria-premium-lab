@@ -78,6 +78,8 @@ export default function ProductSuggestions({ items = [], language = "pt-PT", onA
     setError("");
     setNotice("");
     setSelected([]);
+    setResults([]);
+    setSources([]);
     setSearched(false);
     const key = cacheKey(cleanQuery, countryCode, items);
     if (!force) {
@@ -125,17 +127,18 @@ export default function ProductSuggestions({ items = [], language = "pt-PT", onA
     setAdding(true);
     setError("");
     let count = 0;
+    const addedIds = [];
     for (const id of selected) {
       const product = results.find((entry) => entry.id === id);
       if (!product || existingNames.has(String(product.name || "").toLocaleLowerCase())) continue;
       const ok = await onAddProduct(product.name, 1, "auto", true);
-      if (ok) count++;
+      if (ok) { count++; addedIds.push(id); }
     }
     setAdding(false);
     setNotice(count + " " + c.added);
     setSelected([]);
     setSearched(false);
-    if (count) setResults((current) => current.filter((entry) => !existingNames.has(String(entry.name || "").toLocaleLowerCase()) && !selected.includes(entry.id)));
+    if (count) setResults((current) => current.filter((entry) => !addedIds.includes(entry.id)));
   };
 
   return <>
