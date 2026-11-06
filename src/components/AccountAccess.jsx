@@ -55,79 +55,24 @@ export default function AccountAccess({ language = "pt-PT" }) {
     // and processed OAuth callback URLs. Use the auth event stream as the single
     // source of truth; a parallel getSession() can resolve later with stale data
     // and overwrite the freshly restored Google session.
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, next) => {
       setSession(next);
+      if (event === "SIGNED_IN") {
+        try { window.sessionStorage.removeItem("listora-auth-callback-error"); } catch {}
+        setError("");
+      }
     });
     return () => listener.subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (!supabase || typeof window === "undefined") return;
-
-    // Supabase can return OAuth errors in either the query string or the URL
-    // fragment. The identity-linking conflict commonly arrives as:
-    // #error=server_error&error_code=identity_already_exists
-    const searchParams = new URLSearchParams(window.location.search);
-    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    const callbackErrorCode =
-      searchParams.get("error_code") || hashParams.get("error_code");
-    if (callbackErrorCode !== "identity_already_exists") return;
-
-    // Remove the one-time error from both URL sections before starting a new
-    // OAuth flow, so this callback cannot be handled repeatedly.
-    const cleanUrl = new URL(window.location.href);
-    ["error", "error_code", "error_description"].forEach(key => {
-      cleanUrl.searchParams.delete(key);
-      hashParams.delete(key);
-    });
-    cleanUrl.hash = hashParams.toString() ? hashParams.toString() : "";
-    window.history.replaceState(
-      window.history.state,
-      document.title,
-      cleanUrl.pathname + cleanUrl.search + cleanUrl.hash
-    );
-
-    let cancelled = false;
-    setBusy(true);
-    (async () => {
-      try {
-        // Restore the guest session first. If the Google identity is already
-        // owned by another Supabase user, authenticate that existing user
-        // instead of attempting to link the identity again.
-        const { data, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
-        if (cancelled) return;
-        if (data.session?.user && !data.session.user.is_anonymous) {
-          setBusy(false);
-          return;
-        }
-
-        // A Google identity that already belongs to another Supabase user
-        // cannot be linked to the current anonymous user. Supabase keeps the
-        // anonymous session when it reports identity_already_exists, so an
-        // OAuth attempt without clearing that session can repeat the same
-        // identity-linking path. Sign out locally first, then perform a clean
-        // sign-in to the existing Google account. Family lists are addressed
-        // by share code and are not owned by this anonymous auth user.
-        if (data.session?.user?.is_anonymous) {
-          const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
-          if (signOutError) throw signOutError;
-        }
-
-        const { error: signInError } = await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: { redirectTo: cleanUrl.origin + cleanUrl.pathname + cleanUrl.search }
-        });
-        if (signInError) throw signInError;
-      } catch (err) {
-        if (!cancelled) {
-          setError(err?.message || copy.error);
-          setBusy(false);
-        }
+    try {
+      const callbackError = window.sessionStorage.getItem("listora-auth-callback-error");
+      if (callbackError) {
+        setError(callbackError);
+        setOpen(true);
       }
-    })();
-
-    return () => { cancelled = true; };
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -236,6 +181,7 @@ export default function AccountAccess({ language = "pt-PT" }) {
 
   async function googleAuth() {
     resetMessages();
+    try { window.sessionStorage.removeItem("listora-auth-callback-error"); } catch {}
     setBusy(true);
     try {
       const { data: currentData, error: sessionError } = await supabase.auth.getSession();
@@ -251,9 +197,12 @@ export default function AccountAccess({ language = "pt-PT" }) {
         if (signOutError) throw signOutError;
       }
 
+      const redirectUrl = new URL(window.location.href);
+      ["code", "error", "error_code", "error_description"].forEach(key => redirectUrl.searchParams.delete(key));
+      redirectUrl.hash = "";
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: window.location.href }
+        options: { redirectTo: redirectUrl.origin + redirectUrl.pathname + redirectUrl.search }
       });
       if (signInError) throw signInError;
     } catch (err) {
