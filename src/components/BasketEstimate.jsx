@@ -281,10 +281,10 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
         <span className="basket-estimate-icon"><Sparkles size={22}/></span>
         <div className="basket-estimate-summary-copy">
           
-          <strong>Quanto custa o teu cabaz?</strong>
+          <strong>Compara o teu cabaz com IA</strong>
           {bestStore && !stale ? <>
             <b>{formatMoney(bestStore.estimatedTotal)} <small>· {bestStore.name}</small></b>
-            <span>Compara supermercados</span>
+            <span>Smart comparison · estimativas por supermercado</span>
           </> : <span>Compara supermercados</span>}
         </div>
         <button type="button" className="basket-estimate-open" onClick={openModal}>
@@ -297,7 +297,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
     {open && <div className="basket-estimate-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setOpen(false); }}>
       <section className="basket-estimate-modal" role="dialog" aria-modal="true" aria-labelledby="basket-estimate-title">
         <header className="basket-estimate-modal-header">
-          <div><span className="basket-estimate-modal-kicker"><Sparkles size={14}/> COMPARAÇÃO INTELIGENTE</span><h2 id="basket-estimate-title">Quanto poderá custar o teu cabaz?</h2><p>{cleanItems.length} produtos na lista</p><p className="basket-estimate-quality-hint">A IA pesquisa na Web os produtos e preços disponíveis, procurando primeiro correspondências exatas e depois alternativas equivalentes. Quando não encontra preços verificáveis, apresenta estimativas.</p></div>
+          <div><span className="basket-estimate-modal-kicker"><Sparkles size={14}/> COMPARAÇÃO INTELIGENTE</span><h2 id="basket-estimate-title">Quanto poderá custar o teu cabaz?</h2><p>{cleanItems.length} produtos na lista</p><p className="basket-estimate-quality-hint">Não precisas de indicar marca ou embalagem exata. A IA pesquisa produtos e preços disponíveis, procura correspondências exatas ou alternativas equivalentes e apresenta estimativas por supermercado. Quando não encontra informação fiável, assinala essa limitação em vez de inventar um preço. Os valores são indicativos, não preços garantidos.</p></div>
           <button type="button" className="basket-estimate-modal-close" onClick={() => setOpen(false)} disabled={busy} aria-label="Fechar"><X size={20}/></button>
         </header>
 
