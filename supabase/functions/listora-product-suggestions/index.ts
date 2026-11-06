@@ -67,32 +67,6 @@ serve(async (req) => {
           tools: [{ google_search: {} }],
           generationConfig: {
             responseMimeType: "application/json",
-            responseSchema: {
-              type: "OBJECT",
-              properties: {
-                suggestions: {
-                  type: "ARRAY",
-                  maxItems: 8,
-                  items: {
-                    type: "OBJECT",
-                    properties: {
-                      name: { type: "STRING" },
-                      brand: { type: "STRING" },
-                      category: { type: "STRING" },
-                      attributes: { type: "ARRAY", items: { type: "STRING" } },
-                      reason: { type: "STRING" },
-                      url: { type: "STRING" },
-                      sourceName: { type: "STRING" },
-                      confidence: { type: "STRING", enum: ["high", "medium", "low"] }
-                    },
-                    required: ["name", "brand", "category", "attributes", "reason", "url", "sourceName", "confidence"],
-                    propertyOrdering: ["name", "brand", "category", "attributes", "reason", "url", "sourceName", "confidence"]
-                  }
-                }
-              },
-              required: ["suggestions"],
-              propertyOrdering: ["suggestions"]
-            },
             temperature: 0.2
           }
         }),
@@ -108,6 +82,14 @@ serve(async (req) => {
     try { parsed = JSON.parse(raw); }
     catch { return json({ error: "Não foi possível interpretar as sugestões. Tenta novamente." }, 502); }
 
+    const groundingChunks = candidate?.groundingMetadata?.groundingChunks || [];
+    const sources = groundingChunks.map((chunk: any) => ({
+      title: String(chunk?.web?.title || "").slice(0, 160),
+      url: safeHttpsUrl(chunk?.web?.uri)
+    })).filter((source: any) => source.url).filter((source: any, index: number, all: any[]) =>
+      all.findIndex((entry: any) => entry.url === source.url) === index
+    ).slice(0, 8);
+    const groundedUrls = new Set(sources.map((source: any) => source.url));
     const seen = new Set(existingItems.map((name) => name.toLocaleLowerCase()));
     const suggestions = (Array.isArray(parsed?.suggestions) ? parsed.suggestions : [])
       .slice(0, 8)
@@ -124,20 +106,12 @@ serve(async (req) => {
           category: String(entry?.category || "").trim().slice(0, 60),
           attributes,
           reason: String(entry?.reason || "").trim().slice(0, 240),
-          url: safeHttpsUrl(entry?.url),
+          url: (() => { const candidateUrl = safeHttpsUrl(entry?.url); return groundedUrls.has(candidateUrl) ? candidateUrl : ""; })(),
           sourceName: String(entry?.sourceName || "").trim().slice(0, 100),
           confidence
         };
       })
       .filter((entry: any) => entry.name && !seen.has(entry.name.toLocaleLowerCase()) && entry.confidence !== "low");
-
-    const groundingSources = candidate?.groundingMetadata?.groundingChunks || [];
-    const sources = groundingSources.map((chunk: any) => ({
-      title: String(chunk?.web?.title || "").slice(0, 160),
-      url: safeHttpsUrl(chunk?.web?.uri)
-    })).filter((source: any) => source.url).filter((source: any, index: number, all: any[]) =>
-      all.findIndex((entry: any) => entry.url === source.url) === index
-    ).slice(0, 8);
 
     return json({
       countryCode,
