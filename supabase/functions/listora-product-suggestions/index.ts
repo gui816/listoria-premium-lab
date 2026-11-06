@@ -107,7 +107,7 @@ serve(async (req) => {
           attributes,
           reason: String(entry?.reason || "").trim().slice(0, 240),
           url: (() => { const candidateUrl = safeHttpsUrl(entry?.url); return groundedUrls.has(candidateUrl) ? candidateUrl : ""; })(),
-          sourceName: String(entry?.sourceName || "").trim().slice(0, 100),
+          sourceName: (() => { const found = sources.find((source: any) => source.url === (safeHttpsUrl(entry?.url) && groundedUrls.has(safeHttpsUrl(entry?.url)) ? safeHttpsUrl(entry?.url) : "")); if (found?.title) return found.title.slice(0, 100); try { return new URL(found?.url || "").hostname; } catch { return ""; } })(),
           confidence
         };
       })
