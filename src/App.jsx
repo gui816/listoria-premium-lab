@@ -864,7 +864,7 @@ export default function App() {
               : t("Não foi possível reconhecer a voz. Neste navegador, podes usar o microfone do teclado para ditar no campo do produto.");
         setImportError(message);
       };
-      recognition.onnomatch = () => { setListening(false); setVoiceModalOpen(true); setImportError(t("Não percebemos os produtos ditos. Tenta falar um pouco mais devagar.")); };
+      recognition.onnomatch = () => { voiceResultReceivedRef.current = true; setImportBusy(false); setListening(false); setVoiceModalOpen(true); setImportError(t("Não percebemos os produtos ditos. Tenta falar um pouco mais devagar.")); };
       recognition.onend = () => {
         setListening(false);
         if (!voiceResultReceivedRef.current) {
@@ -876,7 +876,7 @@ export default function App() {
       recognition.onresult = async event => {
         voiceResultReceivedRef.current = true;
         const transcript = event.results?.[0]?.[0]?.transcript?.trim();
-        if (!transcript) { setImportError(t("Não foi detetada voz. Tenta novamente.")); return; }
+        if (!transcript) { setImportBusy(false); setImportError(t("Não foi detetada voz. Tenta novamente.")); return; }
         setImportBusy(true); setImportSource("voice"); setImportError("");
         try {
           const itemsFound = await callGemini({ text: transcript });
