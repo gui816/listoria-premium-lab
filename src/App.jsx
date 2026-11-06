@@ -440,7 +440,7 @@ export default function App() {
         .sort((a, b) => Number(!normalize(a).startsWith(query)) - Number(!normalize(b).startsWith(query)))
         .slice(0, 4);
     }
-    return available.slice(0, 4);
+    return available.slice(0, 3);
   }, [language, name, itemHistory, activeItems, doneItems]);
   const shoppingProgress = items.length ? Math.round((doneItems.length / items.length) * 100) : 0;
 
@@ -1288,7 +1288,7 @@ export default function App() {
           {(smartQuickSuggestions.length > 0 || !name.trim()) && <div className="quick-suggestions" aria-label={t("Sugestões rápidas")}>
             {!keyboardOpen && smartQuickSuggestions.length > 0 && <div className="quick-suggestions-heading">{name.trim() ? t("Correspondências") : t("Sugestões rápidas")}</div>}
             <div className="quick-add-chips">{smartQuickSuggestions.map(itemName => <button type="button" key={itemName} onPointerDown={event => event.preventDefault()} onClick={async () => { const added = await submitItem(itemName, 1, "auto", true); if (added) { setAddPanelExpanded(true); setProductInputFocused(true); setKeyboardOpen(true); requestAnimationFrame(() => productNameInputRef.current?.focus({ preventScroll: true })); } }}><Plus size={13}/>{itemName}</button>)}
-              {!name.trim() && <button type="button" className="quick-add-other" onPointerDown={event => event.preventDefault()} onClick={() => {setShowOtherProducts(true); setOtherProductSearch("");}}><Plus size={13}/>{t("Outros")}</button>}
+              {!name.trim() && <button type="button" className="quick-add-other" onClick={() => { productNameInputRef.current?.blur(); setProductInputFocused(false); setKeyboardOpen(false); setShowOtherProducts(true); setOtherProductSearch(""); }}><Plus size={13}/>{t("Outros")}</button>}
             </div>
           </div>}
           

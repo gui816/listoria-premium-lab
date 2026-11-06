@@ -3190,3 +3190,22 @@ button { -webkit-tap-highlight-color: transparent; }
   .shopping-item { scroll-margin-bottom: calc(var(--listoria-dock-height, 190px) + 24px); }
   .app-shell { padding-bottom: calc(var(--listoria-dock-height, 190px) + 24px + env(safe-area-inset-bottom, 0px)); }
 }
+
+
+/* Keep quick suggestions on one horizontal row at every viewport size. */
+.quick-suggestions .quick-add-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.quick-suggestions .quick-add-chips::-webkit-scrollbar { display: none; }
+.quick-suggestions .quick-add-chips > button { flex: 0 0 auto; white-space: nowrap; }
+
+/* Opening the Other products dialog must not retain the product field focus. */
+.other-products-modal-backdrop { z-index: 1200; }
