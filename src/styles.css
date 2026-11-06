@@ -3297,3 +3297,69 @@ button { -webkit-tap-highlight-color: transparent; }
   .welcome-benefits > span { min-height: 58px; padding: 7px 4px; gap: 5px; border-radius: 11px; }
   .welcome-benefits b { font-size: 9px; }
 }
+
+
+/* Product composer: compact by default, with an obvious one-tap collapse action. */
+@media (max-width: 680px) {
+  .add-panel.floating-add-panel {
+    transition: box-shadow .2s ease, border-radius .2s ease, padding .2s ease;
+  }
+  .floating-add-panel:not(.expanded) .repeat-inline-disclosure,
+  .floating-add-panel:not(.expanded) .add-inline-feedback {
+    display: none;
+  }
+  .floating-add-panel:not(.expanded) {
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+  .add-panel-collapse-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 2px 8px;
+    margin-bottom: 7px;
+    border-bottom: 1px solid #e9eee6;
+    color: #66756a;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .add-panel-collapse-row button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 32px;
+    padding: 5px 9px;
+    border: 1px solid #dce6d8;
+    border-radius: 10px;
+    background: #f5f8f2;
+    color: #286448;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .add-panel-collapse-row button svg {
+    transition: transform .2s ease;
+  }
+  .floating-add-panel:not(.expanded) .add-panel-collapse-row {
+    display: none;
+  }
+  .floating-add-panel.expanded {
+    max-height: min(68dvh, calc(var(--listoria-visual-viewport-height, 100dvh) - 24px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+  .floating-add-panel.expanded .add-panel-collapse-row {
+    position: sticky;
+    top: -10px;
+    z-index: 2;
+    background: rgba(255, 255, 251, .97);
+    padding-top: 2px;
+  }
+}
+@media (min-width: 681px) {
+  .add-panel-collapse-row { display: none; }
+}
