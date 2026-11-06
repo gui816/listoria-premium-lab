@@ -3666,3 +3666,15 @@ button { -webkit-tap-highlight-color: transparent; }
   .product-suggestions-header { padding: 18px 16px 13px; }
   .product-suggestions-content { padding: 15px 16px calc(16px + env(safe-area-inset-bottom)); }
 }
+
+.product-suggestions-empty {
+  margin: 14px 0 0;
+  padding: 13px;
+  border: 1px dashed #d9e4d5;
+  border-radius: 12px;
+  background: #f8faf6;
+  color: #758177;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
