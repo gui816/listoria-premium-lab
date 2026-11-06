@@ -3294,7 +3294,8 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 @media (max-width: 560px) {
   .welcome-benefits { gap: 7px; margin: -7px 0 20px; }
-  .welcome-benefits > span { min-height: 60px; padding: 8px 5px; gap: 5px; border-radius: 11px; }
-  .welcome-benefits b { font-size: 10px; }
+  .welcome-benefits > span { min-height: 58px; padding: 7px 4px; gap: 5px; border-radius: 11px; }
+  .welcome-benefits b { font-size: 9px; }
 }
+
 
