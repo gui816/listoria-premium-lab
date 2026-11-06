@@ -47,6 +47,7 @@ export default function ProductSuggestions({ items = [], language = "pt-PT", onA
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
   const [results, setResults] = useState([]);
+  const [searched, setSearched] = useState(false);
   const [sources, setSources] = useState([]);
   const [selected, setSelected] = useState([]);
   const [notice, setNotice] = useState("");
@@ -77,6 +78,7 @@ export default function ProductSuggestions({ items = [], language = "pt-PT", onA
     setError("");
     setNotice("");
     setSelected([]);
+    setSearched(false);
     const key = cacheKey(cleanQuery, countryCode, items);
     if (!force) {
       try {
@@ -84,6 +86,7 @@ export default function ProductSuggestions({ items = [], language = "pt-PT", onA
         if (cached?.savedAt && Date.now() - cached.savedAt < 4 * 60 * 60 * 1000 && Array.isArray(cached.results)) {
           setResults(cached.results);
           setSources(cached.sources || []);
+          setSearched(true);
           setBusy(false);
           return;
         }
@@ -106,6 +109,7 @@ export default function ProductSuggestions({ items = [], language = "pt-PT", onA
       if (data?.error) throw new Error(data.error);
       const safeResults = Array.isArray(data?.suggestions) ? data.suggestions : [];
       setResults(safeResults);
+      setSearched(true);
       setSources(Array.isArray(data?.sources) ? data.sources : []);
       try { localStorage.setItem(key, JSON.stringify({ savedAt: Date.now(), results: safeResults, sources: data?.sources || [] })); } catch {}
     } catch (err) {
@@ -200,7 +204,7 @@ export default function ProductSuggestions({ items = [], language = "pt-PT", onA
               {adding ? <><LoaderCircle className="spin" size={17}/>…</> : <><Plus size={17}/>{c.add} ({selected.length})</>}
             </button>
           </>}
-          {results.length === 0 && !busy && !error && query.trim().length >= 3 && notice === "" && null}
+          {searched && results.length === 0 && !busy && !error && <p className="product-suggestions-empty">{c.noResults}</p>}
         </div>
       </section>
     </div>}
