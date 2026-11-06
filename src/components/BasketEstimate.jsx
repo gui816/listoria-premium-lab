@@ -285,7 +285,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
           {bestStore && !stale ? <>
             <b>{formatMoney(bestStore.estimatedTotal)} <small>· {bestStore.name}</small></b>
             <span>Smart comparison · estimativas por supermercado</span>
-          </> : <span>Compara supermercados</span>}
+          </> : <span>Smart comparison · estimativas por supermercado</span>}
         </div>
         <button type="button" className="basket-estimate-open" onClick={openModal}>
           <Sparkles size={16}/><span>{bestStore && !stale ? "Ver comparação" : "Estimar cabaz"}</span><ChevronRight size={17}/>
