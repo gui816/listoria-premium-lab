@@ -915,6 +915,31 @@ export default function App() {
     } finally { setImportBusy(false); }
   }
 
+  function collapseAddPanel() {
+    setAddPanelExpanded(false);
+    setProductInputFocused(false);
+    setKeyboardOpen(false);
+    productNameInputRef.current?.blur();
+  }
+
+  useEffect(() => {
+    if (!addPanelExpanded || shoppingMode || activeTab !== "shopping") return;
+    const handleOutsideTap = event => {
+      const panel = document.querySelector(".add-panel.floating-add-panel");
+      if (panel && !panel.contains(event.target)) collapseAddPanel();
+    };
+    const handlePageScroll = event => {
+      const panel = document.querySelector(".add-panel.floating-add-panel");
+      if (panel && !panel.contains(event.target)) collapseAddPanel();
+    };
+    document.addEventListener("pointerdown", handleOutsideTap, true);
+    window.addEventListener("scroll", handlePageScroll, { passive: true });
+    return () => {
+      document.removeEventListener("pointerdown", handleOutsideTap, true);
+      window.removeEventListener("scroll", handlePageScroll);
+    };
+  }, [addPanelExpanded, shoppingMode, activeTab]);
+
   async function addItem(e) {
     e.preventDefault();
     const cleanName = name.trim();
@@ -1323,8 +1348,9 @@ export default function App() {
       {!showOnboarding && shoppingMode && activeTab === "shopping" && <button type="button" className="shopping-mode-fab supermarket-exit-fab" onClick={() => { setShoppingMode(false); setShowDone(false); }}><X size={18} strokeWidth={2.4}/><span>{t("Sair do modo supermercado")}</span></button>}
       <section className={`add-panel floating-add-panel${addPanelExpanded ? " expanded" : ""}${keyboardOpen ? " keyboard-open" : ""}`} hidden={shoppingMode}>
         <form onSubmit={addItem}>
+          {addPanelExpanded && <div className="add-panel-collapse-row"><span>{t("Adicionar produtos")}</span><button type="button" onClick={collapseAddPanel} aria-label={t("Recolher painel de inserção")} title={t("Recolher painel")}><ChevronDown size={18}/><span>{t("Recolher")}</span></button></div>}
           {toast === t("Produto adicionado") && !keyboardOpen && <div className="add-inline-feedback" role="status" aria-live="polite"><Check size={15}/><span>{toast}</span></div>}
-          <div className="add-main"><button type="submit" className="input-plus add-submit-left" aria-label={t("Adicionar artigo")} disabled={!name.trim()}><Plus size={22}/></button><input ref={productNameInputRef} autoComplete="off" value={name} onFocus={() => { setAddPanelExpanded(true); setProductInputFocused(true); setKeyboardOpen(true); }} onBlur={e => { if (e.relatedTarget?.type === "submit") return; setProductInputFocused(false); setKeyboardOpen(false); }} onChange={e => setName(e.target.value)} placeholder={t("Adicionar produto…")} aria-label={t("Nome do artigo")} maxLength={100}/><div className="add-import-tools add-import-tools-inline" aria-label={t("Adicionar por imagem ou voz")}><div className="add-photo-tool"><button type="button" className="add-tool-button add-tool-photo" aria-label={t("Fotografar lista")} title={t("Fotografa uma lista para reconhecer os produtos")} aria-expanded={showPhotoSource} disabled={importBusy} onClick={() => setShowPhotoSource(true)}><Camera size={19}/></button></div><button type="button" className={listening ? "add-tool-button add-tool-voice recording" : "add-tool-button add-tool-voice"} aria-label={listening ? t("A ouvir… toca para parar") : t("Adicionar por voz")} title={t("Dita vários produtos sem escrever")} disabled={importBusy} onClick={startVoiceImport}><Mic size={19}/></button></div></div>
+          <div className="add-main"><button type="submit" className="input-plus add-submit-left" aria-label={t("Adicionar artigo")} disabled={!name.trim()}><Plus size={22}/></button><input ref={productNameInputRef} autoComplete="off" value={name} onFocus={() => { setAddPanelExpanded(true); setProductInputFocused(true); setKeyboardOpen(true); }} onBlur={e => { if (e.relatedTarget?.type === "submit") return; setProductInputFocused(false); setKeyboardOpen(false); if (!e.relatedTarget?.closest(".add-panel")) setAddPanelExpanded(false); }} onChange={e => setName(e.target.value)} placeholder={t("Adicionar produto…")} aria-label={t("Nome do artigo")} maxLength={100}/><div className="add-import-tools add-import-tools-inline" aria-label={t("Adicionar por imagem ou voz")}><div className="add-photo-tool"><button type="button" className="add-tool-button add-tool-photo" aria-label={t("Fotografar lista")} title={t("Fotografa uma lista para reconhecer os produtos")} aria-expanded={showPhotoSource} disabled={importBusy} onClick={() => setShowPhotoSource(true)}><Camera size={19}/></button></div><button type="button" className={listening ? "add-tool-button add-tool-voice recording" : "add-tool-button add-tool-voice"} aria-label={listening ? t("A ouvir… toca para parar") : t("Adicionar por voz")} title={t("Dita vários produtos sem escrever")} disabled={importBusy} onClick={startVoiceImport}><Mic size={19}/></button></div></div>
           {repeatSuggestions.length > 0 && !shoppingMode && !keyboardOpen && <details className="repeat-inline-disclosure">
             <summary><span>{t("Repetir compras")}</span><small>{Math.min(repeatSuggestions.length, 4)}</small><ChevronDown size={15}/></summary>
             <div className="repeat-chips">{repeatSuggestions.slice(0, 4).map(item => <button type="button" className="repeat-chip" key={item._id} onClick={async () => { await repeatItem(item.name); setAddPanelExpanded(false); }}><Plus size={13}/>{item.name}</button>)}</div>
