@@ -283,6 +283,7 @@ export default function App() {
   const [importError, setImportError] = useState("");
   const [listening, setListening] = useState(false);
   const [voiceModalOpen, setVoiceModalOpen] = useState(false);
+  const voiceResultReceivedRef = useRef(false);
   const productNameInputRef = useRef(null);
   const normalViewportHeightRef = useRef(typeof window !== "undefined" ? Math.max(window.innerHeight, window.visualViewport?.height || 0) : 0);
   const imageInputRef = useRef(null);
@@ -848,8 +849,10 @@ export default function App() {
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
       recognitionRef.current = recognition;
-      recognition.onstart = () => { setImportError(""); setListening(true); };
+      recognition.onstart = () => { voiceResultReceivedRef.current = false; setImportError(""); setImportBusy(false); setListening(true); };
       recognition.onerror = event => {
+        voiceResultReceivedRef.current = true;
+        setImportBusy(false);
         setListening(false);
         setVoiceModalOpen(true);
         const message = event.error === "not-allowed" || event.error === "service-not-allowed"
@@ -862,8 +865,16 @@ export default function App() {
         setImportError(message);
       };
       recognition.onnomatch = () => { setListening(false); setVoiceModalOpen(true); setImportError(t("Não percebemos os produtos ditos. Tenta falar um pouco mais devagar.")); };
-      recognition.onend = () => setListening(false);
+      recognition.onend = () => {
+        setListening(false);
+        if (!voiceResultReceivedRef.current) {
+          setImportBusy(false);
+          setImportError(t("Não foi detetada voz. Tenta novamente."));
+          setVoiceModalOpen(true);
+        }
+      };
       recognition.onresult = async event => {
+        voiceResultReceivedRef.current = true;
         const transcript = event.results?.[0]?.[0]?.transcript?.trim();
         if (!transcript) { setImportError(t("Não foi detetada voz. Tenta novamente.")); return; }
         setImportBusy(true); setImportSource("voice"); setImportError("");
@@ -1404,9 +1415,9 @@ export default function App() {
         {receipts.length === 0 ? <div className="empty-state"><span className="empty-illustration">🧾</span><h3>{t("Ainda não há faturas")}</h3><p>{t("Adiciona o primeiro comprovativo para ficar disponível a toda a família.")}</p></div> : <div className="receipt-list">{receipts.map(receipt => <article className="receipt-card" key={receipt.id}><div className="receipt-card-icon"><Receipt size={21}/></div><div className="receipt-card-main"><strong>{receipt.storeName}</strong><span>{new Date(receipt.purchasedAt + "T12:00:00").toLocaleDateString(language === "en" ? "en-GB" : language)} · {receipt.memberName || t("Membro")}</span>{receipt.notes && <p>{receipt.notes}</p>}</div><div className="receipt-card-side"><strong>{Number(receipt.total).toLocaleString(language === "en" ? "en-GB" : language,{style:"currency",currency:"EUR"})}</strong>{receipt.filePath && <button type="button" onClick={() => openReceipt(receipt)} aria-label={t("Abrir comprovativo")}><ExternalLink size={17}/></button>}<button type="button" onClick={() => removeReceipt(receipt)} aria-label={t("Apagar fatura")}><Trash2 size={16}/></button></div></article>)}</div>}
       </section>}
       <footer className="app-footer"><span><Leaf size={15}/> {t("Menos esquecimentos, mais tempo juntos.")}</span><button onClick={leaveCurrentList}>{t("Sair da lista")} / {t("Criar nova")}</button></footer>
-      {voiceModalOpen && createPortal(<div className="modal-backdrop voice-modal-backdrop" onClick={() => { recognitionRef.current?.stop(); setListening(false); setVoiceModalOpen(false); }}>
+      {voiceModalOpen && createPortal(<div className="modal-backdrop voice-modal-backdrop" onClick={() => { if (importBusy) return; recognitionRef.current?.stop(); setListening(false); setVoiceModalOpen(false); }}>
         <section className="share-modal voice-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="voice-modal-title">
-          <button type="button" className="modal-close" aria-label={t("Fechar")} onClick={() => { recognitionRef.current?.stop(); setListening(false); setVoiceModalOpen(false); }}><X size={20}/></button>
+          <button type="button" className="modal-close" aria-label={t("Fechar")} onClick={() => { if (importBusy) return; recognitionRef.current?.stop(); setListening(false); setVoiceModalOpen(false); }} disabled={importBusy}><X size={20}/></button>
           <div className="voice-status-row"><div className={"voice-modal-icon " + (importBusy ? "is-processing" : "is-listening")}>{importBusy ? <LoaderCircle className="spin" size={26}/> : <Mic size={26}/>}</div>
           <span className={"voice-status-pill " + (listening ? "active" : "processing")}><span className="voice-status-dot"/>{importBusy ? t("A processar voz…") : listening ? t("Microfone ativo") : t("A preparar microfone…")}</span></div>
           <h2 id="voice-modal-title">{importBusy ? t("A identificar os produtos") : listening ? t("Podes começar a falar") : t("A preparar microfone…")}</h2>
@@ -1414,7 +1425,7 @@ export default function App() {
           {!importBusy && <div className="voice-example"><span>{t("Por exemplo")}</span><strong>“{t("Leite, pão, seis ovos e dois iogurtes.")}”</strong></div>}
           {listening && <div className="voice-wave"><span/><span/><span/><span/><span/><span/><span/><span/><span/></div>}
           {importBusy && <div className="voice-processing-note"><LoaderCircle className="spin" size={16}/>{t("A analisar o que disseste…")}</div>}
-          {listening && <button type="button" className="primary-button voice-stop-button" onClick={() => { recognitionRef.current?.stop(); setListening(false); setVoiceModalOpen(false); }}><X size={17}/>{t("Parar gravação")}</button>}
+          {listening && <button type="button" className="primary-button voice-stop-button" onClick={() => { setImportError(""); setImportSource("voice"); setImportBusy(true); setListening(false); recognitionRef.current?.stop(); }}><X size={17}/>{t("Parar gravação")}</button>}
           {importError && <div className="voice-modal-error" role="alert">{importError}</div>}
           {importError && !importBusy && <div className="voice-modal-actions"><button type="button" className="primary-button" onClick={startVoiceImport}><Mic size={16}/>{t("Tentar novamente")}</button><button type="button" className="secondary-button" onClick={() => { setVoiceModalOpen(false); setImportError(""); productNameInputRef.current?.focus({ preventScroll: true }); }}>{t("Usar teclado")}</button></div>}
         </section>
