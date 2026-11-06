@@ -3216,3 +3216,47 @@ button { -webkit-tap-highlight-color: transparent; }
 .category-tabs .category-tab {
   touch-action: pan-x pan-y;
 }
+
+
+/* Smart Comparison is the hero feature in the product discovery landing page. */
+.discover-smart-comparison {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(250px, .95fr);
+  gap: 24px;
+  align-items: center;
+  margin: 24px 0 26px;
+  padding: 24px;
+  overflow: hidden;
+  border: 1px solid #d8e6d8;
+  border-radius: 24px;
+  background: linear-gradient(120deg, #edf5e9 0%, #f8faf4 58%, #e8f1e5 100%);
+}
+.discover-smart-copy { min-width: 0; }
+.discover-smart-copy .discover-kicker { display: inline-flex; align-items: center; gap: 6px; }
+.discover-smart-copy h2 { margin: 12px 0 9px; color: #203b2b; font-family: Manrope,sans-serif; font-size: clamp(22px,3vw,30px); line-height: 1.15; letter-spacing: -.045em; }
+.discover-smart-copy > p { margin: 0; color: #627366; font-size: 13px; line-height: 1.7; }
+.discover-smart-points { display: grid; gap: 8px; margin: 17px 0 14px; }
+.discover-smart-points span { display: flex; align-items: flex-start; gap: 8px; color: #3c5945; font-size: 12px; line-height: 1.45; }
+.discover-smart-points svg { flex: 0 0 14px; margin-top: 1px; }
+.discover-smart-copy > small { display: block; color: #7c887c; font-size: 10px; line-height: 1.55; }
+.discover-smart-visual { min-width: 0; padding: 17px; border: 1px solid #e1e9df; border-radius: 19px; background: #fffefa; box-shadow: 0 14px 35px #25452b12; }
+.discover-smart-visual-top,.discover-smart-store-row,.discover-smart-store-row>span { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.discover-smart-visual-top { color: #416d4e; font-size: 10px; font-weight: 800; letter-spacing: .06em; }
+.discover-smart-visual-top span,.discover-smart-visual-foot { display: flex; align-items: center; gap: 6px; }
+.discover-smart-visual-top b { color: #7d887d; font-size: 10px; letter-spacing: 0; }
+.discover-smart-product-list { display: flex; flex-wrap: wrap; gap: 7px; margin: 15px 0 10px; }
+.discover-smart-product-list span { display: inline-flex; align-items: center; gap: 5px; padding: 7px 9px; border-radius: 9px; background: #f0f5ed; color: #45644b; font-size: 11px; font-weight: 700; }
+.discover-smart-product-list i { display: grid; width: 14px; height: 14px; place-items: center; border-radius: 50%; background: #dcebd9; color: #39734b; font-size: 9px; font-style: normal; }
+.discover-smart-product-list em { align-self: center; color: #929b90; font-size: 9px; font-style: normal; }
+.discover-smart-divider { height: 1px; margin: 13px 0; background: #edf0e9; }
+.discover-smart-store-row { padding: 7px 0; border-bottom: 1px solid #f0f1eb; }
+.discover-smart-store-row:last-of-type { border-bottom: 0; }
+.discover-smart-store-row>span { justify-content: flex-start; }
+.discover-smart-store-row b { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 7px; background: #edf3e9; color: #507453; font-size: 9px; }
+.discover-smart-store-row strong { color: #334738; font-size: 11px; }
+.discover-smart-store-row small { color: #899387; font-size: 9px; }
+.discover-smart-visual-foot { margin-top: 10px; padding: 9px; border-radius: 9px; background: #f5f8f1; color: #54735a; font-size: 10px; font-weight: 700; }
+@media(max-width:650px) {
+  .discover-smart-comparison { grid-template-columns: 1fr; gap: 18px; padding: 18px; margin: 20px 0; }
+  .discover-smart-copy h2 { font-size: 23px; }
+}
