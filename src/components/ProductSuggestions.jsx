@@ -73,7 +73,7 @@ export default function ProductSuggestions({ items = [], language = "pt-PT", onA
 
   const search = async (force = false) => {
     const cleanQuery = query.trim();
-    if (cleanQuery.length < 3 || busy) return;
+    if (cleanQuery.length < 3 || busy || adding) return;
     setBusy(true);
     setError("");
     setNotice("");
@@ -134,6 +134,7 @@ export default function ProductSuggestions({ items = [], language = "pt-PT", onA
     setAdding(false);
     setNotice(count + " " + c.added);
     setSelected([]);
+    setSearched(false);
     if (count) setResults((current) => current.filter((entry) => !existingNames.has(String(entry.name || "").toLocaleLowerCase()) && !selected.includes(entry.id)));
   };
 
@@ -169,7 +170,7 @@ export default function ProductSuggestions({ items = [], language = "pt-PT", onA
             {c.examples.map((example) => <button type="button" key={example} onClick={() => setQuery((current) => current ? current + ", " + example.toLocaleLowerCase() : example.toLocaleLowerCase())} disabled={busy || adding}>{example}</button>)}
           </div>
           <p className="product-suggestions-context"><ShoppingBasket size={14}/>{c.listContext}</p>
-          <button type="button" className="product-suggestions-search" onClick={() => search(false)} disabled={busy || query.trim().length < 3}>
+          <button type="button" className="product-suggestions-search" onClick={() => search(false)} disabled={busy || adding || query.trim().length < 3}>
             {busy ? <><LoaderCircle className="spin" size={18}/>{c.searching}</> : <><Sparkles size={17}/>{c.search}</>}
           </button>
 
