@@ -3209,3 +3209,10 @@ button { -webkit-tap-highlight-color: transparent; }
 
 /* Opening the Other products dialog must not retain the product field focus. */
 .other-products-modal-backdrop { z-index: 1200; }
+
+
+/* Category chips must allow vertical page scrolling as well as horizontal tab swipes. */
+.category-tabs,
+.category-tabs .category-tab {
+  touch-action: pan-x pan-y;
+}
