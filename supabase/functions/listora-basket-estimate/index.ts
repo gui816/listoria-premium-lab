@@ -20,6 +20,46 @@ serve(async (req) => {
     if (!geminiKey) return json({ error: "O serviço de estimativa não está configurado (GEMINI_API_KEY)." }, 503);
     if (!supabaseUrl || !serviceKey) return json({ error: "O catálogo internacional não está configurado no Supabase." }, 503);
 
+    const authorization = req.headers.get("Authorization") || "";
+    const accessToken = authorization.replace(/^Bearer\\s+/i, "");
+    if (!accessToken) return json({ error: "Inicia sessão para utilizar esta funcionalidade." }, 401);
+    const authResponse = await fetch(new URL("/auth/v1/user", supabaseUrl), {
+      headers: { apikey: Deno.env.get("SUPABASE_ANON_KEY") || "", Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!authResponse.ok) return json({ error: "Sessão inválida. Volta a iniciar sessão." }, 401);
+    const authUser = await authResponse.json();
+    if (!authUser?.id || authUser.is_anonymous) return json({ error: "A comparação de cabaz é uma funcionalidade Premium. Cria uma conta e subscreve o Premium para continuar." }, 403);
+
+    const adminHeaders = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" };
+    const subscriptionUrl = new URL("/rest/v1/subscriptions", supabaseUrl);
+    subscriptionUrl.search = new URLSearchParams({
+      select: "status,current_period_end,past_due_grace_until",
+      user_id: `eq.${authUser.id}`,
+      order: "created_at.desc",
+      limit: "1"
+    }).toString();
+    const subscriptionResponse = await fetch(subscriptionUrl, { headers: adminHeaders, signal: AbortSignal.timeout(10000) });
+    if (!subscriptionResponse.ok) throw new Error("Não foi possível validar a subscrição Premium.");
+    const subscriptions = await subscriptionResponse.json();
+    const subscription = subscriptions?.[0];
+    const now = Date.now();
+    const graceActive = subscription?.status === "past_due" && subscription.past_due_grace_until && new Date(subscription.past_due_grace_until).getTime() > now;
+    const paidCancellation = subscription?.status === "canceled" && subscription.current_period_end && new Date(subscription.current_period_end).getTime() > now;
+    if (!subscription || !(["active", "trialing"].includes(subscription.status) || graceActive || paidCancellation)) {
+      return json({ error: "Esta funcionalidade requer uma subscrição Listoria Premium ativa.", code: "premium_required" }, 403);
+    }
+
+    const requestId = crypto.randomUUID();
+    const rateResponse = await fetch(new URL("/rest/v1/rpc/consume_premium_rate_limit", supabaseUrl), {
+      method: "POST", headers: adminHeaders,
+      body: JSON.stringify({ p_user_id: authUser.id, p_feature_key: "basket_estimate", p_request_id: requestId, p_limit: 10, p_window_seconds: 60 }),
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!rateResponse.ok) throw new Error("Não foi possível validar o limite de utilização.");
+    const rateRows = await rateResponse.json();
+    if (rateRows?.[0]?.allowed === false) return json({ error: "Estás a fazer demasiadas pesquisas num curto espaço de tempo. Aguarda um minuto e tenta novamente.", code: "rate_limited", retryAfter: rateRows[0].retry_after_seconds }, 429);
+
     const body = await req.json();
     const countryCode = String(body?.countryCode || "").trim().toUpperCase();
     if (!/^[A-Z]{2}$/.test(countryCode)) return json({ error: "Seleciona um país válido." }, 400);
