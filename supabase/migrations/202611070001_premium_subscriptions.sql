@@ -7,7 +7,7 @@ create table if not exists public.subscriptions (
  stripe_subscription_id text unique,
  stripe_checkout_session_id text unique,
  stripe_price_id text,
- plan_key text check (plan_key is null or plan_key in ('monthly','quarterly','half_yearly')),
+ plan_key text check (plan_key is null or plan_key = 'monthly'),
  status text not null default 'incomplete' check (status in ('incomplete','incomplete_expired','trialing','active','past_due','canceled','unpaid','paused')),
  current_period_start timestamptz,
  current_period_end timestamptz,
@@ -86,3 +86,31 @@ grant execute on function public.consume_premium_rate_limit(uuid,text,text,integ
 create or replace function public.set_subscription_updated_at() returns trigger language plpgsql set search_path = '' as $$ begin new.updated_at=now(); return new; end; $$;
 drop trigger if exists subscriptions_updated_at on public.subscriptions;
 create trigger subscriptions_updated_at before update on public.subscriptions for each row execute function public.set_subscription_updated_at();
+
+
+-- One free, server-enforced comparison per Supabase identity (including guest sessions).
+create table if not exists public.premium_comparison_trials (
+ user_id uuid primary key references auth.users(id) on delete cascade,
+ used_at timestamptz not null default now(),
+ request_id text not null
+);
+alter table public.premium_comparison_trials enable row level security;
+revoke all on public.premium_comparison_trials from public, anon, authenticated;
+
+create or replace function public.consume_free_comparison_trial(p_user_id uuid, p_request_id text)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare v_inserted integer;
+begin
+ insert into public.premium_comparison_trials(user_id, request_id)
+ values (p_user_id, left(p_request_id,120))
+ on conflict (user_id) do nothing;
+ get diagnostics v_inserted = row_count;
+ return v_inserted = 1;
+end;
+$$;
+revoke all on function public.consume_free_comparison_trial(uuid,text) from public,anon,authenticated;
+grant execute on function public.consume_free_comparison_trial(uuid,text) to service_role;
