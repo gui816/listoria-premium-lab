@@ -2,13 +2,12 @@
 
 ## Commercial plans
 
-Create one Stripe Product named **Listoria Premium** and three recurring EUR Prices:
+Create one Stripe Product named **Listoria Premium** and one recurring EUR Price:
 
 | Plan key | Amount | Billing interval |
 |---|---:|---|
 | monthly | €2.99 | every 1 month |
-| quarterly | €5.99 | every 3 months |
-| half_yearly | €9.99 | every 6 months |
+
 
 These are recurring subscriptions (not one-off payments). The plan key is stored in Stripe Subscription metadata and in Supabase.
 
@@ -19,9 +18,7 @@ Set these Supabase Edge Function secrets (never put secret keys in the frontend)
 - STRIPE_SECRET_KEY — Stripe secret key (test mode first).
 - STRIPE_WEBHOOK_SECRET — signing secret for the webhook endpoint.
 - STRIPE_PRICE_MONTHLY — recurring Price ID for €2.99/month.
-- STRIPE_PRICE_QUARTERLY — recurring Price ID for €5.99/every 3 months.
-- STRIPE_PRICE_HALF_YEARLY — recurring Price ID for €9.99/every 6 months.
-- APP_URL — full public app URL, including any deployment base path, e.g. https://example.github.io/listoria.
+- - APP_URL — full public app URL, including any deployment base path, e.g. https://example.github.io/listoria.
 
 Supabase supplies SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY to Edge Functions. Keep service role and Stripe secrets server-side only.
 
@@ -54,7 +51,7 @@ Commands:
 
 ```sh
 supabase db push
-supabase secrets set STRIPE_SECRET_KEY=sk_test_... STRIPE_WEBHOOK_SECRET=whsec_... STRIPE_PRICE_MONTHLY=price_... STRIPE_PRICE_QUARTERLY=price_... STRIPE_PRICE_HALF_YEARLY=price_... APP_URL=https://example.github.io/listoria
+supabase secrets set STRIPE_SECRET_KEY=sk_test_... STRIPE_WEBHOOK_SECRET=whsec_... STRIPE_PRICE_MONTHLY=price_... APP_URL=https://example.github.io/listoria
 supabase functions deploy stripe-create-checkout
 supabase functions deploy stripe-create-portal
 supabase functions deploy premium-status
@@ -63,6 +60,8 @@ supabase functions deploy stripe-webhook
 
 ## Entitlement and fair-use rules
 
+- Every identity (including a guest session) receives one free basket comparison, enforced server-side and shared across devices when the account identity is retained.
+- After the free comparison, an active Premium subscription is required.
 - Premium entitlement is checked server-side for every basket estimate request.
 - active and trialing subscriptions grant access.
 - past_due retains access for 3 days from the first failed payment; repeated webhook events do not extend the grace period.
@@ -73,4 +72,4 @@ supabase functions deploy stripe-webhook
 
 ## Important
 
-The app currently supports anonymous sessions. Anonymous users can use the free Listora but must upgrade to a permanent account before subscribing. Supabase account linking preserves the user UUID. This ensures the subscription is attached to the account, not a device.
+The app supports anonymous sessions. A guest can use the one free comparison; a permanent account is required before subscribing. Account linking should preserve the Supabase user UUID so the free trial and subscription remain attached to the same identity.
