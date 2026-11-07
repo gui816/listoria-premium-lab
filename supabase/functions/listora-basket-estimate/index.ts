@@ -21,7 +21,7 @@ serve(async (req) => {
     if (!supabaseUrl || !serviceKey) return json({ error: "O catálogo internacional não está configurado no Supabase." }, 503);
 
     const authorization = req.headers.get("Authorization") || "";
-    const accessToken = authorization.replace(/^Bearer\\s+/i, "");
+    const accessToken = authorization.replace(/^Bearer\s+/i, "");
     if (!accessToken) return json({ error: "Inicia sessão para utilizar esta funcionalidade." }, 401);
     const authResponse = await fetch(new URL("/auth/v1/user", supabaseUrl), {
       headers: { apikey: Deno.env.get("SUPABASE_ANON_KEY") || "", Authorization: `Bearer ${accessToken}` },
@@ -139,17 +139,14 @@ serve(async (req) => {
 
     let freeTrialUsed = false;
     if (!hasPremium) {
-      const trialResponse = await fetch(new URL("/rest/v1/rpc/consume_free_comparison_trial", supabaseUrl), {
-        method: "POST", headers: adminHeaders,
-        body: JSON.stringify({ p_user_id: authUser.id, p_request_id: crypto.randomUUID() }),
-        signal: AbortSignal.timeout(10000)
-      });
-      if (!trialResponse.ok) throw new Error("Não foi possível validar a utilização gratuita.");
-      const trialGranted = await trialResponse.json();
-      if (trialGranted !== true) {
+      const trialUrl = new URL("/rest/v1/premium_comparison_trials", supabaseUrl);
+      trialUrl.search = new URLSearchParams({ select: "user_id", user_id: `eq.${authUser.id}`, limit: "1" }).toString();
+      const trialCheck = await fetch(trialUrl, { headers: adminHeaders, signal: AbortSignal.timeout(10000) });
+      if (!trialCheck.ok) throw new Error("Não foi possível validar a utilização gratuita.");
+      const existingTrial = await trialCheck.json();
+      if (existingTrial?.length) {
         return json({ error: "Já utilizaste a tua comparação gratuita. Subscreve o Listoria Premium para continuares a comparar o teu cabaz.", code: "premium_required" }, 403);
       }
-      freeTrialUsed = true;
     }
 
     const ai = await fetch(
@@ -253,6 +250,20 @@ serve(async (req) => {
         items: itemResults
       };
     }).filter(Boolean);
+
+    if (!hasPremium) {
+      const trialResponse = await fetch(new URL("/rest/v1/rpc/consume_free_comparison_trial", supabaseUrl), {
+        method: "POST", headers: adminHeaders,
+        body: JSON.stringify({ p_user_id: authUser.id, p_request_id: requestId }),
+        signal: AbortSignal.timeout(10000)
+      });
+      if (!trialResponse.ok) throw new Error("Não foi possível confirmar a utilização gratuita.");
+      const trialGranted = await trialResponse.json();
+      if (trialGranted !== true) {
+        return json({ error: "Já utilizaste a tua comparação gratuita. Subscreve o Listoria Premium para continuares a comparar o teu cabaz.", code: "premium_required" }, 403);
+      }
+      freeTrialUsed = true;
+    }
 
     return json({
       generatedAt: new Date().toISOString(),
