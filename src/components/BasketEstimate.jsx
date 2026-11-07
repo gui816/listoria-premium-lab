@@ -42,6 +42,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
   const [selectedStore, setSelectedStore] = useState(null);
   const [stale, setStale] = useState(false);
   const [showPremiumPrompt, setShowPremiumPrompt] = useState(false);
+  const [freeComparisonAvailable, setFreeComparisonAvailable] = useState(false);
 
   const country = useMemo(() => countries.find((entry) => entry.code === countryCode), [countries, countryCode]);
   const cleanItems = useMemo(() => normaliseItems(items), [items]);
@@ -50,6 +51,15 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
     if (!countryCode || !selected.length || !cleanItems.length) return "";
     return "listora-basket-estimate-v4:" + countryCode + ":" + [...selected].sort().join("|") + ":" + itemSignature;
   }, [countryCode, selected, itemSignature, cleanItems.length]);
+
+  useEffect(() => {
+    let active = true;
+    if (!supabase) return () => { active = false; };
+    supabase.functions.invoke("premium-status", { body: {} }).then(({ data, error: statusError }) => {
+      if (active && !statusError) setFreeComparisonAvailable(Boolean(data?.freeComparisonAvailable));
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -241,6 +251,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
       }
       if (data?.error) throw new Error(data.error);
       setResult(data);
+      setFreeComparisonAvailable(false);
       setShowPremiumPrompt(Boolean(data?.freeTrialUsed));
       setSelectedStore(null);
       setStale(false);
@@ -251,6 +262,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
     } catch (estimateError) {
       if (estimateError?.context?.status === 403 || /premium_required/.test(estimateError?.message || "")) setShowPremiumPrompt(true);
       setError(estimateError.message || "Não foi possível estimar o cabaz.");
+      if (estimateError?.context?.status === 403) setFreeComparisonAvailable(false);
     } finally {
       setBusy(false);
     }
@@ -287,7 +299,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
           <strong>Compara o teu cabaz com IA</strong>
           {bestStore && !stale ? <>
             <b>{formatMoney(bestStore.estimatedTotal)} <small>· {bestStore.name}</small></b>
-            <span>Smart comparison · estimativas por supermercado</span>
+            <span>Smart comparison · estimativas por supermercado</span>{freeComparisonAvailable && <small className="basket-estimate-free-trial-note">1.ª comparação gratuita</small>}
           </> : <span>Smart comparison · estimativas por supermercado</span>}
         </div>
         <button type="button" className="basket-estimate-open" onClick={openModal}>
