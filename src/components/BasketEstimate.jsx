@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase.js";
+import PremiumSubscription from "./PremiumSubscription.jsx";
 import {
   Sparkles, LoaderCircle, Globe2, ChevronDown, X, MapPin,
   ShoppingBasket, ChevronRight, ArrowLeft, Clock3, CheckCircle2
@@ -24,7 +25,7 @@ const normaliseItems = (items = []) => items.map((item) => ({
   unit: item.unit || "un"
 })).filter((item) => item.name).sort((a, b) => a.name.localeCompare(b.name));
 
-export default function BasketEstimate({ items, language = "pt-PT" }) {
+export default function BasketEstimate({ items, language = "pt-PT", session }) {
   const [countries, setCountries] = useState([]);
   const [countryCode, setCountryCode] = useState(getStoredCountry);
   const [countrySource, setCountrySource] = useState(getStoredCountry() ? getStoredSource() : "unknown");
@@ -44,6 +45,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
   const [stale, setStale] = useState(false);
   const [showPremiumPrompt, setShowPremiumPrompt] = useState(false);
   const [freeComparisonAvailable, setFreeComparisonAvailable] = useState(false);
+  const [freeComparisonUsed, setFreeComparisonUsed] = useState(false);
 
   const country = useMemo(() => countries.find((entry) => entry.code === countryCode), [countries, countryCode]);
 
@@ -63,7 +65,10 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
     let active = true;
     if (!supabase) return () => { active = false; };
     supabase.functions.invoke("premium-status", { body: {} }).then(({ data, error: statusError }) => {
-      if (active && !statusError) setFreeComparisonAvailable(Boolean(data?.freeComparisonAvailable));
+      if (active && !statusError) {
+        setFreeComparisonAvailable(Boolean(data?.freeComparisonAvailable));
+        setFreeComparisonUsed(Boolean(data?.freeComparisonUsed));
+      }
     }).catch(() => {});
     return () => { active = false; };
   }, []);
@@ -263,6 +268,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
       if (data?.error) throw new Error(data.error);
       setResult(data);
       setFreeComparisonAvailable(false);
+      if (data?.freeTrialUsed) setFreeComparisonUsed(true);
       setShowPremiumPrompt(Boolean(data?.freeTrialUsed));
       setSelectedStore(null);
       setStale(false);
@@ -342,6 +348,8 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
       {stale && <p className="basket-estimate-stale-note">A lista foi alterada. Atualiza a estimativa para refletir os produtos atuais.</p>}
     </section>
 
+    {freeComparisonUsed && session?.user && <PremiumSubscription session={session} language={language} compact />}
+
     {open && <div className="basket-estimate-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setOpen(false); }}>
       <section className="basket-estimate-modal" role="dialog" aria-modal="true" aria-labelledby="basket-estimate-title">
         <header className="basket-estimate-modal-header">
@@ -405,7 +413,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
             </button>)}
 
             {error && <p className="basket-estimate-error" role="alert">{error}</p>}
-            {showPremiumPrompt && !result && <div className="basket-estimate-premium-prompt"><strong>A tua comparação gratuita já foi utilizada</strong><p>Subscreve o Listoria Premium para continuares a comparar preços e encontrar onde o teu cabaz fica mais em conta.</p><button type="button" onClick={() => window.dispatchEvent(new CustomEvent("listoria:open-premium"))}>Conhecer o Premium · 2,99 €/mês</button></div>}}
+            {showPremiumPrompt && !result && <div className="basket-estimate-premium-prompt"><strong>A tua comparação gratuita já foi utilizada</strong><p>Subscreve o Listoria Premium para continuares a comparar preços e encontrar onde o teu cabaz fica mais em conta.</p><button type="button" onClick={() => window.dispatchEvent(new CustomEvent("listoria:open-premium"))}>Conhecer o Premium · 1,99 €/mês</button></div>}}
 
             {result && <>
               <div className="basket-estimate-results-heading"><strong>Comparação do cabaz</strong><span>{updatedAt ? <><Clock3 size={12}/> {updatedAt.toLocaleString(language, { dateStyle: "short", timeStyle: "short" })}</> : null}</span></div>
