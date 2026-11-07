@@ -2,11 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase.js";
 import { Sparkles, ShieldCheck, CreditCard, RefreshCw, CheckCircle2 } from "lucide-react";
 
-const PLANS = [
- { id:"monthly", name:"Mensal", price:"2,99 €", period:"por mês" },
- { id:"quarterly", name:"Trimestral", price:"5,99 €", period:"a cada 3 meses" },
- { id:"half_yearly", name:"Semestral", price:"9,99 €", period:"a cada 6 meses" }
-];
+const PLANS = [{ id:"monthly", name:"Mensal", price:"2,99 €", period:"por mês" }];
 
 export default function PremiumSubscription({ session, language="pt-PT" }) {
  const [status,setStatus]=useState(null);
@@ -46,16 +42,16 @@ export default function PremiumSubscription({ session, language="pt-PT" }) {
    <div><span className="premium-eyebrow">LISTORIA PREMIUM</span><h2>{premium?(isEnglish?"Your Premium is active":"Tens o Premium ativo"):(isEnglish?"Unlock more from Listora":"Descobre o Listoria Premium")}</h2><p>{premium?(isEnglish?"Your smart basket comparison is ready.":"A comparação inteligente do cabaz está disponível."):(isEnglish?"Smart basket estimates and more intelligent shopping.":"Estimativas inteligentes do cabaz e compras mais informadas.")}</p></div>
    {premium&&<span className="premium-active-pill"><CheckCircle2 size={13}/>{isEnglish?"Active":"Ativo"}</span>}
   </div>
-  {!premium&&<div className="premium-benefits"><span><CheckCircle2 size={14}/> {isEnglish?"Smart basket comparison":"Comparação inteligente do cabaz"}</span><span><CheckCircle2 size={14}/> {isEnglish?"Unlimited use, subject to fair-use protection":"Utilização sem limite, com proteção contra abuso"}</span></div>}
+  {!premium&&<div className="premium-benefits"><span><CheckCircle2 size={14}/> {isEnglish?"Smart basket comparison":"Comparação inteligente do cabaz"}</span><span><CheckCircle2 size={14}/> {isEnglish?"Unlimited use with fair-use protection":"Utilização sem limite, com proteção contra abuso"}</span></div>}
   {premium?<div className="premium-subscription-active">
-   <div><strong>{status.subscription?.plan==="monthly"?"Mensal":status.subscription?.plan==="quarterly"?"Trimestral":"Semestral"}</strong><small>{status.subscription?.cancelAtPeriodEnd?"Cancelamento agendado":status.subscription?.status==="past_due"?"Período de regularização do pagamento":"Subscrição recorrente ativa"}{status.subscription?.currentPeriodEnd?" · até "+new Date(status.subscription.currentPeriodEnd).toLocaleDateString(language):""}</small></div>
+   <div><strong>{"Mensal"}</strong><small>{status.subscription?.cancelAtPeriodEnd?"Cancelamento agendado":status.subscription?.status==="past_due"?"Período de regularização do pagamento":"Subscrição recorrente ativa"}{status.subscription?.currentPeriodEnd?" · até "+new Date(status.subscription.currentPeriodEnd).toLocaleDateString(language):""}</small></div>
    <button type="button" onClick={openPortal} disabled={Boolean(busy)}><CreditCard size={16}/>{isEnglish?"Manage subscription":"Gerir subscrição"}</button>
-  </div>:requiresAccount?<p className="premium-account-note">{isEnglish?"Create a Listora account to subscribe. Your guest lists can stay on this device.":"Cria uma conta Listora para subscrever. As tuas listas de convidado continuam disponíveis neste dispositivo."}</p>:<div className="premium-plans">
-   {PLANS.map(plan=><article className={plan.id==="half_yearly"?"premium-plan premium-plan-featured":"premium-plan"} key={plan.id}>
-    {plan.id==="half_yearly"&&<span className="premium-plan-tag">{isEnglish?"Best value":"Melhor valor"}</span>}
-    <strong>{isEnglish?({monthly:"Monthly",quarterly:"Quarterly",half_yearly:"6 months"}[plan.id]):plan.name}</strong>
+  </div>:requiresAccount?<p className="premium-account-note">{isEnglish?"Create a Listora account before subscribing.":"Cria uma conta Listoria antes de subscrever."}</p>:<div className="premium-plans">
+   {PLANS.map(plan=><article className="premium-plan premium-plan-featured" key={plan.id}>
+
+    <strong>{isEnglish?"Monthly":plan.name}</strong>
     <b>{plan.price}</b><small>{plan.period}</small>
-    <button type="button" onClick={()=>openCheckout(plan.id)} disabled={Boolean(busy)}>{busy===plan.id?(isEnglish?"Opening…":"A abrir…"):(isEnglish?"Subscribe":"Subscrever")}</button>
+    <button type="button" onClick={()=>openCheckout("monthly")} disabled={Boolean(busy)}>{busy===plan.id?(isEnglish?"Opening…":"A abrir…"):(isEnglish?"Subscribe":"Subscrever")}</button>
    </article>)}
   </div>}
   {error&&<p className="premium-error" role="alert">{error}</p>}
