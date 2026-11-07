@@ -86,3 +86,5 @@ comment on table public.premium_paid_conversions is
   'First successful real Stripe invoice payment per user; excludes demo subscriptions.';
 comment on view public.premium_comparison_conversion_monthly is
   'Monthly free Smart Comparison cohorts and paid conversion rates at 7, 30 and 60 days. Only mature cohorts have rates.';
+
+revoke all on public.premium_comparison_conversion_monthly from public, anon, authenticated;
