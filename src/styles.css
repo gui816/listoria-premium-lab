@@ -3430,3 +3430,5 @@ button { -webkit-tap-highlight-color: transparent; }
 .discover-premium-price{white-space:nowrap;font-size:19px;font-weight:800;color:#34472f}
 .discover-premium-price small{font-size:11px;font-weight:600;color:#687461}
 @media(max-width:620px){.discover-premium-callout{align-items:flex-start;gap:11px;padding:15px}.discover-premium-callout-icon{flex-basis:36px;width:36px;height:36px}.discover-premium-callout-copy strong{font-size:13px}.discover-premium-callout-copy p{font-size:11px}.discover-premium-price{font-size:16px}}
+
+.basket-estimate-free-trial-note{display:inline-flex!important;align-self:flex-start;margin-top:5px;padding:3px 8px;border-radius:999px;background:#edf4e7;color:#58754b;font-size:10px!important;font-weight:700;line-height:1.3}
