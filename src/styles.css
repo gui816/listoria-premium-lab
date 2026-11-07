@@ -3418,3 +3418,15 @@ button { -webkit-tap-highlight-color: transparent; }
 .basket-estimate-premium-prompt strong{display:block;color:#285b3d;font-size:13px}
 .basket-estimate-premium-prompt p{margin:5px 0 11px;color:#65776a;font-size:11px;line-height:1.5}
 .basket-estimate-premium-prompt button{min-height:38px;padding:0 13px;border:0;border-radius:10px;background:#286848;color:#fff;font-size:11px;font-weight:800}
+
+
+/* Premium positioning within the Smart Comparison discovery flow */
+.discover-premium-callout{display:flex;align-items:center;gap:16px;margin:22px 0 30px;padding:18px 20px;border:1px solid rgba(92,116,74,.2);border-radius:18px;background:linear-gradient(110deg,rgba(238,244,226,.9),rgba(249,248,239,.92));}
+.discover-premium-callout-icon{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:13px;background:#e4edda;color:#547448}
+.discover-premium-callout-copy{display:grid;gap:4px;min-width:0;flex:1}
+.discover-premium-callout-copy>span{font-size:10px;font-weight:800;letter-spacing:.12em;color:#617b50}
+.discover-premium-callout-copy strong{font-size:14px;line-height:1.35;color:#283326}
+.discover-premium-callout-copy p{margin:0;font-size:12px;line-height:1.5;color:#66715f}
+.discover-premium-price{white-space:nowrap;font-size:19px;font-weight:800;color:#34472f}
+.discover-premium-price small{font-size:11px;font-weight:600;color:#687461}
+@media(max-width:620px){.discover-premium-callout{align-items:flex-start;gap:11px;padding:15px}.discover-premium-callout-icon{flex-basis:36px;width:36px;height:36px}.discover-premium-callout-copy strong{font-size:13px}.discover-premium-callout-copy p{font-size:11px}.discover-premium-price{font-size:16px}}
