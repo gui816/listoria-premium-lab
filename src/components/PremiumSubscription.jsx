@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase.js";
 import { Sparkles, ShieldCheck, CreditCard, RefreshCw, CheckCircle2, FlaskConical, RotateCcw, CircleAlert, Ban } from "lucide-react";
 
-const PLANS = [{ id:"monthly", name:"Mensal", price:"2,99 €", period:"por mês" }];
+const PLANS = [{ id:"monthly", name:"Mensal", price:"1,99 €", period:"por mês" }];
 
 export default function PremiumSubscription({ session, language="pt-PT" }) {
  const [status,setStatus]=useState(null);
