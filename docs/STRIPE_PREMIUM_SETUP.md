@@ -6,7 +6,7 @@ Create one Stripe Product named **Listoria Premium** and one recurring EUR Price
 
 | Plan key | Amount | Billing interval |
 |---|---:|---|
-| monthly | €2.99 | every 1 month |
+| monthly | €1.99 | every 1 month |
 
 
 This is a recurring subscription (not a one-off payment). Only the monthly plan is supported; the webhook rejects any other Stripe interval or legacy plan metadata.
@@ -17,7 +17,7 @@ Set these Supabase Edge Function secrets (never put secret keys in the frontend)
 
 - STRIPE_SECRET_KEY — Stripe secret key (test mode first).
 - STRIPE_WEBHOOK_SECRET — signing secret for the webhook endpoint.
-- STRIPE_PRICE_MONTHLY — recurring Price ID for €2.99/month.
+- STRIPE_PRICE_MONTHLY — recurring Price ID for €1.99/month.
 - APP_URL — full public app URL, including any deployment base path, e.g. https://example.github.io/listoria.
 
 Supabase supplies SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY to Edge Functions. Keep service role and Stripe secrets server-side only.
