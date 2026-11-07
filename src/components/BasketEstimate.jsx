@@ -456,7 +456,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
                 }) : <p className="basket-estimate-product-empty">O serviço ainda não devolveu detalhe por produto para esta estimativa. Atualiza para obter uma decomposição detalhada.</p>}
                 {selectedStore.items?.length > 0 && <div className="basket-estimate-product-total"><span>Total estimado</span><strong>{formatMoney(selectedStore.estimatedTotal)}</strong></div>}
               </div>}
-              {showPremiumPrompt && <div className="basket-estimate-premium-prompt"><strong>Gostaste da comparação?</strong><p>Esta foi a tua comparação gratuita. Com o Listoria Premium podes continuar a comparar o teu cabaz sempre que quiseres.</p><button type="button" onClick={() => window.dispatchEvent(new CustomEvent("listoria:open-premium"))}>Conhecer o Premium · 2,99 €/mês</button></div>}
+              {showPremiumPrompt && <div className="basket-estimate-premium-prompt"><strong>Gostaste da comparação?</strong><p>Esta foi a tua comparação gratuita. Com o Listoria Premium podes continuar a comparar o teu cabaz sempre que quiseres.</p><button type="button" onClick={() => window.dispatchEvent(new CustomEvent("listoria:open-premium"))}>Conhecer o Premium · 1,99 €/mês</button></div>}
               <p className="basket-estimate-disclaimer">{result.disclaimer}</p>
             </>}
           </>}
