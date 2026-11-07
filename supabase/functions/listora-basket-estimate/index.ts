@@ -56,7 +56,7 @@ serve(async (req) => {
     const demoSubscription = demoRows?.[0];
     const demoGrace = demoSubscription?.status === "past_due" && demoSubscription.past_due_grace_until && new Date(demoSubscription.past_due_grace_until).getTime() > now;
     const demoPaidPeriod = demoSubscription?.cancel_at_period_end && demoSubscription.current_period_end && new Date(demoSubscription.current_period_end).getTime() > now;
-    const hasDemoPremium = Boolean(demoSubscription && (demoSubscription.status === "active" || demoGrace || demoPaidPeriod));
+    const hasDemoPremium = Boolean(demoSubscription && ((demoSubscription.status === "active" && (!demoSubscription.current_period_end || new Date(demoSubscription.current_period_end).getTime() > now)) || demoGrace || demoPaidPeriod));
     const hasAnyPremium = hasPremium || hasDemoPremium;
 
     const requestId = crypto.randomUUID();
