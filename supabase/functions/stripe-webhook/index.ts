@@ -23,12 +23,16 @@ serve(async(req)=>{
   event=await stripe.webhooks.constructEventAsync(payload,signature,secret,undefined,Stripe.createSubtleCryptoProvider());
  }catch(error){console.error("Invalid Stripe signature:",error);return json({error:"Invalid signature"},400);}
  const admin=createClient(url,service,{auth:{persistSession:false}});
+ let eventRowId:string|undefined;
  const {data:inserted,error:insertError}=await admin.from("subscription_events").insert({
   stripe_event_id:event.id,event_type:event.type,payload:event as unknown as Record<string,unknown>
  }).select("id").maybeSingle();
- if(insertError?.code==="23505")return json({received:true,duplicate:true});
- if(insertError)return json({error:"Could not record event"},500);
- const eventRowId=inserted?.id;
+ if(insertError?.code==="23505"){
+  const {data:existing}=await admin.from("subscription_events").select("id,processed_at").eq("stripe_event_id",event.id).maybeSingle();
+  if(existing?.processed_at)return json({received:true,duplicate:true});
+  eventRowId=existing?.id;
+ }else if(insertError)return json({error:"Could not record event"},500);
+ else eventRowId=inserted?.id;
  try{
   const syncSubscription=async(subscription:Stripe.Subscription, customerId:string|null=null)=>{
    const metadata=subscription.metadata||{};
