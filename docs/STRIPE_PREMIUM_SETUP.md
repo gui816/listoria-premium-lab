@@ -9,7 +9,7 @@ Create one Stripe Product named **Listoria Premium** and one recurring EUR Price
 | monthly | €2.99 | every 1 month |
 
 
-These are recurring subscriptions (not one-off payments). The plan key is stored in Stripe Subscription metadata and in Supabase.
+This is a recurring subscription (not a one-off payment). Only the monthly plan is supported; the webhook rejects any other Stripe interval or legacy plan metadata.
 
 ## Stripe secrets
 
@@ -18,7 +18,7 @@ Set these Supabase Edge Function secrets (never put secret keys in the frontend)
 - STRIPE_SECRET_KEY — Stripe secret key (test mode first).
 - STRIPE_WEBHOOK_SECRET — signing secret for the webhook endpoint.
 - STRIPE_PRICE_MONTHLY — recurring Price ID for €2.99/month.
-- - APP_URL — full public app URL, including any deployment base path, e.g. https://example.github.io/listoria.
+- APP_URL — full public app URL, including any deployment base path, e.g. https://example.github.io/listoria.
 
 Supabase supplies SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY to Edge Functions. Keep service role and Stripe secrets server-side only.
 
@@ -60,7 +60,7 @@ supabase functions deploy stripe-webhook
 
 ## Entitlement and fair-use rules
 
-- Every identity (including a guest session) receives one free basket comparison, enforced server-side and shared across devices when the account identity is retained.
+- Every identity (including a guest session) receives one free basket comparison, enforced server-side and shared across devices when the account identity is retained. A failed AI request does not consume the free comparison; it is only recorded after a successful estimate. Concurrent first-use requests are resolved atomically, so only one receives the free result.
 - After the free comparison, an active Premium subscription is required.
 - Premium entitlement is checked server-side for every basket estimate request.
 - active and trialing subscriptions grant access.
