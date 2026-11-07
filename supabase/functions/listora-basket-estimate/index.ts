@@ -251,6 +251,8 @@ serve(async (req) => {
       };
     }).filter(Boolean);
 
+    if (!results.length) return json({ error: "Não foi possível obter uma comparação válida para os supermercados selecionados." }, 502);
+
     if (!hasPremium) {
       const trialResponse = await fetch(new URL("/rest/v1/rpc/consume_free_comparison_trial", supabaseUrl), {
         method: "POST", headers: adminHeaders,
