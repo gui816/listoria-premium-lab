@@ -347,7 +347,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
               {busy ? <><LoaderCircle className="spin" size={17}/> A estimar o cabaz…</> : <><Sparkles size={17}/> Estimar preço do cabaz</>}
             </button>}
 
-            {error && <p className="basket-estimate-error" role="alert">{error}</p>
+            {error && <p className="basket-estimate-error" role="alert">{error}</p>}
             {showPremiumPrompt && !result && <div className="basket-estimate-premium-prompt"><strong>A tua comparação gratuita já foi utilizada</strong><p>Subscreve o Listoria Premium para continuares a comparar preços e encontrar onde o teu cabaz fica mais em conta.</p><button type="button" onClick={() => window.dispatchEvent(new CustomEvent("listoria:open-premium"))}>Conhecer o Premium · 2,99 €/mês</button></div>}}
 
             {result && <>
