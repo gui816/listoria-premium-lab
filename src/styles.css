@@ -3413,3 +3413,8 @@ button { -webkit-tap-highlight-color: transparent; }
  .premium-active-pill { font-size:9px;padding:5px 7px; }
  .premium-subscription-active { align-items:flex-start;flex-direction:column; }
 }
+
+.basket-estimate-premium-prompt{margin:14px 0;padding:14px;border:1px solid #d7e8d5;border-radius:14px;background:#f3f8f0}
+.basket-estimate-premium-prompt strong{display:block;color:#285b3d;font-size:13px}
+.basket-estimate-premium-prompt p{margin:5px 0 11px;color:#65776a;font-size:11px;line-height:1.5}
+.basket-estimate-premium-prompt button{min-height:38px;padding:0 13px;border:0;border-radius:10px;background:#286848;color:#fff;font-size:11px;font-weight:800}
