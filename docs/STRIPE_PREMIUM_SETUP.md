@@ -56,6 +56,7 @@ supabase functions deploy stripe-create-checkout
 supabase functions deploy stripe-create-portal
 supabase functions deploy premium-status
 supabase functions deploy stripe-webhook
+supabase functions deploy listora-basket-estimate
 ```
 
 ## Entitlement and fair-use rules
