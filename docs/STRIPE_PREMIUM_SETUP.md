@@ -22,6 +22,36 @@ Set these Supabase Edge Function secrets (never put secret keys in the frontend)
 
 Supabase supplies SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY to Edge Functions. Keep service role and Stripe secrets server-side only.
 
+## Smart Comparison conversion analytics
+
+Apply `202611070003_premium_conversion_analytics.sql` after the Premium and demo migrations. The instrumentation records:
+
+- **Cohort entry:** the first successful free Smart Comparison per Supabase user ID. Failed estimates and subsequent Premium estimates do not create new cohort entries.
+- **Paid conversion:** the first successfully paid real Stripe invoice per user. Demo subscriptions are deliberately excluded.
+- **Windows:** whether that first payment happened within 7, 30 or 60 days after the first free comparison.
+- **Maturity:** a conversion rate is shown only after the full 7/30/60-day observation window has elapsed for the cohort member. This avoids treating recent users as non-converters.
+- **Identity:** the Supabase user ID is the join key, so anonymous-to-permanent account conversion must preserve the same Supabase user ID.
+
+The monthly cohort view is `public.premium_comparison_conversion_monthly`. Query it in the Supabase SQL Editor (or through a privileged analytics connection):
+
+```sql
+select
+  cohort_month,
+  free_comparison_users,
+  converted_7d,
+  conversion_rate_7d_pct,
+  converted_30d,
+  conversion_rate_30d_pct,
+  converted_60d,
+  conversion_rate_60d_pct
+from public.premium_comparison_conversion_monthly
+order by cohort_month desc;
+```
+
+The `converted_7d/30d/60d` columns are raw counts observed so far; the corresponding rates use only mature cohort members. For an exact overall rate across all mature users, calculate weighted totals rather than averaging monthly percentages.
+
+These are **first-paid-conversion** metrics, not trial-start or checkout-start metrics. They do not yet measure renewals, churn, refunds, ad attribution or lifetime value. Add campaign attribution separately before using the dashboard to calculate Instagram CAC/ROAS.
+
 ## Webhook
 
 After deploying the functions, create a Stripe webhook endpoint:
