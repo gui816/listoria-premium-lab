@@ -36,6 +36,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
   const [selected, setSelected] = useState([]);
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [loadingStage, setLoadingStage] = useState(0);
   const [loadingCatalogue, setLoadingCatalogue] = useState(true);
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
@@ -45,6 +46,12 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
   const [freeComparisonAvailable, setFreeComparisonAvailable] = useState(false);
 
   const country = useMemo(() => countries.find((entry) => entry.code === countryCode), [countries, countryCode]);
+
+  useEffect(() => {
+    if (!busy) { setLoadingStage(0); return; }
+    const timer = window.setInterval(() => setLoadingStage((stage) => (stage + 1) % 3), 2600);
+    return () => window.clearInterval(timer);
+  }, [busy]);
   const cleanItems = useMemo(() => normaliseItems(items), [items]);
   const itemSignature = useMemo(() => JSON.stringify(cleanItems), [cleanItems]);
   const cacheKey = useMemo(() => {
@@ -295,6 +302,28 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
   const updatedAt = result?.generatedAt ? new Date(result.generatedAt) : null;
 
   return <>
+
+        <style>{`
+          .basket-estimate-quality-hint{font-size:14px;line-height:1.45;margin-top:10px!important;padding:12px 14px!important}
+          .basket-estimate-loading{margin-top:18px;padding:16px;border:1px solid #dce9df;border-radius:18px;background:linear-gradient(135deg,#f4f8f2,#fff);color:#1c3329}
+          .basket-estimate-loading-top{display:flex;align-items:center;gap:12px}
+          .basket-estimate-loading-icon{width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;border-radius:14px;background:#e2f0e5;color:#276b50;animation:basket-glow 2s ease-in-out infinite}
+          .basket-estimate-loading-top strong{display:block;font-size:15px}
+          .basket-estimate-loading-top small{display:block;margin-top:3px;color:#718078;font-size:12px;line-height:1.4}
+          .basket-estimate-loading-dots{display:flex;gap:4px;margin-left:auto;align-self:center}
+          .basket-estimate-loading-dots i{width:5px;height:5px;border-radius:50%;background:#287354;animation:basket-dot 1s ease-in-out infinite}
+          .basket-estimate-loading-dots i:nth-child(2){animation-delay:.15s}.basket-estimate-loading-dots i:nth-child(3){animation-delay:.3s}
+          .basket-estimate-loading-track{height:5px;margin-top:16px;overflow:hidden;border-radius:10px;background:#e3ebe3}
+          .basket-estimate-loading-track span{display:block;width:38%;height:100%;border-radius:10px;background:#287354;animation:basket-travel 1.8s ease-in-out infinite}
+          .basket-estimate-loading-steps{display:flex;justify-content:space-between;gap:8px;margin-top:12px}
+          .basket-estimate-loading-steps span{display:flex;align-items:center;gap:5px;color:#929c95;font-size:11px}
+          .basket-estimate-loading-steps i{width:7px;height:7px;border-radius:50%;background:#d5ddd6}
+          .basket-estimate-loading-steps .active{color:#276b50;font-weight:700}.basket-estimate-loading-steps .active i,.basket-estimate-loading-steps .passed i{background:#287354}
+          @keyframes basket-travel{0%{transform:translateX(-110%)}50%{transform:translateX(165%)}100%{transform:translateX(290%)}}
+          @keyframes basket-dot{0%,60%,100%{opacity:.35;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+          @keyframes basket-glow{0%,100%{transform:scale(1);box-shadow:0 0 0 0 #28735400}50%{transform:scale(1.04);box-shadow:0 0 0 6px #28735412}}
+          @media(prefers-reduced-motion:reduce){.basket-estimate-loading *{animation:none!important}}
+        `}</style>
     <section className="basket-estimate">
       <div className="basket-estimate-summary">
         <span className="basket-estimate-icon"><Sparkles size={22}/></span>
@@ -316,7 +345,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
     {open && <div className="basket-estimate-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setOpen(false); }}>
       <section className="basket-estimate-modal" role="dialog" aria-modal="true" aria-labelledby="basket-estimate-title">
         <header className="basket-estimate-modal-header">
-          <div><span className="basket-estimate-modal-kicker"><Sparkles size={14}/> COMPARAÇÃO INTELIGENTE</span><h2 id="basket-estimate-title">Quanto poderá custar o teu cabaz?</h2><p>{cleanItems.length} produtos na lista</p><p className="basket-estimate-quality-hint">Não precisas de indicar marca ou embalagem exata. A IA pesquisa produtos e preços disponíveis, procura correspondências exatas ou alternativas equivalentes e apresenta estimativas por supermercado. Quando não encontra informação fiável, assinala essa limitação em vez de inventar um preço. Os valores são indicativos, não preços garantidos.</p></div>
+          <div><span className="basket-estimate-modal-kicker"><Sparkles size={14}/> COMPARAÇÃO INTELIGENTE</span><h2 id="basket-estimate-title">Quanto poderá custar o teu cabaz?</h2><p>{cleanItems.length} produtos na lista</p><p className="basket-estimate-quality-hint">A IA procura produtos e preços, compara opções equivalentes e assinala quando não encontra dados fiáveis. Os valores são estimativas, não preços garantidos.</p></div>
           <button type="button" className="basket-estimate-modal-close" onClick={() => setOpen(false)} disabled={busy} aria-label="Fechar"><X size={20}/></button>
         </header>
 
@@ -359,9 +388,21 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
               </div>
             </div>
 
-            {!result && <button type="button" className="basket-estimate-button" onClick={() => estimate(false)} disabled={busy || loadingCatalogue || !cleanItems.length || !selected.length}>
-              {busy ? <><LoaderCircle className="spin" size={17}/> A estimar o cabaz…</> : <><Sparkles size={17}/> Estimar preço do cabaz</>}
-            </button>}
+            {!result && (busy ? <div className="basket-estimate-loading" role="status" aria-live="polite">
+              <div className="basket-estimate-loading-top">
+                <span className="basket-estimate-loading-icon"><Sparkles size={20}/></span>
+                <div><strong>{["A analisar a tua lista","A procurar preços disponíveis","A comparar supermercados"][loadingStage]}</strong>
+                  <small>{["Estamos a identificar os produtos e as quantidades.","A procurar correspondências e preços em cada loja.","A reunir os resultados para te mostrar as melhores opções."][loadingStage]}</small>
+                </div>
+                <span className="basket-estimate-loading-dots" aria-hidden="true"><i/><i/><i/></span>
+              </div>
+              <div className="basket-estimate-loading-track" aria-hidden="true"><span/></div>
+              <div className="basket-estimate-loading-steps" aria-hidden="true">
+                {["Análise","Pesquisa","Comparação"].map((label, index) => <span className={index === loadingStage ? "active" : index < loadingStage ? "passed" : ""} key={label}><i/>{label}</span>)}
+              </div>
+            </div> : <button type="button" className="basket-estimate-button" onClick={() => estimate(false)} disabled={loadingCatalogue || !cleanItems.length || !selected.length}>
+              <Sparkles size={17}/> Estimar preço do cabaz
+            </button>)}
 
             {error && <p className="basket-estimate-error" role="alert">{error}</p>}
             {showPremiumPrompt && !result && <div className="basket-estimate-premium-prompt"><strong>A tua comparação gratuita já foi utilizada</strong><p>Subscreve o Listoria Premium para continuares a comparar preços e encontrar onde o teu cabaz fica mais em conta.</p><button type="button" onClick={() => window.dispatchEvent(new CustomEvent("listoria:open-premium"))}>Conhecer o Premium · 2,99 €/mês</button></div>}}
