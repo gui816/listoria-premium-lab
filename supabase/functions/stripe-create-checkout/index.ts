@@ -18,7 +18,7 @@ serve(async (req) => {
   const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
   const appUrl = Deno.env.get("APP_URL");
-  if (!appUrl || !url || !anon || !service) return json({ error: "A configuração da aplicação está incompleta." }, 503);
+  if (!url || !anon || !service) return json({ error: "A configuração da aplicação está incompleta." }, 503);
   const authClient = createClient(url, anon, { global: { headers: { Authorization: `Bearer ${token}` } }, auth: { persistSession: false } });
   const { data: { user }, error: authError } = await authClient.auth.getUser(token);
   if (authError || !user) return json({ error: "Sessão inválida. Volta a iniciar sessão." }, 401);
@@ -29,6 +29,7 @@ serve(async (req) => {
    if (demoError) throw demoError;
    return json({ demo: true, activated: true, subscription: demoSub });
   }
+  if (!appUrl) return json({ error: "APP_URL não está configurado." }, 503);
   const body = await req.json().catch(() => ({}));
   const planKey = "monthly" as keyof typeof plans;
   if (!(planKey in plans)) return json({ error: "Seleciona um plano válido." }, 400);
