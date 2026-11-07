@@ -17,7 +17,7 @@ export default function PremiumSubscription({ session, language="pt-PT", compact
   setStatus(data);
  },[session?.access_token,isEnglish]);
  useEffect(()=>{refresh();},[refresh]);
- useEffect(()=>{const open=()=>document.querySelector(".premium-subscription")?.scrollIntoView({behavior:"smooth",block:"center"});window.addEventListener("listoria:open-premium",open);return()=>window.removeEventListener("listoria:open-premium",open);},[]);
+ useEffect(()=>{const open=()=>{requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelector(".premium-subscription-compact, .premium-subscription")?.scrollIntoView({behavior:"smooth",block:"center"})));};window.addEventListener("listoria:open-premium",open);return()=>window.removeEventListener("listoria:open-premium",open);},[]);
  const runDemoAction=async(action)=>{
   setBusy(action);setError("");
   try{
