@@ -10,11 +10,13 @@ serve(async(req)=>{
   const token=(req.headers.get("Authorization")||"").replace(/^Bearer\s+/i,"");
   if(!token) return json({error:"Inicia sessão para continuar."},401);
   const url=Deno.env.get("SUPABASE_URL")!, anon=Deno.env.get("SUPABASE_ANON_KEY")!, service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, key=Deno.env.get("STRIPE_SECRET_KEY"), appUrl=Deno.env.get("APP_URL");
-  if(!key||!appUrl) return json({error:"A configuração de pagamentos está incompleta."},503);
+  if(!url||!anon||!service) return json({error:"A configuração da aplicação está incompleta."},503);
   const auth=createClient(url,anon,{global:{headers:{Authorization:`Bearer ${token}`}},auth:{persistSession:false}});
   const {data:{user},error}=await auth.auth.getUser(token);
   if(error||!user) return json({error:"Sessão inválida."},401);
   if(user.is_anonymous) return json({error:"Cria uma conta para gerir o Premium."},403);
+  if(!key) return json({demo:true,manageInApp:true});
+  if(!appUrl) return json({error:"APP_URL não está configurado."},503);
   const admin=createClient(url,service,{auth:{persistSession:false}});
   const {data:sub}=await admin.from("subscriptions").select("stripe_customer_id").eq("user_id",user.id).not("stripe_customer_id","is",null).order("created_at",{ascending:false}).limit(1).maybeSingle();
   if(!sub?.stripe_customer_id) return json({error:"Não encontrámos uma conta Stripe associada."},404);
