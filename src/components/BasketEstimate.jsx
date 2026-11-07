@@ -41,6 +41,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
   const [open, setOpen] = useState(false);
   const [selectedStore, setSelectedStore] = useState(null);
   const [stale, setStale] = useState(false);
+  const [showPremiumPrompt, setShowPremiumPrompt] = useState(false);
 
   const country = useMemo(() => countries.find((entry) => entry.code === countryCode), [countries, countryCode]);
   const cleanItems = useMemo(() => normaliseItems(items), [items]);
@@ -240,6 +241,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
       }
       if (data?.error) throw new Error(data.error);
       setResult(data);
+      setShowPremiumPrompt(Boolean(data?.freeTrialUsed));
       setSelectedStore(null);
       setStale(false);
       try {
@@ -247,6 +249,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
         localStorage.setItem("listora-basket-last-signature", itemSignature);
       } catch {}
     } catch (estimateError) {
+      if (estimateError?.context?.status === 403 || /premium_required/.test(estimateError?.message || "")) setShowPremiumPrompt(true);
       setError(estimateError.message || "Não foi possível estimar o cabaz.");
     } finally {
       setBusy(false);
@@ -344,7 +347,8 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
               {busy ? <><LoaderCircle className="spin" size={17}/> A estimar o cabaz…</> : <><Sparkles size={17}/> Estimar preço do cabaz</>}
             </button>}
 
-            {error && <p className="basket-estimate-error" role="alert">{error}</p>}
+            {error && <p className="basket-estimate-error" role="alert">{error}</p>
+            {showPremiumPrompt && !result && <div className="basket-estimate-premium-prompt"><strong>A tua comparação gratuita já foi utilizada</strong><p>Subscreve o Listoria Premium para continuares a comparar preços e encontrar onde o teu cabaz fica mais em conta.</p><button type="button" onClick={() => window.dispatchEvent(new CustomEvent("listoria:open-premium"))}>Conhecer o Premium · 2,99 €/mês</button></div>}}
 
             {result && <>
               <div className="basket-estimate-results-heading"><strong>Comparação do cabaz</strong><span>{updatedAt ? <><Clock3 size={12}/> {updatedAt.toLocaleString(language, { dateStyle: "short", timeStyle: "short" })}</> : null}</span></div>
@@ -383,6 +387,7 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
                 }) : <p className="basket-estimate-product-empty">O serviço ainda não devolveu detalhe por produto para esta estimativa. Atualiza para obter uma decomposição detalhada.</p>}
                 {selectedStore.items?.length > 0 && <div className="basket-estimate-product-total"><span>Total estimado</span><strong>{formatMoney(selectedStore.estimatedTotal)}</strong></div>}
               </div>}
+              {showPremiumPrompt && <div className="basket-estimate-premium-prompt"><strong>Gostaste da comparação?</strong><p>Esta foi a tua comparação gratuita. Com o Listoria Premium podes continuar a comparar o teu cabaz sempre que quiseres.</p><button type="button" onClick={() => window.dispatchEvent(new CustomEvent("listoria:open-premium"))}>Conhecer o Premium · 2,99 €/mês</button></div>}
               <p className="basket-estimate-disclaimer">{result.disclaimer}</p>
             </>}
           </>}
