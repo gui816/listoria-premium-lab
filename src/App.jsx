@@ -1232,10 +1232,10 @@ export default function App() {
           <div className="discover-premium-callout-icon"><Sparkles size={19}/></div>
           <div className="discover-premium-callout-copy">
             <span>LISTORIA PREMIUM</span>
-            <strong>Experimenta uma comparação gratuita. Depois, continua por 2,99 €/mês.</strong>
+            <strong>Experimenta uma comparação gratuita. Depois, continua por 1,99 €/mês.</strong>
             <p>Comparações inteligentes do cabaz sempre que precisares, sem limites mensais e com proteção contra utilização abusiva. Subscrição mensal, que podes gerir ou cancelar a qualquer momento.</p>
           </div>
-          <span className="discover-premium-price">2,99 € <small>/ mês</small></span>
+          <span className="discover-premium-price">1,99 € <small>/ mês</small></span>
         </section>
         <div className="discover-feature-grid">
           <article className="discover-feature"><div className="discover-art"><div className="discover-art-paper"><span/><span/><span/><span/></div><span className="discover-art-icon"><Camera size={25}/></span><span className="discover-ai-tag"><Sparkles size={12}/> IA</span></div><span className="discover-kicker">{t("FOTOGRAFIA + IA")}</span><h2>{t("Uma fotografia. Uma lista pronta a rever.")}</h2><p>{t("Fotografa uma lista manuscrita, uma folha de papel ou um quadro. A inteligência artificial analisa a imagem e identifica os produtos para confirmares antes de adicionar.")}</p></article>
