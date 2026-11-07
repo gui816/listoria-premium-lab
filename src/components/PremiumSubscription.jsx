@@ -16,6 +16,7 @@ export default function PremiumSubscription({ session, language="pt-PT" }) {
   setStatus(data);
  },[session?.access_token,isEnglish]);
  useEffect(()=>{refresh();},[refresh]);
+ useEffect(()=>{const open=()=>document.querySelector(".premium-subscription")?.scrollIntoView({behavior:"smooth",block:"center"});window.addEventListener("listoria:open-premium",open);return()=>window.removeEventListener("listoria:open-premium",open);},[]);
  const openCheckout=async(plan)=>{
   setBusy(plan);setError("");
   try{
