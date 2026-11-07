@@ -3432,3 +3432,15 @@ button { -webkit-tap-highlight-color: transparent; }
 @media(max-width:620px){.discover-premium-callout{align-items:flex-start;gap:11px;padding:15px}.discover-premium-callout-icon{flex-basis:36px;width:36px;height:36px}.discover-premium-callout-copy strong{font-size:13px}.discover-premium-callout-copy p{font-size:11px}.discover-premium-price{font-size:16px}}
 
 .basket-estimate-free-trial-note{display:inline-flex!important;align-self:flex-start;margin-top:5px;padding:3px 8px;border-radius:999px;background:#edf4e7;color:#58754b;font-size:10px!important;font-weight:700;line-height:1.3}
+
+
+/* Stripe-less Premium demo mode */
+.premium-demo-banner{display:flex;align-items:center;gap:9px;margin:14px 0;padding:11px 13px;border:1px dashed #9aa982;border-radius:12px;background:#f3f7ed;color:#536747;font-size:12px;line-height:1.45}
+.premium-demo-banner svg{flex:0 0 auto}
+.premium-demo-controls{display:grid;gap:10px;margin-top:14px;padding:15px;border:1px solid #dfe6d8;border-radius:14px;background:#f8faf5}
+.premium-demo-controls>strong{font-size:13px;color:#34442e}
+.premium-demo-controls>p{margin:0;color:#687362;font-size:12px;line-height:1.45}
+.premium-demo-actions{display:flex;flex-wrap:wrap;gap:8px}
+.premium-demo-actions button{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid #d7dfcf;border-radius:9px;background:#fff;color:#43563a;font-size:12px;font-weight:600}
+.premium-demo-actions button:disabled{opacity:.55}
+.premium-demo-controls>small{font-size:10px;color:#7a8473}
