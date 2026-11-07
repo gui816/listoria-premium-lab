@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { createPortal } from "react-dom";
 import BasketEstimate from "./components/BasketEstimate.jsx";
+import PremiumSubscription from "./components/PremiumSubscription.jsx";
 import AccountAccess from "./components/AccountAccess.jsx";
 import { supabase, isSupabaseConfigured } from "./lib/supabase.js";
 import {
@@ -1227,6 +1228,15 @@ export default function App() {
             <div className="discover-smart-visual-foot"><Sparkles size={14}/>{t("Correspondências e estimativas explicadas")}</div>
           </div>
         </section>
+        <section className="discover-premium-callout">
+          <div className="discover-premium-callout-icon"><Sparkles size={19}/></div>
+          <div className="discover-premium-callout-copy">
+            <span>LISTORIA PREMIUM</span>
+            <strong>Experimenta uma comparação gratuita. Depois, continua por 1,99 €/mês.</strong>
+            <p>Comparações inteligentes do cabaz sempre que precisares, sem limites mensais e com proteção contra utilização abusiva. Subscrição mensal, que podes gerir ou cancelar a qualquer momento.</p>
+          </div>
+          <span className="discover-premium-price">1,99 € <small>/ mês</small></span>
+        </section>
         <div className="discover-feature-grid">
           <article className="discover-feature"><div className="discover-art"><div className="discover-art-paper"><span/><span/><span/><span/></div><span className="discover-art-icon"><Camera size={25}/></span><span className="discover-ai-tag"><Sparkles size={12}/> IA</span></div><span className="discover-kicker">{t("FOTOGRAFIA + IA")}</span><h2>{t("Uma fotografia. Uma lista pronta a rever.")}</h2><p>{t("Fotografa uma lista manuscrita, uma folha de papel ou um quadro. A inteligência artificial analisa a imagem e identifica os produtos para confirmares antes de adicionar.")}</p></article>
           <article className="discover-feature"><div className="discover-art"><div className="discover-voice-orb"><Mic size={29}/></div><div className="discover-wave">{[10,18,28,16,34,21,13,26,17].map((h,i)=><i key={i} style={{height:h}}/>)}</div><span className="discover-ai-tag"><Sparkles size={12}/> IA</span></div><span className="discover-kicker">{t("VOZ + IA")}</span><h2>{t("Diz vários produtos de seguida.")}</h2><p>{t("Diz, por exemplo, «leite, pão e seis ovos». A inteligência artificial interpreta a voz e prepara os produtos para reveres e adicionares à lista.")}</p></article>
@@ -1306,6 +1316,7 @@ export default function App() {
         
       </section>}
       {!shoppingMode && activeItems.length > 0 && <BasketEstimate items={activeItems} language={language} />}
+      {authSession?.user && <PremiumSubscription session={authSession} language={language} />}
       {shoppingMode && <section className="supermarket-summary" aria-label="Progresso das compras">
         <div className="supermarket-summary-top"><div><span className="supermarket-kicker">{t("AS TUAS COMPRAS")}</span><h2>{doneItems.length === items.length && items.length > 0 ? t("Tudo comprado!") : t("Vamos às compras")}</h2></div><strong>{doneItems.length}<span> / {items.length}</span></strong></div>
         <div className="supermarket-progress-track"><span style={{width: `${shoppingProgress}%`}}/></div>
