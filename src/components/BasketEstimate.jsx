@@ -246,6 +246,10 @@ export default function BasketEstimate({ items, language = "pt-PT" }) {
         body: { items: cleanItems, countryCode, supermarkets: selected }
       });
       if (invokeError) {
+        if (invokeError.context?.status === 403) {
+          setShowPremiumPrompt(true);
+          setFreeComparisonAvailable(false);
+        }
         const detail = await invokeError.context?.json?.().catch(() => null);
         throw new Error(detail?.error || invokeError.message);
       }
