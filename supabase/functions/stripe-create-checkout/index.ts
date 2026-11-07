@@ -18,18 +18,23 @@ serve(async (req) => {
   const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
   const appUrl = Deno.env.get("APP_URL");
-  if (!stripeKey || !appUrl || !url || !anon || !service) return json({ error: "A configuração de pagamentos está incompleta." }, 503);
+  if (!appUrl || !url || !anon || !service) return json({ error: "A configuração da aplicação está incompleta." }, 503);
   const authClient = createClient(url, anon, { global: { headers: { Authorization: `Bearer ${token}` } }, auth: { persistSession: false } });
   const { data: { user }, error: authError } = await authClient.auth.getUser(token);
   if (authError || !user) return json({ error: "Sessão inválida. Volta a iniciar sessão." }, 401);
   if (user.is_anonymous) return json({ error: "Cria uma conta Listoria antes de subscrever o Premium." }, 403);
+  const admin = createClient(url, service, { auth: { persistSession: false } });
+  if (!stripeKey) {
+   const { data: demoSub, error: demoError } = await admin.from("premium_demo_subscriptions").upsert({ user_id: user.id, status: "active", current_period_start: new Date().toISOString(), current_period_end: new Date(Date.now()+30*24*60*60*1000).toISOString(), cancel_at_period_end: false, past_due_grace_until: null }, { onConflict: "user_id" }).select().single();
+   if (demoError) throw demoError;
+   return json({ demo: true, activated: true, subscription: demoSub });
+  }
   const body = await req.json().catch(() => ({}));
   const planKey = "monthly" as keyof typeof plans;
   if (!(planKey in plans)) return json({ error: "Seleciona um plano válido." }, 400);
   const priceId = Deno.env.get(plans[planKey].env);
-  if (!priceId) return json({ error: `O preço Stripe do plano ${planKey} ainda não está configurado.` }, 503);
+  if (!priceId) return json({ error: `O preço Stripe do plano ${planKey} ainda não está configurado. Define STRIPE_PRICE_MONTHLY ou remove STRIPE_SECRET_KEY para usar o modo de demonstração.` }, 503);
 
-  const admin = createClient(url, service, { auth: { persistSession: false } });
   const { data: existing } = await admin.from("subscriptions").select("stripe_customer_id,status,current_period_end,past_due_grace_until").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (existing?.status === "active" || existing?.status === "trialing" || (existing?.status === "past_due" && existing.past_due_grace_until && new Date(existing.past_due_grace_until) > new Date())) {
     return json({ error: "Já tens uma subscrição Premium ativa.", code: "already_subscribed" }, 409);
