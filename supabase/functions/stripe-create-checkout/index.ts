@@ -4,11 +4,7 @@ import Stripe from "https://esm.sh/stripe@17.7.0?target=deno";
 
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
-const plans = {
- monthly: { env: "STRIPE_PRICE_MONTHLY", label: "Listoria Premium mensal" },
- quarterly: { env: "STRIPE_PRICE_QUARTERLY", label: "Listoria Premium trimestral" },
- half_yearly: { env: "STRIPE_PRICE_HALF_YEARLY", label: "Listoria Premium semestral" }
-} as const;
+const plans = { monthly: { env: "STRIPE_PRICE_MONTHLY", label: "Listoria Premium mensal" } } as const;
 
 serve(async (req) => {
  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -28,7 +24,7 @@ serve(async (req) => {
   if (authError || !user) return json({ error: "Sessão inválida. Volta a iniciar sessão." }, 401);
   if (user.is_anonymous) return json({ error: "Cria uma conta Listoria antes de subscrever o Premium." }, 403);
   const body = await req.json().catch(() => ({}));
-  const planKey = String(body?.plan || "") as keyof typeof plans;
+  const planKey = "monthly" as keyof typeof plans;
   if (!(planKey in plans)) return json({ error: "Seleciona um plano válido." }, 400);
   const priceId = Deno.env.get(plans[planKey].env);
   if (!priceId) return json({ error: `O preço Stripe do plano ${planKey} ainda não está configurado.` }, 503);
