@@ -20,7 +20,7 @@ serve(async(req)=>{
   const now=Date.now();
   const demoGrace=demoSub?.status==="past_due" && demoSub.past_due_grace_until && new Date(demoSub.past_due_grace_until).getTime()>now;
   const demoPaidPeriod=demoSub?.cancel_at_period_end && demoSub.current_period_end && new Date(demoSub.current_period_end).getTime()>now;
-  const demoActive=Boolean(demoSub && (demoSub.status==="active" || demoGrace || demoPaidPeriod));
+  const demoActive=Boolean(demoSub && ((demoSub.status==="active" && (!demoSub.current_period_end || new Date(demoSub.current_period_end).getTime()>now)) || demoGrace || demoPaidPeriod));
   const grace=sub?.status==="past_due" && sub.past_due_grace_until && new Date(sub.past_due_grace_until).getTime()>now;
   const paidPeriod=sub?.status==="canceled" && sub.current_period_end && new Date(sub.current_period_end).getTime()>now;
   const isPremium=demoActive || Boolean(sub && (["active","trialing"].includes(sub.status)||grace||paidPeriod));
