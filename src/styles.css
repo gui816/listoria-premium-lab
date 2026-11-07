@@ -3363,3 +3363,53 @@ button { -webkit-tap-highlight-color: transparent; }
 @media (min-width: 681px) {
   .add-panel-collapse-row { display: none; }
 }
+
+
+/* Listoria Premium subscription and recurring Stripe checkout */
+.premium-subscription {
+  margin: 16px 0;
+  padding: 18px;
+  border: 1px solid #dce8d8;
+  border-radius: 19px;
+  background: linear-gradient(125deg, #f3f8ef 0%, #fffefa 75%);
+  box-shadow: 0 8px 22px rgba(35, 86, 53, .055);
+}
+.premium-subscription-heading { display:flex; align-items:center; gap:12px; }
+.premium-subscription-icon { width:44px;height:44px;flex:0 0 44px;display:grid;place-items:center;border-radius:14px;background:#e2efdc;color:#286848; }
+.premium-subscription-heading > div { flex:1;min-width:0; }
+.premium-eyebrow { color:#48815d;font-size:9px;font-weight:900;letter-spacing:.14em; }
+.premium-subscription-heading h2 { margin:4px 0 3px;color:#20372a;font-size:17px;line-height:1.2; }
+.premium-subscription-heading p { margin:0;color:#7d897f;font-size:11px;line-height:1.4; }
+.premium-active-pill { display:inline-flex;align-items:center;gap:4px;padding:6px 9px;border-radius:99px;background:#e1f2e4;color:#277144;font-size:10px;font-weight:800;white-space:nowrap; }
+.premium-benefits { display:flex;flex-wrap:wrap;gap:8px 16px;margin:14px 0;color:#54705b;font-size:11px; }
+.premium-benefits span { display:inline-flex;align-items:center;gap:5px; }
+.premium-plans { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:15px; }
+.premium-plan { position:relative;min-width:0;display:flex;flex-direction:column;gap:5px;padding:12px;border:1px solid #e2e9de;border-radius:14px;background:#fff; }
+.premium-plan-featured { border-color:#77a889;box-shadow:0 0 0 1px #77a889 inset; }
+.premium-plan-tag { align-self:flex-start;margin:-2px 0 2px;padding:3px 6px;border-radius:99px;background:#e4f0df;color:#32724d;font-size:8px;font-weight:900; }
+.premium-plan strong { color:#45584a;font-size:11px; }
+.premium-plan b { color:#203c2a;font-size:21px;letter-spacing:-.04em; }
+.premium-plan small { min-height:14px;color:#89948b;font-size:9px; }
+.premium-plan button,.premium-subscription-active button { min-height:35px;margin-top:6px;padding:0 9px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:10px;background:#286848;color:#fff;font-size:10px;font-weight:850;cursor:pointer; }
+.premium-plan button:disabled,.premium-subscription-active button:disabled { opacity:.55;cursor:wait; }
+.premium-account-note { margin:14px 0 0;padding:11px 12px;border-radius:11px;background:#fff7e9;color:#866a39;font-size:11px;line-height:1.5; }
+.premium-subscription-active { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding:12px;border:1px solid #e0eadc;border-radius:13px;background:#fff; }
+.premium-subscription-active > div { min-width:0;display:flex;flex-direction:column;gap:4px; }
+.premium-subscription-active strong { color:#294634;font-size:13px; }
+.premium-subscription-active small { color:#7d897f;font-size:10px;line-height:1.4; }
+.premium-subscription-active button { flex:0 0 auto;min-height:38px;padding:0 12px;font-size:11px; }
+.premium-footnote { display:flex;align-items:flex-start;gap:6px;margin:13px 0 0;color:#89948b;font-size:9px;line-height:1.5; }
+.premium-footnote svg { flex:0 0 auto;margin-top:1px; }
+.premium-refresh { display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:4px 0;border:0;background:transparent;color:#6f8876;font-size:9px;cursor:pointer; }
+.premium-error { margin:10px 0 0;padding:10px 12px;border-radius:10px;background:#fff0ed;color:#9b493d;font-size:11px;line-height:1.45; }
+@media(max-width:620px) {
+ .premium-subscription { padding:14px;border-radius:16px; }
+ .premium-plans { gap:6px; }
+ .premium-plan { padding:9px 8px; }
+ .premium-plan b { font-size:18px; }
+ .premium-plan strong { font-size:10px; }
+ .premium-plan button { min-height:34px;padding:0 5px;font-size:9px; }
+ .premium-subscription-heading h2 { font-size:15px; }
+ .premium-active-pill { font-size:9px;padding:5px 7px; }
+ .premium-subscription-active { align-items:flex-start;flex-direction:column; }
+}
