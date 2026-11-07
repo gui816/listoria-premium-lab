@@ -11,7 +11,7 @@ Create one Stripe Product named **Listoria Premium** and one recurring EUR Price
 
 This is a recurring subscription (not a one-off payment). Only the monthly plan is supported; the webhook rejects any other Stripe interval or legacy plan metadata.
 
-## Stripe secrets
+## Demo mode (no Stripe keys required)\n\nWhen `STRIPE_SECRET_KEY` is absent, checkout automatically switches to a server-side demo subscription. No Stripe account, API key, Price ID, webhook or `APP_URL` is needed for the demo flow. A separate `premium_demo_subscriptions` table keeps simulated entitlements isolated from real Stripe subscriptions. The demo grants 30 days of Premium immediately and includes in-app controls to schedule cancellation, reactivate, simulate a failed payment (3-day grace), resolve payment, renew for 30 days or expire the subscription. The basket-estimate endpoint recognises demo entitlements exactly like paid Premium.\n\nApply `202611070002_premium_demo_mode.sql` after the Premium migration and deploy `premium-demo-manage`. The Gemini API key is still required to generate real AI basket estimates; demo mode simulates billing, not Gemini results.\n\n## Stripe secrets
 
 Set these Supabase Edge Function secrets (never put secret keys in the frontend):
 
@@ -40,9 +40,9 @@ Copy the endpoint signing secret into STRIPE_WEBHOOK_SECRET. Webhook signature v
 
 ## Database and deployment order
 
-1. Apply migrations in order, including 202611040001_user_accounts.sql and 202611070001_premium_subscriptions.sql.
+1. Apply migrations in order, including 202611040001_user_accounts.sql, 202611070001_premium_subscriptions.sql and 202611070002_premium_demo_mode.sql.
 2. Configure Stripe test-mode products/prices and Supabase secrets.
-3. Deploy stripe-create-checkout, stripe-create-portal, premium-status and stripe-webhook.
+3. Deploy stripe-create-checkout, stripe-create-portal, premium-status, premium-demo-manage and stripe-webhook.
 4. Configure the webhook in Stripe.
 5. Test checkout with Stripe test cards and confirm the webhook writes subscriptions.
 6. Only then switch the Stripe keys and webhook to live mode.
