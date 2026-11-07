@@ -3,13 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
 import Stripe from "https://esm.sh/stripe@17.7.0?target=deno";
 
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{"Content-Type":"application/json"}});
-const planFromPrice=(price:any)=>{
- const interval=price?.recurring?.interval, count=Number(price?.recurring?.interval_count||1);
- if(interval==="month"&&count===1)return "monthly";
- if(interval==="month"&&count===3)return "quarterly";
- if(interval==="month"&&count===6)return "half_yearly";
- return null;
-};
+const planFromPrice=(price:any)=>price?.recurring?.interval==="month"&&Number(price?.recurring?.interval_count||1)===1?"monthly":null;
 serve(async(req)=>{
  if(req.method!=="POST")return json({error:"Method not allowed"},405);
  const signature=req.headers.get("stripe-signature");
@@ -40,7 +34,10 @@ serve(async(req)=>{
    if(!userId)throw new Error("Subscription metadata is missing supabase_user_id");
    const firstItem=subscription.items.data[0];
    const priceId=firstItem?.price?.id||null;
-   const planKey=metadata.plan_key||planFromPrice(firstItem?.price)||null;
+   const planKey=planFromPrice(firstItem?.price);
+   if(!planKey|| (metadata.plan_key && metadata.plan_key!=="monthly")) {
+    throw new Error("Stripe subscription does not use the supported monthly Premium price");
+   }
    const {data:previous}=await admin.from("subscriptions").select("past_due_since,past_due_grace_until").eq("stripe_subscription_id",subscription.id).maybeSingle();
    const isPastDue=subscription.status==="past_due";
    const pastDueSince=isPastDue?(previous?.past_due_since||new Date().toISOString()):null;
