@@ -261,6 +261,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
         if (invokeError.context?.status === 403) {
           setShowPremiumPrompt(true);
           setFreeComparisonAvailable(false);
+          setFreeComparisonUsed(true);
         }
         const detail = await invokeError.context?.json?.().catch(() => null);
         throw new Error(detail?.error || invokeError.message);
@@ -279,7 +280,10 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
     } catch (estimateError) {
       if (estimateError?.context?.status === 403 || /premium_required/.test(estimateError?.message || "")) setShowPremiumPrompt(true);
       setError(estimateError.message || "Não foi possível estimar o cabaz.");
-      if (estimateError?.context?.status === 403) setFreeComparisonAvailable(false);
+      if (estimateError?.context?.status === 403) {
+        setFreeComparisonAvailable(false);
+        setFreeComparisonUsed(true);
+      }
     } finally {
       setBusy(false);
     }
