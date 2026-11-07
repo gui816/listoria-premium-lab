@@ -12,13 +12,14 @@ serve(async(req)=>{
   const auth=createClient(url,anon,{global:{headers:{Authorization:`Bearer ${token}`}},auth:{persistSession:false}});
   const {data:{user},error}=await auth.auth.getUser(token);
   if(error||!user) return json({error:"Sessão inválida."},401);
-  if(user.is_anonymous) return json({isPremium:false,requiresAccount:true,subscription:null});
+
   const admin=createClient(url,service,{auth:{persistSession:false}});
   const {data:sub}=await admin.from("subscriptions").select("plan_key,status,current_period_start,current_period_end,cancel_at_period_end,past_due_grace_until").eq("user_id",user.id).order("created_at",{ascending:false}).limit(1).maybeSingle();
+  const {data:trial}=await admin.from("premium_comparison_trials").select("used_at").eq("user_id",user.id).maybeSingle();
   const now=Date.now();
   const grace=sub?.status==="past_due" && sub.past_due_grace_until && new Date(sub.past_due_grace_until).getTime()>now;
   const paidPeriod=sub?.status==="canceled" && sub.current_period_end && new Date(sub.current_period_end).getTime()>now;
   const isPremium=Boolean(sub && (["active","trialing"].includes(sub.status)||grace||paidPeriod));
-  return json({isPremium,requiresAccount:false,subscription:sub?{plan:sub.plan_key,status:sub.status,currentPeriodEnd:sub.current_period_end,cancelAtPeriodEnd:sub.cancel_at_period_end,graceUntil:sub.past_due_grace_until}:null});
+  return json({isPremium,requiresAccount:user.is_anonymous,freeComparisonAvailable:!isPremium&&!trial,freeComparisonUsed:Boolean(trial),subscription:sub?{plan:sub.plan_key,status:sub.status,currentPeriodEnd:sub.current_period_end,cancelAtPeriodEnd:sub.cancel_at_period_end,graceUntil:sub.past_due_grace_until}:null});
  }catch(error){console.error("premium-status:",error);return json({error:"Não foi possível consultar a subscrição."},500);}
 });
