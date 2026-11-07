@@ -836,8 +836,12 @@ export default function App() {
     setImportError("");
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
+      setAddPanelExpanded(true);
       setImportError(t("O reconhecimento de voz não é suportado neste navegador. Toca no campo do produto e usa o microfone do teclado para ditar."));
-      document.querySelector('input[placeholder*="produto"]')?.focus();
+      requestAnimationFrame(() => {
+        const input = productNameInputRef.current;
+        input?.focus({ preventScroll: true });
+      });
       return;
     }
     if (listening) { recognitionRef.current?.stop(); setListening(false); setVoiceModalOpen(false); return; }
