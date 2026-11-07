@@ -75,7 +75,19 @@ serve(async(req)=>{
    const subscriptionId=typeof (invoice as any).subscription==="string"?(invoice as any).subscription:(invoice as any).subscription?.id;
    if(subscriptionId){
     const subscription=await stripe.subscriptions.retrieve(subscriptionId);
-    await syncSubscription(subscription);
+    const userId=await syncSubscription(subscription);
+    if(event.type==="invoice.paid" && userId && invoice.status==="paid"){
+     // Count only the first real Stripe invoice payment; demo subscriptions never reach this webhook.
+     const {error: conversionError}=await admin.from("premium_paid_conversions").upsert({
+      user_id:userId,
+      first_paid_at:invoice.status_transitions?.paid_at?new Date(invoice.status_transitions.paid_at*1000).toISOString():new Date().toISOString(),
+      stripe_subscription_id:subscriptionId,
+      stripe_invoice_id:invoice.id,
+      amount_paid:invoice.amount_paid,
+      currency:invoice.currency
+     },{onConflict:"user_id",ignoreDuplicates:true});
+     if(conversionError)throw conversionError;
+    }
     if(event.type==="invoice.payment_failed"){
      await admin.from("subscriptions").update({last_payment_error:"payment_failed"}).eq("stripe_subscription_id",subscriptionId);
     }else{
