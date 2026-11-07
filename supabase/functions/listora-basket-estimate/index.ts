@@ -29,7 +29,7 @@ serve(async (req) => {
     });
     if (!authResponse.ok) return json({ error: "Sessão inválida. Volta a iniciar sessão." }, 401);
     const authUser = await authResponse.json();
-    if (!authUser?.id || authUser.is_anonymous) return json({ error: "A comparação de cabaz é uma funcionalidade Premium. Cria uma conta e subscreve o Premium para continuar." }, 403);
+    if (!authUser?.id) return json({ error: "Sessão inválida." }, 401);
 
     const adminHeaders = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" };
     const subscriptionUrl = new URL("/rest/v1/subscriptions", supabaseUrl);
@@ -46,9 +46,7 @@ serve(async (req) => {
     const now = Date.now();
     const graceActive = subscription?.status === "past_due" && subscription.past_due_grace_until && new Date(subscription.past_due_grace_until).getTime() > now;
     const paidCancellation = subscription?.status === "canceled" && subscription.current_period_end && new Date(subscription.current_period_end).getTime() > now;
-    if (!subscription || !(["active", "trialing"].includes(subscription.status) || graceActive || paidCancellation)) {
-      return json({ error: "Esta funcionalidade requer uma subscrição Listoria Premium ativa.", code: "premium_required" }, 403);
-    }
+    const hasPremium = Boolean(subscription && (["active", "trialing"].includes(subscription.status) || graceActive || paidCancellation));
 
     const requestId = crypto.randomUUID();
     const rateResponse = await fetch(new URL("/rest/v1/rpc/consume_premium_rate_limit", supabaseUrl), {
@@ -138,6 +136,21 @@ serve(async (req) => {
       }))),
       "Return valid JSON only, using this schema: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes,items:[{requestedName,matchedProductName,brand,packageSize,normalizedUnit,matchType,matchConfidence,matchingNotes,quantity,unit,estimatedUnitPrice,estimatedSubtotal,confidence}]}]}. Use null for unavailable numeric prices and omit no requested items."
     ].join("\n");
+
+    let freeTrialUsed = false;
+    if (!hasPremium) {
+      const trialResponse = await fetch(new URL("/rest/v1/rpc/consume_free_comparison_trial", supabaseUrl), {
+        method: "POST", headers: adminHeaders,
+        body: JSON.stringify({ p_user_id: authUser.id, p_request_id: crypto.randomUUID() }),
+        signal: AbortSignal.timeout(10000)
+      });
+      if (!trialResponse.ok) throw new Error("Não foi possível validar a utilização gratuita.");
+      const trialGranted = await trialResponse.json();
+      if (trialGranted !== true) {
+        return json({ error: "Já utilizaste a tua comparação gratuita. Subscreve o Listoria Premium para continuares a comparar o teu cabaz.", code: "premium_required" }, 403);
+      }
+      freeTrialUsed = true;
+    }
 
     const ai = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(geminiKey),
@@ -255,6 +268,7 @@ serve(async (req) => {
         .filter((source: any, index: number, all: any[]) => all.findIndex((entry: any) => entry.url === source.url) === index)
         .slice(0, 20),
       stores: results,
+      freeTrialUsed,
       disclaimer: "Estimativa recolhida por IA. O valor apresentado pode não corresponder exatamente ao preço de catálogo ou incluir todos os descontos e promoções aplicáveis."
     });
   } catch (error) {
