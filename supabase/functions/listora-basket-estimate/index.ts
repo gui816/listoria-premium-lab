@@ -48,6 +48,17 @@ serve(async (req) => {
     const paidCancellation = subscription?.status === "canceled" && subscription.current_period_end && new Date(subscription.current_period_end).getTime() > now;
     const hasPremium = Boolean(subscription && (["active", "trialing"].includes(subscription.status) || graceActive || paidCancellation));
 
+    const demoUrl = new URL("/rest/v1/premium_demo_subscriptions", supabaseUrl);
+    demoUrl.search = new URLSearchParams({ select: "status,current_period_end,cancel_at_period_end,past_due_grace_until", user_id: `eq.${authUser.id}`, limit: "1" }).toString();
+    const demoResponse = await fetch(demoUrl, { headers: adminHeaders, signal: AbortSignal.timeout(10000) });
+    if (!demoResponse.ok) throw new Error("Não foi possível validar o modo de demonstração Premium.");
+    const demoRows = await demoResponse.json();
+    const demoSubscription = demoRows?.[0];
+    const demoGrace = demoSubscription?.status === "past_due" && demoSubscription.past_due_grace_until && new Date(demoSubscription.past_due_grace_until).getTime() > now;
+    const demoPaidPeriod = demoSubscription?.cancel_at_period_end && demoSubscription.current_period_end && new Date(demoSubscription.current_period_end).getTime() > now;
+    const hasDemoPremium = Boolean(demoSubscription && (demoSubscription.status === "active" || demoGrace || demoPaidPeriod));
+    const hasAnyPremium = hasPremium || hasDemoPremium;
+
     const requestId = crypto.randomUUID();
     const rateResponse = await fetch(new URL("/rest/v1/rpc/consume_premium_rate_limit", supabaseUrl), {
       method: "POST", headers: adminHeaders,
@@ -138,7 +149,7 @@ serve(async (req) => {
     ].join("\n");
 
     let freeTrialUsed = false;
-    if (!hasPremium) {
+    if (!hasAnyPremium) {
       const trialUrl = new URL("/rest/v1/premium_comparison_trials", supabaseUrl);
       trialUrl.search = new URLSearchParams({ select: "user_id", user_id: `eq.${authUser.id}`, limit: "1" }).toString();
       const trialCheck = await fetch(trialUrl, { headers: adminHeaders, signal: AbortSignal.timeout(10000) });
