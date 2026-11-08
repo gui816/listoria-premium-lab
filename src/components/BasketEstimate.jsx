@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabase.js";
 import PremiumSubscription from "./PremiumSubscription.jsx";
 import {
   Sparkles, LoaderCircle, Globe2, ChevronDown, X, MapPin,
-  ShoppingBasket, ChevronRight, ArrowLeft, Clock3, CheckCircle2
+  ShoppingBasket, ChevronRight, ArrowLeft, Clock3, CheckCircle2, Search, PackageSearch, Store, Coins, Calculator, Coffee
 } from "lucide-react";
 
 const COUNTRY_STORAGE_KEY = "listora-country-code";
@@ -26,10 +26,15 @@ const normaliseItems = (items = []) => items.map((item) => ({
 })).filter((item) => item.name).sort((a, b) => a.name.localeCompare(b.name));
 
 const LOADING_MESSAGES = [
-  { title: "A identificar produtos equivalentes", detail: "Estamos a procurar as melhores correspondências para cada artigo da tua lista." },
-  { title: "A consultar preços disponíveis", detail: "A pesquisa está a reunir preços e informação das lojas selecionadas." },
-  { title: "A validar os resultados encontrados", detail: "Estamos a verificar se os produtos e os preços são suficientemente fiáveis." },
-  { title: "A preparar a comparação", detail: "Estamos a organizar os valores para te mostrar uma estimativa clara do teu cabaz." }
+  { after: 0, icon: ShoppingBasket, title: "A preparar o teu cabaz", detail: "Estamos a organizar a lista para começar a comparação.", tone: "helpful" },
+  { after: 4, icon: Search, title: "A analisar os produtos", detail: "Estamos a procurar as melhores correspondências para cada artigo.", tone: "helpful" },
+  { after: 8, icon: PackageSearch, title: "Há produtos difíceis de encontrar…", detail: "Mas nós não desistimos! Estamos à procura deles. Dá-nos só mais um bocadinho.", tone: "fun" },
+  { after: 12, icon: Store, title: "A explorar supermercados", detail: "Estamos a reunir preços e informação das lojas selecionadas.", tone: "helpful" },
+  { after: 17, icon: Coins, title: "Cada cêntimo conta!", detail: "Estamos a fazer as contas. A carteira agradece este esforço!", tone: "fun" },
+  { after: 22, icon: Calculator, title: "A calcular o teu cabaz", detail: "Estamos a validar os valores para te mostrar uma estimativa clara.", tone: "helpful" },
+  { after: 28, icon: Clock3, title: "O teu cabaz é exigente…", detail: "Mas nós gostamos de desafios. Estamos a afinar os resultados!", tone: "fun" },
+  { after: 38, icon: Sparkles, title: "Estamos mesmo a finalizar!", detail: "Não desistas agora, estamos a dar tudo por tudo. Falta muito pouco!", tone: "reassure" },
+  { after: 50, icon: Coffee, title: "Até os algoritmos já pediram café…", detail: "A comparação ainda está a trabalhar. Obrigado por esperares mais um bocadinho!", tone: "reassure" }
 ];
 
 export default function BasketEstimate({ items, language = "pt-PT", session }) {
@@ -44,7 +49,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
   const [selected, setSelected] = useState([]);
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [loadingElapsedSeconds, setLoadingElapsedSeconds] = useState(0);
   const [loadingCatalogue, setLoadingCatalogue] = useState(true);
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
@@ -57,12 +62,16 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
   const country = useMemo(() => countries.find((entry) => entry.code === countryCode), [countries, countryCode]);
 
   useEffect(() => {
-    if (!busy) { setLoadingMessageIndex(0); return; }
+    if (!busy) { setLoadingElapsedSeconds(0); return; }
+    const startedAt = Date.now();
     const interval = window.setInterval(() => {
-      setLoadingMessageIndex((index) => (index + 1) % LOADING_MESSAGES.length);
-    }, 3200);
+      setLoadingElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
     return () => window.clearInterval(interval);
   }, [busy]);
+
+  const loadingMessage = [...LOADING_MESSAGES].reverse().find((message) => loadingElapsedSeconds >= message.after) || LOADING_MESSAGES[0];
+  const LoadingIcon = loadingMessage.icon;
 
   // The estimate endpoint returns one completed response; keep the active search state honest
   // instead of rotating through stages that the backend does not expose as live events.
@@ -333,6 +342,12 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
           .basket-estimate-modal.is-processing .basket-estimate-modal-content{padding-top:14px}
           .basket-estimate-modal.is-processing .basket-estimate-loading{margin:0;padding:clamp(22px,5vw,34px);border-radius:22px;min-height:300px;display:flex;flex-direction:column;justify-content:center;gap:22px;background:radial-gradient(circle at 50% 5%,#e8f2e8 0,transparent 48%),linear-gradient(145deg,#f3f8f1,#fffefa 72%);}
           .basket-estimate-focus-visual{width:76px;height:76px;margin:0 auto;display:grid;place-items:center;border-radius:26px;background:#e1efe4;color:#276b50;box-shadow:0 0 0 10px #eaf3e9;animation:basket-glow 2.2s ease-in-out infinite}
+          .basket-estimate-focus-visual svg{transition:transform .35s ease}
+          .basket-estimate-focus-visual.tone-fun{background:#f2efdf;color:#8a7130;box-shadow:0 0 0 10px #f8f5e9}
+          .basket-estimate-focus-visual.tone-reassure{background:#e8e9f4;color:#5d6392;box-shadow:0 0 0 10px #f0f0f8}
+          .basket-estimate-focus-copy strong,.basket-estimate-focus-copy small{animation:basket-message-in .28s ease both}
+          @keyframes basket-message-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
           .basket-estimate-focus-copy{text-align:center;max-width:360px;margin:0 auto}
           .basket-estimate-focus-copy strong{display:block;font-size:21px;line-height:1.25;letter-spacing:-.5px}
           .basket-estimate-focus-copy small{display:block;margin-top:8px;color:#718078;font-size:13px;line-height:1.5}
@@ -428,11 +443,11 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
             </div>
 
             {!result && (busy ? <div className="basket-estimate-loading" role="status" aria-live="polite">
-              <span className="basket-estimate-focus-visual"><Sparkles size={34}/></span>
-              <div className="basket-estimate-focus-copy" aria-live="polite" aria-atomic="true"><strong key={loadingMessageIndex}>{LOADING_MESSAGES[loadingMessageIndex].title}</strong><small>{LOADING_MESSAGES[loadingMessageIndex].detail}</small></div>
+              <span className={"basket-estimate-focus-visual tone-" + loadingMessage.tone}><LoadingIcon size={36}/></span>
+              <div className="basket-estimate-focus-copy" aria-live="polite" aria-atomic="true"><strong key={loadingMessage.title}>{loadingMessage.title}</strong><small key={loadingMessage.detail}>{loadingMessage.detail}</small></div>
               <div className="basket-estimate-loading-track" aria-hidden="true"><span/></div>
               <div className="basket-estimate-focus-stores" aria-label="Supermercados selecionados">{selected.map((name) => <span key={name}>{name}</span>)}</div>
-              <div className="basket-estimate-focus-note"><LoaderCircle className="spin" size={15}/> A pesquisa pode demorar alguns instantes</div>
+              <div className="basket-estimate-focus-note"><LoaderCircle className="spin" size={15}/> {loadingElapsedSeconds >= 38 ? "Obrigado pela paciência!" : "A pesquisa pode demorar alguns instantes"}</div>
             </div> : <button type="button" className="basket-estimate-button" onClick={() => estimate(false)} disabled={loadingCatalogue || !cleanItems.length || !selected.length}>
               <Sparkles size={17}/> Estimar preço do cabaz
             </button>)}

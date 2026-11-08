@@ -282,6 +282,7 @@ export default function App() {
   const [importBusy, setImportBusy] = useState(false);
   const [importError, setImportError] = useState("");
   const [listening, setListening] = useState(false);
+  const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const voiceResultReceivedRef = useRef(false);
   const productNameInputRef = useRef(null);
   const normalViewportHeightRef = useRef(typeof window !== "undefined" ? Math.max(window.innerHeight, window.visualViewport?.height || 0) : 0);
@@ -912,7 +913,7 @@ export default function App() {
       document.querySelector('input[placeholder*="produto"]')?.focus();
       return;
     }
-    if (listening) { recognitionRef.current?.stop(); setListening(false); return; }
+    if (listening) { setVoiceModalOpen(false); setListening(false); recognitionRef.current?.stop(); return; }
     try {
       // Let SpeechRecognition request microphone access itself. A separate getUserMedia prompt can consume the user gesture on Android.
       const recognition = new SpeechRecognition();
@@ -921,12 +922,12 @@ export default function App() {
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
       recognitionRef.current = recognition;
-      recognition.onstart = () => { voiceResultReceivedRef.current = false; setImportError(""); setImportBusy(false); setListening(true); };
+      recognition.onstart = () => { voiceResultReceivedRef.current = false; setImportError(""); setImportBusy(false); setListening(true); setVoiceModalOpen(true); };
       recognition.onerror = event => {
         voiceResultReceivedRef.current = true;
         setImportBusy(false);
         setListening(false);
-        
+        setVoiceModalOpen(false);
         const message = event.error === "not-allowed" || event.error === "service-not-allowed"
           ? t("O acesso ao microfone foi recusado. Permite o microfone nas definições do navegador.")
           : event.error === "network"
@@ -936,9 +937,10 @@ export default function App() {
               : t("Não foi possível reconhecer a voz. Neste navegador, podes usar o microfone do teclado para ditar no campo do produto.");
         setImportError(message);
       };
-      recognition.onnomatch = () => { voiceResultReceivedRef.current = true; setImportBusy(false); setListening(false);  setImportError(t("Não percebemos os produtos ditos. Tenta falar um pouco mais devagar.")); };
+      recognition.onnomatch = () => { voiceResultReceivedRef.current = true; setImportBusy(false); setListening(false); setVoiceModalOpen(false); setImportError(t("Não percebemos os produtos ditos. Tenta falar um pouco mais devagar.")); };
       recognition.onend = () => {
         setListening(false);
+        setVoiceModalOpen(false);
         if (!voiceResultReceivedRef.current) {
           setImportBusy(false);
           setImportError(t("Não foi detetada voz. Tenta novamente."));
@@ -949,6 +951,7 @@ export default function App() {
         voiceResultReceivedRef.current = true;
         const transcript = event.results?.[0]?.[0]?.transcript?.trim();
         if (!transcript) { setImportBusy(false); setImportError(t("Não foi detetada voz. Tenta novamente.")); return; }
+        setVoiceModalOpen(false);
         setImportBusy(true); setImportSource("voice"); setImportError("");
         try {
           const itemsFound = await callGemini({ text: transcript });
@@ -960,6 +963,7 @@ export default function App() {
       recognition.start();
     } catch {
       setListening(false);
+      setVoiceModalOpen(false);
       setImportError("Não foi possível iniciar o microfone neste dispositivo.");
     }
   }
@@ -1522,6 +1526,19 @@ export default function App() {
         {receipts.length === 0 ? <div className="empty-state"><span className="empty-illustration">🧾</span><h3>{t("Ainda não há faturas")}</h3><p>{t("Adiciona o primeiro comprovativo para ficar disponível a toda a família.")}</p></div> : <div className="receipt-list">{receipts.map(receipt => <article className="receipt-card" key={receipt.id}><div className="receipt-card-icon"><Receipt size={21}/></div><div className="receipt-card-main"><strong>{receipt.storeName}</strong><span>{new Date(receipt.purchasedAt + "T12:00:00").toLocaleDateString(language === "en" ? "en-GB" : language)} · {receipt.memberName || t("Membro")}</span>{receipt.notes && <p>{receipt.notes}</p>}</div><div className="receipt-card-side"><strong>{Number(receipt.total).toLocaleString(language === "en" ? "en-GB" : language,{style:"currency",currency:"EUR"})}</strong>{receipt.filePath && <button type="button" onClick={() => openReceipt(receipt)} aria-label={t("Abrir comprovativo")}><ExternalLink size={17}/></button>}<button type="button" onClick={() => removeReceipt(receipt)} aria-label={t("Apagar fatura")}><Trash2 size={16}/></button></div></article>)}</div>}
       </section>}
       <footer className="app-footer"><span><Leaf size={15}/> {t("Menos esquecimentos, mais tempo juntos.")}</span><button onClick={leaveCurrentList}>{t("Sair da lista")} / {t("Criar nova")}</button></footer>
+      {voiceModalOpen && createPortal(<div className="modal-backdrop voice-modal-backdrop" onClick={() => { voiceResultReceivedRef.current = true; setVoiceModalOpen(false); setListening(false); recognitionRef.current?.abort(); }}>
+        <section className="share-modal voice-modal voice-listening-modal" onClick={event => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="voice-modal-title">
+          <button type="button" className="modal-close" aria-label={t("Fechar")} onClick={() => { voiceResultReceivedRef.current = true; setVoiceModalOpen(false); setListening(false); recognitionRef.current?.abort(); }}><X size={20}/></button>
+          <div className="voice-listening-icon"><Mic size={30}/></div>
+          <span className="voice-listening-pill"><span/> {t("A ouvir")}</span>
+          <h2 id="voice-modal-title">{t("Estou a ouvir!")}</h2>
+          <p>{t("Diz-me o que precisas de comprar.")}</p>
+          <div className="voice-wave" aria-hidden="true"><span/><span/><span/><span/><span/><span/><span/><span/><span/></div>
+          <div className="voice-listening-example"><small>{t("Podes dizer vários produtos de seguida")}</small><strong>“{t("Leite, pão, seis ovos e dois iogurtes.")}”</strong></div>
+          <button type="button" className="primary-button voice-stop-button" onClick={() => { voiceResultReceivedRef.current = true; setVoiceModalOpen(false); setListening(false); setImportError(""); recognitionRef.current?.stop(); }}><Mic size={17}/>{t("Terminar gravação")}</button>
+          <small className="voice-listening-hint">{t("Toca para terminar")}</small>
+        </section>
+      </div>, document.body)}
       {showPhotoSource && createPortal(<div className="modal-backdrop photo-source-backdrop" onClick={() => setShowPhotoSource(false)}><section className="share-modal photo-source-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="photo-source-title"><button type="button" className="modal-close" aria-label={t("Cancelar")} onClick={() => setShowPhotoSource(false)}><X size={19}/></button><div className="share-graphic"><Camera size={25}/></div><h2 id="photo-source-title">{t("Câmara ou galeria")}</h2><p>{t("Escolhe como queres adicionar os produtos")}</p><div className="photo-source-options"><button type="button" className="photo-source-option" onClick={() => {setShowPhotoSource(false); imageCameraInputRef.current?.click();}}><span className="photo-source-option-icon"><Camera size={20}/></span><span><strong>{t("Abrir câmara")}</strong><small>{t("Fotografar uma lista de compras em papel, manuscrita ou num quadro.")}</small></span></button><button type="button" className="photo-source-option" onClick={() => {setShowPhotoSource(false); imageFileInputRef.current?.click();}}><span className="photo-source-option-icon"><Upload size={20}/></span><span><strong>{t("Escolher ficheiro")}</strong><small>{t("Seleciona uma fotografia, PDF, Excel, CSV, TXT ou Word (.docx) com a tua lista de compras.")}</small></span></button></div><button type="button" className="secondary-button photo-source-cancel" onClick={() => setShowPhotoSource(false)}>{t("Cancelar")}</button></section></div>, document.body)}
       {importPreview.length > 0 && createPortal(<div className="modal-backdrop" onClick={() => !importBusy && setImportPreview([])}><section className="share-modal import-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="import-title"><button className="modal-close" onClick={() => !importBusy && setImportPreview([])} aria-label={t("Fechar")}><X size={20}/></button><div className="share-graphic"><ShoppingBasket size={28}/></div><h2 id="import-title">{t("Confirmar produtos")}</h2><p>{importSource === "photo" ? t("Revê os produtos reconhecidos na fotografia.") : importSource === "document" ? t("Revê os produtos identificados no ficheiro.") : t("Revê os produtos reconhecidos por voz.")} Podes corrigir os nomes e quantidades antes de adicionar.</p><div className="import-preview-list">{importPreview.map((item, index) => <div className="import-preview-row" key={index}><input aria-label={`Produto ${index + 1}`} value={item.name} maxLength={100} onChange={e => editPreviewItem(index, { name: e.target.value })}/><input aria-label={`Quantidade de ${item.name}`} type="number" min="1" max="999" value={item.quantity} onChange={e => editPreviewItem(index, { quantity: e.target.value })}/><button type="button" aria-label={`Remover ${item.name}`} onClick={() => setImportPreview(previous => previous.filter((_, i) => i !== index))}><X size={17}/></button></div>)}</div>{importError && <p className="error-message">{importError}</p>}<button className="primary-button" disabled={importBusy || !importPreview.some(item => item.name.trim())} onClick={confirmImport}>{importBusy ? <LoaderCircle className="spin" size={17}/> : <Check size={17}/>} {importBusy ? "A adicionar…" : `Adicionar ${importPreview.length} produtos`}</button><button className="secondary-button" disabled={importBusy} onClick={() => setImportPreview([])}>{t("Cancelar")}</button></section></div>, document.body)}
       {showOnboarding && <div className="modal-backdrop onboarding-backdrop" onClick={() => { setShowOnboarding(false); localStorage.setItem("listora-onboarding-v3-complete", "1"); }}>
