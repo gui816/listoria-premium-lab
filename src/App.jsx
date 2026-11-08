@@ -1381,8 +1381,8 @@ export default function App() {
             <span><Leaf size={17}/><b>{t("Simples e intuitivo")}</b></span>
             <span><Users size={17}/><b>{t("Gestão em família")}</b></span>
             <span><ShoppingBasket size={17}/><b>{t("Modo supermercado")}</b></span>
-            <span><Sparkles size={17}/><b>{t("Voz e foto com IA")}</b></span>
-            <span><Store size={17}/><b>{t("Compara supermercados")}</b></span>
+            <span className="welcome-benefit-featured welcome-benefit-ai"><Sparkles size={19}/><b>{t("Voz e foto com IA")}</b></span>
+            <span className="welcome-benefit-featured welcome-benefit-comparison"><Store size={19}/><b>{t("Compara supermercados")}</b></span>
             <span><Receipt size={17}/><b>{t("Faturas num só lugar")}</b></span>
           </div>
         </div>

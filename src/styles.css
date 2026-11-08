@@ -3526,3 +3526,40 @@ button { -webkit-tap-highlight-color: transparent; }
  .analytics-consent-actions button{min-height:42px}
  .analytics-privacy-button{right:12px;bottom:max(12px,env(safe-area-inset-bottom))}
 }
+
+
+/* Subtle emphasis for the two most distinctive landing-page features.
+   Preserve the existing compact 3x2 grid and card dimensions. */
+.welcome-benefits > .welcome-benefit-featured {
+  position: relative;
+  border-color: #c4d9c2;
+  background: linear-gradient(145deg, #edf5e9 0%, #f7f8f1 100%);
+  box-shadow: 0 3px 12px rgba(49, 91, 60, .07);
+  color: #286447;
+}
+.welcome-benefits > .welcome-benefit-featured svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 2.2;
+}
+.welcome-benefits > .welcome-benefit-featured b {
+  color: #285c40;
+}
+.welcome-benefits > .welcome-benefit-featured::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #75a47b;
+  opacity: .9;
+}
+.welcome-benefits > .welcome-benefit-featured:hover {
+  border-color: #a9c9a8;
+  box-shadow: 0 5px 15px rgba(49, 91, 60, .11);
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-benefits > .welcome-benefit-featured { transition: none; }
+}
