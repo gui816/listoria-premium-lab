@@ -1045,15 +1045,12 @@ export default function App() {
       const panel = document.querySelector(".add-panel.floating-add-panel");
       if (panel && !panel.contains(event.target)) collapseAddPanel();
     };
-    const handlePageScroll = event => {
-      const panel = document.querySelector(".add-panel.floating-add-panel");
-      if (panel && !panel.contains(event.target)) collapseAddPanel();
-    };
+    // Do not collapse the composer on window scroll: Android browsers can emit
+    // scroll events when the virtual keyboard opens or resizes the visual viewport.
+    // Outside pointer interaction is sufficient to dismiss the expanded composer.
     document.addEventListener("pointerdown", handleOutsideTap, true);
-    window.addEventListener("scroll", handlePageScroll, { passive: true });
     return () => {
       document.removeEventListener("pointerdown", handleOutsideTap, true);
-      window.removeEventListener("scroll", handlePageScroll);
     };
   }, [addPanelExpanded, shoppingMode, activeTab]);
 
