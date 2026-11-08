@@ -59,6 +59,12 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
   const [showPremiumPrompt, setShowPremiumPrompt] = useState(false);
   const [freeComparisonAvailable, setFreeComparisonAvailable] = useState(false);
   const [freeComparisonUsed, setFreeComparisonUsed] = useState(false);
+  const estimateAbortController = useRef(null);
+
+  useEffect(() => () => {
+    estimateAbortController.current?.abort();
+    estimateAbortController.current = null;
+  }, []);
 
   const country = useMemo(() => countries.find((entry) => entry.code === countryCode), [countries, countryCode]);
 
@@ -260,6 +266,23 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
     setSelectedStore(null);
   };
 
+  const cancelEstimate = () => {
+    const controller = estimateAbortController.current;
+    if (controller) {
+      controller.abort();
+      estimateAbortController.current = null;
+      trackEvent("basket_comparison_cancelled", {
+        item_count: cleanItems.length,
+        supermarket_count: selected.length,
+        country_code: countryCode,
+        source: "smart_comparison"
+      });
+    }
+    setBusy(false);
+    setError("");
+    setOpen(false);
+  };
+
   const estimate = async (force = false) => {
     if (!cleanItems.length || busy || !countryCode || !selected.length) return;
     if (!force && cacheKey) {
@@ -273,12 +296,15 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
         }
       } catch {}
     }
+    const controller = new AbortController();
+    estimateAbortController.current = controller;
     setBusy(true);
     trackEvent("basket_comparison_started", { item_count: cleanItems.length, supermarket_count: selected.length, country_code: countryCode, source: "smart_comparison" });
     setError("");
     try {
       const { data, error: invokeError } = await supabase.functions.invoke("listora-basket-estimate", {
-        body: { items: cleanItems, countryCode, supermarkets: selected }
+        body: { items: cleanItems, countryCode, supermarkets: selected },
+        signal: controller.signal
       });
       if (invokeError) {
         const status = invokeError.context?.status;
@@ -314,6 +340,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
         localStorage.setItem("listora-basket-last-signature", itemSignature);
       } catch {}
     } catch (estimateError) {
+      if (controller.signal.aborted) return;
       trackEvent("basket_comparison_failed", { country_code: countryCode, error_type: estimateError?.context?.status === 403 ? "premium_required" : "request_failed" });
       if (estimateError?.context?.status === 403 || /premium_required/.test(estimateError?.message || "")) setShowPremiumPrompt(true);
       setError(estimateError.message || "Não foi possível estimar o cabaz.");
@@ -322,7 +349,10 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
         setFreeComparisonUsed(true);
       }
     } finally {
-      setBusy(false);
+      if (estimateAbortController.current === controller) {
+        estimateAbortController.current = null;
+        setBusy(false);
+      }
     }
   };
 
@@ -416,7 +446,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
       <section className={"basket-estimate-modal" + (busy ? " is-processing" : "")} role="dialog" aria-modal="true" aria-labelledby="basket-estimate-title">
         <header className="basket-estimate-modal-header">
           <div><span className="basket-estimate-modal-kicker"><Sparkles size={14}/> {busy ? "A COMPARAR O TEU CABAZ" : "COMPARAÇÃO INTELIGENTE"}</span><h2 id="basket-estimate-title">{busy ? "Estamos a analisar o teu cabaz" : "Quanto poderá custar o teu cabaz?"}</h2><p>{cleanItems.length} produtos na lista{busy ? " · " + selected.length + (selected.length === 1 ? " supermercado" : " supermercados") : ""}</p><p className="basket-estimate-quality-hint">A IA procura produtos e preços, compara opções equivalentes e assinala quando não encontra dados fiáveis. Os valores são estimativas, não preços garantidos.</p></div>
-          <button type="button" className="basket-estimate-modal-close" onClick={() => setOpen(false)} disabled={busy} aria-label="Fechar"><X size={20}/></button>
+          <button type="button" className="basket-estimate-modal-close" onClick={busy ? cancelEstimate : () => setOpen(false)} aria-label={busy ? "Cancelar estimativa" : "Fechar comparação"}><X size={20}/></button>
         </header>
 
         <div className="basket-estimate-modal-content">
