@@ -32,5 +32,5 @@ jobs:
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - name: Type-check experimental estimate function
-        run: deno check supabase/functions/listora-basket-estimate-v2/index.ts
+      - name: Type-check basket estimate functions
+        run: deno check supabase/functions/listora-basket-estimate/index.ts supabase/functions/listora-basket-estimate-v2/index.ts
