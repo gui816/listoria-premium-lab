@@ -3,9 +3,10 @@ import { QRCodeSVG } from "qrcode.react";
 import { createPortal } from "react-dom";
 import BasketEstimate from "./components/BasketEstimate.jsx";
 import AccountAccess from "./components/AccountAccess.jsx";
+import { getAnalyticsConsent, hasAnalyticsProviders, setAnalyticsConsent as saveAnalyticsConsent, trackEvent, trackPageView } from "./lib/analytics.js";
 import { supabase, isSupabaseConfigured } from "./lib/supabase.js";
 import {
-  ArrowRight, ArrowLeft, Sparkles, Check, CheckCheck, ChevronDown, CircleHelp, Clipboard, Copy, Share2, Download, Repeat2, List, Store,
+  ArrowRight, ArrowLeft, Sparkles, Check, CheckCheck, ChevronDown, CircleHelp, Clipboard, Copy, Share2, Download, Repeat2, List, Store, ShieldCheck,
   Camera, Mic, Leaf, LoaderCircle, Plus, ShoppingBasket, Trash2, Users, LogOut, Wifi, WifiOff, X, FileText, Receipt, Upload, ExternalLink, Zap, Smartphone, Bell
 } from "lucide-react";
 
@@ -135,9 +136,21 @@ const GUIDED_TOUR_I18N = {"en":{"Visita guiada":"Guided tour","CONHECE A LISTORI
 
 const LANDING_I18N = {"en":{"Criar lista grátis":"Create a free list","Grátis para começar · Sem compromisso":"Free to start · No commitment","O ESSENCIAL PARA A FAMÍLIA":"MADE FOR THE WHOLE FAMILY","Tudo começa numa lista partilhada.":"It all starts with a shared list.","Organiza as compras em conjunto e adiciona produtos da forma que te for mais simples.":"Organise shopping together and add products in the way that works best for you.","MAIS FORMAS DE SIMPLIFICAR":"MORE WAYS TO MAKE LIFE EASIER","Pequenos detalhes que fazem a diferença.":"Small details that make a difference.","Tudo o que ajuda a manter as compras e a rotina da família organizadas.":"Everything that helps keep family shopping and routines organised.","Experimentar comparação grátis":"Try a free comparison","Conhece todas as funcionalidades da Listora":"Explore all Listora features"},"es":{"Criar lista grátis":"Crear lista gratis","Grátis para começar · Sem compromisso":"Gratis para empezar · Sin compromiso","O ESSENCIAL PARA A FAMÍLIA":"LO ESENCIAL PARA LA FAMILIA","Tudo começa numa lista partilhada.":"Todo empieza con una lista compartida.","Organiza as compras em conjunto e adiciona produtos da forma que te for mais simples.":"Organizad las compras juntos y añadid productos como os resulte más fácil.","MAIS FORMAS DE SIMPLIFICAR":"MÁS FORMAS DE SIMPLIFICAR","Pequenos detalhes que fazem a diferença.":"Pequeños detalles que marcan la diferencia.","Tudo o que ajuda a manter as compras e a rotina da família organizadas.":"Todo lo que ayuda a mantener organizadas las compras y la rutina familiar.","Experimentar comparação grátis":"Probar una comparación gratis","Conhece todas as funcionalidades da Listora":"Descubre todas las funciones de Listora"},"fr":{"Criar lista grátis":"Créer une liste gratuite","Grátis para começar · Sem compromisso":"Gratuit pour commencer · Sans engagement","O ESSENCIAL PARA A FAMÍLIA":"L’ESSENTIEL POUR LA FAMILLE","Tudo começa numa lista partilhada.":"Tout commence par une liste partagée.","Organiza as compras em conjunto e adiciona produtos da forma que te for mais simples.":"Organisez les courses ensemble et ajoutez des produits comme vous le souhaitez.","MAIS FORMAS DE SIMPLIFICAR":"ENCORE PLUS SIMPLE","Pequenos detalhes que fazem a diferença.":"Les petits détails qui font la différence.","Tudo o que ajuda a manter as compras e a rotina da família organizadas.":"Tout pour garder les courses et le quotidien de la famille organisés.","Experimentar comparação grátis":"Essayer une comparaison gratuite","Conhece todas as funcionalidades da Listora":"Découvrir toutes les fonctionnalités de Listora"},"de":{"Criar lista grátis":"Kostenlose Liste erstellen","Grátis para começar · Sem compromisso":"Kostenlos starten · Unverbindlich","O ESSENCIAL PARA A FAMÍLIA":"DAS WICHTIGSTE FÜR DIE FAMILIE","Tudo começa numa lista partilhada.":"Alles beginnt mit einer gemeinsamen Liste.","Organiza as compras em conjunto e adiciona produtos da forma que te for mais simples.":"Organisiert eure Einkäufe gemeinsam und fügt Produkte ganz einfach hinzu.","MAIS FORMAS DE SIMPLIFICAR":"NOCH MEHR ERLEICHTERUNGEN","Pequenos detalhes que fazem a diferença.":"Kleine Details mit großer Wirkung.","Tudo o que ajuda a manter as compras e a rotina da família organizadas.":"Alles, was eure Einkäufe und den Familienalltag organisiert hält.","Experimentar comparação grátis":"Kostenlosen Vergleich testen","Conhece todas as funcionalidades da Listora":"Alle Listora-Funktionen entdecken"},"it":{"Criar lista grátis":"Crea una lista gratis","Grátis para começar · Sem compromisso":"Gratis per iniziare · Senza impegno","O ESSENCIAL PARA A FAMÍLIA":"L’ESSENZIALE PER LA FAMIGLIA","Tudo começa numa lista partilhada.":"Tutto inizia con una lista condivisa.","Organiza as compras em conjunto e adiciona produtos da forma que te for mais simples.":"Organizzate la spesa insieme e aggiungete prodotti nel modo più semplice per voi.","MAIS FORMAS DE SIMPLIFICAR":"ALTRI MODI PER SEMPLIFICARE","Pequenos detalhes que fazem a diferença.":"Piccoli dettagli che fanno la differenza.","Tudo o que ajuda a manter as compras e a rotina da família organizadas.":"Tutto ciò che aiuta a organizzare la spesa e la routine familiare.","Experimentar comparação grátis":"Prova un confronto gratuito","Conhece todas as funcionalidades da Listora":"Scopri tutte le funzionalità di Listora"},"nl":{"Criar lista grátis":"Maak gratis een lijst","Grátis para começar · Sem compromisso":"Gratis beginnen · Vrijblijvend","O ESSENCIAL PARA A FAMÍLIA":"DE BASIS VOOR HET HELE GEZIN","Tudo começa numa lista partilhada.":"Alles begint met een gedeelde lijst.","Organiza as compras em conjunto e adiciona produtos da forma que te for mais simples.":"Organiseer samen de boodschappen en voeg producten toe op de manier die bij je past.","MAIS FORMAS DE SIMPLIFICAR":"NOG MEER GEMAK","Pequenos detalhes que fazem a diferença.":"Kleine details die het verschil maken.","Tudo o que ajuda a manter as compras e a rotina da família organizadas.":"Alles om boodschappen en het gezinsleven overzichtelijk te houden.","Experimentar comparação grátis":"Probeer gratis vergelijken","Conhece todas as funcionalidades da Listora":"Ontdek alle functies van Listora"},"pl":{"Criar lista grátis":"Utwórz bezpłatną listę","Grátis para começar · Sem compromisso":"Zacznij za darmo · Bez zobowiązań","O ESSENCIAL PARA A FAMÍLIA":"NAJWAŻNIEJSZE DLA CAŁEJ RODZINY","Tudo começa numa lista partilhada.":"Wszystko zaczyna się od wspólnej listy.","Organiza as compras em conjunto e adiciona produtos da forma que te for mais simples.":"Planujcie zakupy razem i dodawajcie produkty w najwygodniejszy sposób.","MAIS FORMAS DE SIMPLIFICAR":"WIĘCEJ UŁATWIEŃ","Pequenos detalhes que fazem a diferença.":"Małe rzeczy, które robią różnicę.","Tudo o que ajuda a manter as compras e a rotina da família organizadas.":"Wszystko, co pomaga uporządkować zakupy i rodzinne obowiązki.","Experimentar comparação grátis":"Wypróbuj bezpłatne porównanie","Conhece todas as funcionalidades da Listora":"Poznaj wszystkie funkcje Listory"},"ro":{"Criar lista grátis":"Creează o listă gratuită","Grátis para começar · Sem compromisso":"Începe gratuit · Fără obligații","O ESSENCIAL PARA A FAMÍLIA":"ESENȚIALUL PENTRU FAMILIE","Tudo começa numa lista partilhada.":"Totul începe cu o listă comună.","Organiza as compras em conjunto e adiciona produtos da forma que te for mais simples.":"Organizați cumpărăturile împreună și adăugați produse în modul cel mai simplu pentru voi.","MAIS FORMAS DE SIMPLIFICAR":"ȘI MAI MULTE MODURI DE SIMPLIFICARE","Pequenos detalhes que fazem a diferença.":"Detaliile mici fac diferența.","Tudo o que ajuda a manter as compras e a rotina da família organizadas.":"Tot ce ajută la organizarea cumpărăturilor și a rutinei familiei.","Experimentar comparação grátis":"Încearcă o comparație gratuită","Conhece todas as funcionalidades da Listora":"Descoperă toate funcționalitățile Listora"},"zh-CN":{"Criar lista grátis":"免费创建清单","Grátis para começar · Sem compromisso":"免费开始 · 无需承诺","O ESSENCIAL PARA A FAMÍLIA":"为整个家庭打造","Tudo começa numa lista partilhada.":"一切从共享清单开始。","Organiza as compras em conjunto e adiciona produtos da forma que te for mais simples.":"一起管理购物，并用最方便的方式添加商品。","MAIS FORMAS DE SIMPLIFICAR":"更多便捷功能","Pequenos detalhes que fazem a diferença.":"让生活更轻松的小细节。","Tudo o que ajuda a manter as compras e a rotina da família organizadas.":"帮助家庭整理购物和日常安排的实用功能。","Experimentar comparação grátis":"免费试用比价","Conhece todas as funcionalidades da Listora":"了解 Listora 的所有功能"}};
 
+const ANALYTICS_CONSENT_I18N = {
+  en: {"Preferências de privacidade":"Privacy preferences","A tua privacidade importa.":"Your privacy matters.","Com a tua autorização, usamos cookies de análise para perceber que campanhas trazem utilizadores e melhorar a Listora. Não recolhemos nomes, produtos nem conteúdo das listas.":"With your permission, we use analytics cookies to understand which campaigns bring visitors and improve Listora. We do not collect names, products or list contents.","Saber mais":"Learn more","Rejeitar":"Reject","Aceitar análise":"Accept analytics","Gerir privacidade":"Manage privacy","Preferências de análise":"Analytics preferences","Podes alterar a tua escolha a qualquer momento.":"You can change your choice at any time.","Rejeitar análise":"Reject analytics","Permitir análise":"Allow analytics"},
+  es: {"Preferências de privacidade":"Preferencias de privacidad","A tua privacidade importa.":"Tu privacidad importa.","Com a tua autorização, usamos cookies de análise para perceber que campanhas trazem utilizadores e melhorar a Listora. Não recolhemos nomes, produtos nem conteúdo das listas.":"Con tu permiso, usamos cookies analíticas para saber qué campañas atraen visitantes y mejorar Listora. No recopilamos nombres, productos ni contenido de las listas.","Saber mais":"Más información","Rejeitar":"Rechazar","Aceitar análise":"Aceptar analítica","Gerir privacidade":"Gestionar privacidad","Preferências de análise":"Preferencias de análisis","Podes alterar a tua escolha a qualquer momento.":"Puedes cambiar tu elección en cualquier momento.","Rejeitar análise":"Rechazar analítica","Permitir análise":"Permitir analítica"},
+  fr: {"Preferências de privacidade":"Préférences de confidentialité","A tua privacidade importa.":"Votre confidentialité compte.","Com a tua autorização, usamos cookies de análise para perceber que campanhas trazem utilizadores e melhorar a Listora. Não recolhemos nomes, produtos nem conteúdo das listas.":"Avec votre accord, nous utilisons des cookies analytiques pour comprendre quelles campagnes attirent les visiteurs et améliorer Listora. Nous ne collectons ni noms, ni produits, ni contenu des listes.","Saber mais":"En savoir plus","Rejeitar":"Refuser","Aceitar análise":"Accepter l’analyse","Gerir privacidade":"Gérer la confidentialité","Preferências de análise":"Préférences d’analyse","Podes alterar a tua escolha a qualquer momento.":"Vous pouvez modifier votre choix à tout moment.","Rejeitar análise":"Refuser l’analyse","Permitir análise":"Autoriser l’analyse"},
+  de: {"Preferências de privacidade":"Datenschutzeinstellungen","A tua privacidade importa.":"Deine Privatsphäre ist wichtig.","Com a tua autorização, usamos cookies de análise para perceber que campanhas trazem utilizadores e melhorar a Listora. Não recolhemos nomes, produtos nem conteúdo das listas.":"Mit deiner Zustimmung verwenden wir Analyse-Cookies, um zu verstehen, welche Kampagnen Besucher bringen und Listora zu verbessern. Wir erfassen keine Namen, Produkte oder Listeninhalte.","Saber mais":"Mehr erfahren","Rejeitar":"Ablehnen","Aceitar análise":"Analyse akzeptieren","Gerir privacidade":"Datenschutz verwalten","Preferências de análise":"Analyse-Einstellungen","Podes alterar a tua escolha a qualquer momento.":"Du kannst deine Auswahl jederzeit ändern.","Rejeitar análise":"Analyse ablehnen","Permitir análise":"Analyse erlauben"},
+  it: {"Preferências de privacidade":"Preferenze sulla privacy","A tua privacidade importa.":"La tua privacy è importante.","Com a tua autorização, usamos cookies de análise para perceber que campanhas trazem utilizadores e melhorar a Listora. Não recolhemos nomes, produtos nem conteúdo das listas.":"Con il tuo consenso, utilizziamo cookie analitici per capire quali campagne portano visitatori e migliorare Listora. Non raccogliamo nomi, prodotti o contenuti delle liste.","Saber mais":"Scopri di più","Rejeitar":"Rifiuta","Aceitar análise":"Accetta analisi","Gerir privacidade":"Gestisci privacy","Preferências de análise":"Preferenze di analisi","Podes alterar a tua escolha a qualquer momento.":"Puoi modificare la tua scelta in qualsiasi momento.","Rejeitar análise":"Rifiuta analisi","Permitir análise":"Consenti analisi"},
+  nl: {"Preferências de privacidade":"Privacyvoorkeuren","A tua privacidade importa.":"Jouw privacy is belangrijk.","Com a tua autorização, usamos cookies de análise para perceber que campanhas trazem utilizadores e melhorar a Listora. Não recolhemos nomes, produtos nem conteúdo das listas.":"Met jouw toestemming gebruiken we analytische cookies om te begrijpen welke campagnes bezoekers opleveren en Listora te verbeteren. We verzamelen geen namen, producten of lijstinhoud.","Saber mais":"Meer informatie","Rejeitar":"Weigeren","Aceitar análise":"Analyse accepteren","Gerir privacidade":"Privacy beheren","Preferências de análise":"Analysevoorkeuren","Podes alterar a tua escolha a qualquer momento.":"Je kunt je keuze op elk moment wijzigen.","Rejeitar análise":"Analyse weigeren","Permitir análise":"Analyse toestaan"},
+  pl: {"Preferências de privacidade":"Ustawienia prywatności","A tua privacidade importa.":"Twoja prywatność ma znaczenie.","Com a tua autorização, usamos cookies de análise para perceber que campanhas trazem utilizadores e melhorar a Listora. Não recolhemos nomes, produtos nem conteúdo das listas.":"Za Twoją zgodą używamy plików analitycznych, aby sprawdzić, które kampanie przyciągają użytkowników, i ulepszać Listorę. Nie zbieramy imion, produktów ani zawartości list.","Saber mais":"Dowiedz się więcej","Rejeitar":"Odrzuć","Aceitar análise":"Zgódź się na analitykę","Gerir privacidade":"Zarządzaj prywatnością","Preferências de análise":"Ustawienia analityki","Podes alterar a tua escolha a qualquer momento.":"Możesz zmienić wybór w dowolnym momencie.","Rejeitar análise":"Odrzuć analitykę","Permitir análise":"Zezwól na analitykę"},
+  ro: {"Preferências de privacidade":"Preferințe de confidențialitate","A tua privacidade importa.":"Confidențialitatea ta contează.","Com a tua autorização, usamos cookies de análise para perceber que campanhas trazem utilizadores e melhorar a Listora. Não recolhemos nomes, produtos nem conteúdo das listas.":"Cu acordul tău, folosim cookie-uri de analiză pentru a înțelege ce campanii aduc vizitatori și pentru a îmbunătăți Listora. Nu colectăm nume, produse sau conținutul listelor.","Saber mais":"Află mai multe","Rejeitar":"Respinge","Aceitar análise":"Acceptă analiza","Gerir privacidade":"Gestionează confidențialitatea","Preferências de análise":"Preferințe de analiză","Podes alterar a tua escolha a qualquer momento.":"Poți schimba alegerea oricând.","Rejeitar análise":"Respinge analiza","Permitir análise":"Permite analiza"},
+  "zh-CN": {"Preferências de privacidade":"隐私偏好设置","A tua privacidade importa.":"我们重视你的隐私。","Com a tua autorização, usamos cookies de análise para perceber que campanhas trazem utilizadores e melhorar a Listora. Não recolhemos nomes, produtos nem conteúdo das listas.":"经你同意后，我们会使用分析 Cookie 了解哪些广告活动带来访客并改进 Listora。我们不会收集姓名、商品或清单内容。","Saber mais":"了解更多","Rejeitar":"拒绝","Aceitar análise":"接受分析","Gerir privacidade":"管理隐私","Preferências de análise":"分析偏好","Podes alterar a tua escolha a qualquer momento.":"你可以随时更改选择。","Rejeitar análise":"拒绝分析","Permitir análise":"允许分析"}
+};
+
 function tx(text, lang) {
   if (!lang || lang === "pt-PT") return text;
-  return LANDING_I18N[lang]?.[text] || GUIDED_TOUR_I18N[lang]?.[text] || RECEIPTS_TABS_I18N[lang]?.[text] || AUDIT_I18N[lang]?.[text] || EXTRA_I18N[lang]?.[text] || I18N[lang]?.[text] || EXTRA_I18N.en[text] || I18N.en[text] || text;
+  return ANALYTICS_CONSENT_I18N[lang]?.[text] || LANDING_I18N[lang]?.[text] || GUIDED_TOUR_I18N[lang]?.[text] || RECEIPTS_TABS_I18N[lang]?.[text] || AUDIT_I18N[lang]?.[text] || EXTRA_I18N[lang]?.[text] || I18N[lang]?.[text] || EXTRA_I18N.en[text] || I18N.en[text] || text;
 }
 const LANGUAGE_FLAGS = {
   "pt-PT": "🇵🇹", en: "🇬🇧", es: "🇪🇸", fr: "🇫🇷", de: "🇩🇪",
@@ -165,6 +178,9 @@ function getDeviceId() { let id = localStorage.getItem("listora-device-id"); if 
 
 
 export default function App() {
+  const [analyticsConsent, setAnalyticsConsent] = useState(getAnalyticsConsent);
+  const [showPrivacySettings, setShowPrivacySettings] = useState(false);
+  const chooseAnalyticsConsent = (consent) => { saveAnalyticsConsent(consent); setAnalyticsConsent(consent); setShowPrivacySettings(false); };
   const [authSession, setAuthSession] = useState(null);
   useEffect(() => {
     if (!supabase) return undefined;
@@ -270,7 +286,7 @@ export default function App() {
   const [recentlyAddedItemId, setRecentlyAddedItemId] = useState("");
   const addedFeedbackTimerRef = useRef(null);
   const [showShare, setShowShare] = useState(false);
-  const [showDiscover, setShowDiscover] = useState(() => window.location.hash === "#descobrir" || window.location.hash === "#funcionalidades" || new URLSearchParams(window.location.search).get("pagina") === "funcionalidades");
+  const [showDiscover, setShowDiscover] = useState(() => ["#descobrir", "#funcionalidades", "#comparar"].includes(window.location.hash) || new URLSearchParams(window.location.search).get("pagina") === "funcionalidades");
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [showGuidedTourIntro, setShowGuidedTourIntro] = useState(false);
@@ -292,6 +308,21 @@ export default function App() {
   const imageFileInputRef = useRef(null);
   const imageCameraInputRef = useRef(null);
   const recognitionRef = useRef(null);
+
+  useEffect(() => {
+    if (analyticsConsent === "granted") saveAnalyticsConsent("granted");
+    if (analyticsConsent === "granted" || analyticsConsent === "denied") return undefined;
+    return undefined;
+  }, [analyticsConsent]);
+
+  useEffect(() => {
+    trackPageView();
+    if (showDiscover && window.location.hash === "#comparar") {
+      const timer = window.setTimeout(() => document.getElementById("comparar-supermercados")?.scrollIntoView({ behavior: "smooth", block: "start" }), 180);
+      return () => window.clearTimeout(timer);
+    }
+    return undefined;
+  }, [showDiscover]);
 
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -474,7 +505,7 @@ export default function App() {
   }, [listCode]);
 
   useEffect(() => {
-    const syncDiscoverRoute = () => setShowDiscover(window.location.hash === "#descobrir" || window.location.hash === "#funcionalidades" || new URLSearchParams(window.location.search).get("pagina") === "funcionalidades");
+    const syncDiscoverRoute = () => setShowDiscover(["#descobrir", "#funcionalidades", "#comparar"].includes(window.location.hash) || new URLSearchParams(window.location.search).get("pagina") === "funcionalidades");
     window.addEventListener("hashchange", syncDiscoverRoute);
     window.addEventListener("popstate", syncDiscoverRoute);
     return () => { window.removeEventListener("hashchange", syncDiscoverRoute); window.removeEventListener("popstate", syncDiscoverRoute); };
@@ -493,10 +524,10 @@ export default function App() {
     setGuidedTourStep(null);
     setShowGuidedTourIntro(false);
   }
-  function openDiscover() { setShowDiscover(true); if (window.location.hash !== "#descobrir") window.history.pushState({ page: "discover" }, "", `${window.location.pathname}${window.location.search}#descobrir`); window.scrollTo({ top: 0, behavior: "smooth" }); }
-  function closeDiscover() { setShowDiscover(false); if (window.location.hash === "#descobrir" || window.location.hash === "#funcionalidades" || new URLSearchParams(window.location.search).has("pagina")) { const url = new URL(window.location.href); url.hash = ""; url.searchParams.delete("pagina"); window.history.pushState({}, "", `${url.pathname}${url.search}`); } window.scrollTo({ top: 0, behavior: "smooth" }); }
+  function openDiscover() { setShowDiscover(true); if (window.location.hash !== "#descobrir") window.history.pushState({ page: "discover" }, "", `${window.location.pathname}${window.location.search}#descobrir`); window.scrollTo({ top: 0, behavior: "smooth" }); trackEvent("feature_discovery_opened", { destination: "features" }); trackPageView(); }
+  function closeDiscover() { setShowDiscover(false); if (["#descobrir", "#funcionalidades", "#comparar"].includes(window.location.hash) || new URLSearchParams(window.location.search).has("pagina")) { const url = new URL(window.location.href); url.hash = ""; url.searchParams.delete("pagina"); window.history.pushState({}, "", `${url.pathname}${url.search}`); } window.scrollTo({ top: 0, behavior: "smooth" }); trackPageView(); }
   function startFromDiscover() { closeDiscover(); window.setTimeout(() => document.getElementById("create-list-card")?.scrollIntoView({ behavior: "smooth", block: "center" }), 90); }
-  function scrollToCreateList() { document.getElementById("create-list-card")?.scrollIntoView({ behavior: "smooth", block: "center" }); }
+  function scrollToCreateList() { trackEvent("create_list_cta_clicked", { placement: showDiscover ? "features" : "landing" }); document.getElementById("create-list-card")?.scrollIntoView({ behavior: "smooth", block: "center" }); }
 
   async function shareLandingPage() {
     const url = `${window.location.origin}${window.location.pathname}`;
@@ -719,6 +750,7 @@ export default function App() {
       const deviceId = getDeviceId(); setMemberId(deviceId);
       const { error: memberError } = await supabase.rpc("register_family_member", { p_share_code: data.list.shareCode, p_device_id: deviceId, p_display_name: displayName });
       if (memberError) throw memberError;
+      trackEvent("list_created", { method: "web", list_type: "family" });
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
   }
@@ -740,6 +772,7 @@ export default function App() {
       localStorage.setItem("lista-familia-code", code);
       setMemberName(displayName); setMemberNameInput(displayName); setMemberId(deviceId);
       setListCode(code); setList(data.list); setItems(data.items || []); setReceipts(data.receipts || []);
+      trackEvent("family_list_joined", { method: "invite_code" });
       setActiveTab("shopping"); setShowDiscover(false); setInviteDismissed(true); setLoading(false);
       window.history.replaceState({}, "", window.location.pathname);
     } catch (err) { console.error("Listora join failed:", err); setError(err?.message ? `${t("Não foi possível entrar na lista")}: ${err.message}` : t("Não encontrámos essa lista. Confirma o código e tenta novamente.")); }
@@ -1128,6 +1161,7 @@ export default function App() {
   async function copyInviteLink() {
     try {
       await navigator.clipboard.writeText(inviteUrl);
+      trackEvent("family_invite_shared", { method: "copy_link" });
       notify(t("Link de convite copiado!"));
     } catch {
       window.prompt(t("Copia este link e partilha com a família:"), inviteUrl);
@@ -1139,14 +1173,17 @@ export default function App() {
     try {
       if (navigator.share) {
         await navigator.share({ title: "Listora — lista partilhada", text: message, url: inviteUrl });
+        trackEvent("family_invite_shared", { method: "native_share" });
       } else {
         await navigator.clipboard.writeText(message);
+        trackEvent("family_invite_shared", { method: "copy_link" });
         notify(t("Link de convite copiado!"));
       }
     } catch (err) {
       if (err?.name === "AbortError") return;
       try {
         await navigator.clipboard.writeText(listCode);
+        trackEvent("family_invite_shared", { method: "copy_code" });
         notify(t("Código da lista copiado!"));
       } catch {
         window.prompt(t("Copia este link e partilha com a família:"), inviteUrl);
@@ -1289,7 +1326,7 @@ export default function App() {
           <article className="discover-feature"><div className="discover-art"><div className="discover-art-paper"><span/><span/><span/><span/></div><span className="discover-art-icon"><Camera size={25}/></span><span className="discover-ai-tag"><Sparkles size={12}/> IA</span></div><span className="discover-kicker">{t("FOTOGRAFIA + IA")}</span><h2>{t("Uma fotografia. Uma lista pronta a rever.")}</h2><p>{t("Fotografa uma lista manuscrita, uma folha de papel ou um quadro. A inteligência artificial analisa a imagem e identifica os produtos para confirmares antes de adicionar.")}</p></article>
           <article className="discover-feature"><div className="discover-art"><div className="discover-voice-orb"><Mic size={29}/></div><div className="discover-wave">{[10,18,28,16,34,21,13,26,17].map((h,i)=><i key={i} style={{height:h}}/>)}</div><span className="discover-ai-tag"><Sparkles size={12}/> IA</span></div><span className="discover-kicker">{t("VOZ + IA")}</span><h2>{t("Diz vários produtos de seguida.")}</h2><p>{t("Diz, por exemplo, «leite, pão e seis ovos». A inteligência artificial interpreta a voz e prepara os produtos para reveres e adicionares à lista.")}</p></article>
         </div>
-        <section className="discover-smart-comparison">
+        <section id="comparar-supermercados" className="discover-smart-comparison">
           <div className="discover-smart-copy">
             <span className="discover-kicker"><Sparkles size={13}/> {t("SMART COMPARISON · IA")}</span>
             <h2>{t("Descobre onde o teu cabaz pode ficar mais em conta.")}</h2>
@@ -1654,6 +1691,12 @@ export default function App() {
           </div>
         </section>
       </div>}
+      {hasAnalyticsProviders && analyticsConsent === "unknown" && <aside className="analytics-consent-banner" role="dialog" aria-label={t("Preferências de privacidade")}>
+        <div className="analytics-consent-copy"><strong>{t("A tua privacidade importa.")}</strong><p>{t("Com a tua autorização, usamos cookies de análise para perceber que campanhas trazem utilizadores e melhorar a Listora. Não recolhemos nomes, produtos nem conteúdo das listas.")}</p></div>
+        <div className="analytics-consent-actions"><button type="button" className="analytics-consent-reject" onClick={() => chooseAnalyticsConsent("denied")}>{t("Rejeitar")}</button><button type="button" className="analytics-consent-accept" onClick={() => chooseAnalyticsConsent("granted")}>{t("Aceitar análise")}</button></div>
+      </aside>}
+      {hasAnalyticsProviders && analyticsConsent !== "unknown" && <button type="button" className="analytics-privacy-button" onClick={() => setShowPrivacySettings(value => !value)} aria-label={t("Gerir privacidade")} title={t("Gerir privacidade")}><ShieldCheck size={17}/></button>}
+      {hasAnalyticsProviders && showPrivacySettings && <aside className="analytics-privacy-panel" role="dialog" aria-label={t("Preferências de privacidade")}><strong>{t("Preferências de análise")}</strong><p>{t("Podes alterar a tua escolha a qualquer momento.")}</p><div><button type="button" className="analytics-consent-reject" onClick={() => chooseAnalyticsConsent("denied")}>{t("Rejeitar análise")}</button><button type="button" className="analytics-consent-accept" onClick={() => chooseAnalyticsConsent("granted")}>{t("Permitir análise")}</button></div><button type="button" className="analytics-privacy-close" onClick={() => setShowPrivacySettings(false)}>{t("Fechar")}</button></aside>}
       {toast && toast !== t("Produto adicionado") && <div className="toast"><Check size={16}/>{toast}</div>}
       {error && <button className="error-toast" onClick={() => setError("")}>{error}<X size={15}/></button>}
     </main>

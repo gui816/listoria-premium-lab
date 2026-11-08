@@ -3503,3 +3503,26 @@ button { -webkit-tap-highlight-color: transparent; }
  .discover-smart-comparison{margin-top:25px}
 }
 @media(prefers-reduced-motion:reduce){.welcome-primary-cta,.discover-inline-cta{transition:none}}
+
+/* Privacy-first campaign analytics consent */
+.analytics-consent-banner{position:fixed;z-index:1200;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(760px,calc(100% - 28px));display:flex;align-items:center;gap:20px;padding:17px 19px;border:1px solid #dce5dc;border-radius:20px;background:rgba(255,255,252,.98);box-shadow:0 14px 48px rgba(22,42,29,.18);color:#1b2d22}
+.analytics-consent-copy{min-width:0;flex:1}
+.analytics-consent-copy strong,.analytics-privacy-panel strong{display:block;font-size:14px;font-weight:800;margin-bottom:4px}
+.analytics-consent-copy p,.analytics-privacy-panel p{margin:0;color:#69766b;font-size:11px;line-height:1.5}
+.analytics-consent-actions,.analytics-privacy-panel>div{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.analytics-consent-actions button,.analytics-privacy-panel button{min-height:40px;border-radius:11px;padding:0 13px;font:inherit;font-size:11px;font-weight:750;cursor:pointer}
+.analytics-consent-reject{border:1px solid #d9e1d9;background:#fff;color:#526457}
+.analytics-consent-accept{border:1px solid #246447;background:#246447;color:#fff}
+.analytics-privacy-button{position:fixed;z-index:1100;right:16px;bottom:max(16px,env(safe-area-inset-bottom));width:40px;height:40px;display:grid;place-items:center;border:1px solid #dce5dc;border-radius:50%;background:#fff;color:#286747;box-shadow:0 5px 20px rgba(22,42,29,.14);cursor:pointer}
+.analytics-privacy-panel{position:fixed;z-index:1201;right:14px;bottom:max(64px,calc(env(safe-area-inset-bottom) + 56px));width:min(330px,calc(100% - 28px));padding:16px;border:1px solid #dce5dc;border-radius:17px;background:#fff;box-shadow:0 12px 36px rgba(22,42,29,.18);color:#1b2d22}
+.analytics-privacy-panel>div{margin-top:12px}
+.analytics-privacy-panel button{min-height:36px;padding:0 10px}
+.analytics-privacy-panel .analytics-privacy-close{margin-top:10px;border:0;background:transparent;color:#66766a;padding:0}
+@media(max-width:620px){
+ .analytics-consent-banner{bottom:max(10px,env(safe-area-inset-bottom));width:calc(100% - 20px);display:block;padding:15px;border-radius:17px}
+ .analytics-consent-copy strong{font-size:13px}
+ .analytics-consent-copy p{font-size:10px;line-height:1.45}
+ .analytics-consent-actions{display:grid;grid-template-columns:1fr 1.2fr;margin-top:12px}
+ .analytics-consent-actions button{min-height:42px}
+ .analytics-privacy-button{right:12px;bottom:max(12px,env(safe-area-inset-bottom))}
+}

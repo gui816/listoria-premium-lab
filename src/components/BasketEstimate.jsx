@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase.js";
 import PremiumSubscription from "./PremiumSubscription.jsx";
+import { trackEvent } from "../lib/analytics.js";
 import {
   Sparkles, LoaderCircle, Globe2, ChevronDown, X, MapPin,
   ShoppingBasket, ChevronRight, ArrowLeft, Clock3, CheckCircle2, Search, PackageSearch, Store, Coins, Calculator, Coffee
@@ -273,6 +274,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
       } catch {}
     }
     setBusy(true);
+    trackEvent("basket_comparison_started", { item_count: cleanItems.length, supermarket_count: selected.length, country_code: countryCode, source: "smart_comparison" });
     setError("");
     try {
       const { data, error: invokeError } = await supabase.functions.invoke("listora-basket-estimate", {
@@ -289,6 +291,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
       }
       if (data?.error) throw new Error(data.error);
       setResult(data);
+      trackEvent("basket_comparison_completed", { item_count: cleanItems.length, supermarket_count: selected.length, country_code: countryCode, used_free_trial: Boolean(data?.freeTrialUsed) });
       setFreeComparisonAvailable(false);
       if (data?.freeTrialUsed) setFreeComparisonUsed(true);
       setShowPremiumPrompt(Boolean(data?.freeTrialUsed));
@@ -299,6 +302,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
         localStorage.setItem("listora-basket-last-signature", itemSignature);
       } catch {}
     } catch (estimateError) {
+      trackEvent("basket_comparison_failed", { country_code: countryCode, error_type: estimateError?.context?.status === 403 ? "premium_required" : "request_failed" });
       if (estimateError?.context?.status === 403 || /premium_required/.test(estimateError?.message || "")) setShowPremiumPrompt(true);
       setError(estimateError.message || "Não foi possível estimar o cabaz.");
       if (estimateError?.context?.status === 403) {
