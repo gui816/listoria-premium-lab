@@ -3444,3 +3444,24 @@ button { -webkit-tap-highlight-color: transparent; }
 .premium-demo-actions button{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid #d7dfcf;border-radius:9px;background:#fff;color:#43563a;font-size:12px;font-weight:600}
 .premium-demo-actions button:disabled{opacity:.55}
 .premium-demo-controls>small{font-size:10px;color:#7a8473}
+
+
+/* Friendly, focused voice recording dialog */
+.voice-listening-modal{position:relative;display:flex;align-items:center;flex-direction:column;gap:12px;text-align:center;padding:30px 26px 24px!important;border-radius:26px!important}
+.voice-listening-modal .modal-close{align-self:flex-end;margin:-12px -10px -24px auto;z-index:1}
+.voice-listening-icon{width:82px;height:82px;display:grid;place-items:center;border-radius:28px;background:#e2f0e4;color:#286d4c;box-shadow:0 0 0 10px #eaf3e9;animation:voice-listening-pulse 1.8s ease-in-out infinite}
+.voice-listening-pill{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:99px;background:#edf6ed;color:#2e754d;font-size:11px;font-weight:750}
+.voice-listening-pill>span{width:7px;height:7px;border-radius:50%;background:#36a45d;box-shadow:0 0 0 4px #36a45d20}
+.voice-listening-modal h2{margin:4px 0 0;font-size:25px;letter-spacing:-.7px;color:#25382c}
+.voice-listening-modal>p{margin:0;color:#758178;font-size:14px}
+.voice-listening-modal .voice-wave{height:42px;margin:3px 0}
+.voice-listening-modal .voice-wave span{animation:voice-wave-bounce .7s ease-in-out infinite alternate}
+.voice-listening-modal .voice-wave span:nth-child(2n){animation-delay:.14s}
+.voice-listening-modal .voice-wave span:nth-child(3n){animation-delay:.28s}
+.voice-listening-example{display:flex;flex-direction:column;gap:6px;width:100%;padding:13px;border-radius:14px;background:#f5f8f3;color:#46584b}
+.voice-listening-example small,.voice-listening-hint{font-size:11px;color:#839087}
+.voice-listening-example strong{font-size:13px;font-weight:650}
+.voice-listening-modal .voice-stop-button{width:100%;justify-content:center;min-height:48px;margin-top:5px}
+@keyframes voice-listening-pulse{0%,100%{transform:scale(1);box-shadow:0 0 0 8px #eaf3e9}50%{transform:scale(1.04);box-shadow:0 0 0 13px #eaf3e980}}
+@keyframes voice-wave-bounce{from{transform:scaleY(.45);opacity:.55}to{transform:scaleY(1.15);opacity:1}}
+@media(prefers-reduced-motion:reduce){.voice-listening-icon,.voice-listening-modal .voice-wave span{animation:none}}
