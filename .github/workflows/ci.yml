@@ -22,3 +22,15 @@ jobs:
         run: npm test
       - name: Build frontend
         run: npm run build
+
+  edge-function-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check experimental estimate function
+        run: deno check supabase/functions/listora-basket-estimate-v2/index.ts
