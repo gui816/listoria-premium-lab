@@ -334,7 +334,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
           @keyframes basket-glow{0%,100%{transform:scale(1);box-shadow:0 0 0 0 #28735400}50%{transform:scale(1.04);box-shadow:0 0 0 6px #28735412}}
           @media(prefers-reduced-motion:reduce){.basket-estimate-loading *{animation:none!important}}
         `}</style>
-    <section className="basket-estimate">
+    {freeComparisonUsed && session?.user ? <PremiumSubscription session={session} language={language} compact /> : <section className="basket-estimate">
       <div className="basket-estimate-summary">
         <span className="basket-estimate-icon"><Sparkles size={22}/></span>
         <div className="basket-estimate-summary-copy">
@@ -350,9 +350,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
         </button>
       </div>
       {stale && <p className="basket-estimate-stale-note">A lista foi alterada. Atualiza a estimativa para refletir os produtos atuais.</p>}
-    </section>
-
-    {freeComparisonUsed && session?.user && <PremiumSubscription session={session} language={language} compact />}
+    </section>}
 
     {open && <div className="basket-estimate-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setOpen(false); }}>
       <section className="basket-estimate-modal" role="dialog" aria-modal="true" aria-labelledby="basket-estimate-title">
@@ -417,7 +415,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
             </button>)}
 
             {error && <p className="basket-estimate-error" role="alert">{error}</p>}
-            {showPremiumPrompt && !result && <div className="basket-estimate-premium-prompt"><strong>A tua comparação gratuita já foi utilizada</strong><p>Subscreve o Listoria Premium para continuares a comparar preços e encontrar onde o teu cabaz fica mais em conta.</p><button type="button" onClick={() => window.dispatchEvent(new CustomEvent("listoria:open-premium"))}>Conhecer o Premium · 1,99 €/mês</button></div>}}
+            {showPremiumPrompt && !result && <div className="basket-estimate-premium-prompt"><strong>A tua comparação gratuita já foi utilizada</strong><p>Subscreve o Listoria Premium para continuares a comparar preços e encontrar onde o teu cabaz fica mais em conta.</p><button type="button" onClick={() => window.dispatchEvent(new CustomEvent("listoria:open-premium"))}>Conhecer o Premium · 1,99 €/mês</button></div>}
 
             {result && <>
               <div className="basket-estimate-results-heading"><strong>Comparação do cabaz</strong><span>{updatedAt ? <><Clock3 size={12}/> {updatedAt.toLocaleString(language, { dateStyle: "short", timeStyle: "short" })}</> : null}</span></div>
