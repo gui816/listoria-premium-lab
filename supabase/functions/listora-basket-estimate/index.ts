@@ -174,7 +174,7 @@ serve(async (req) => {
             thinkingConfig: { thinkingLevel: "medium" }
           }
         }),
-        signal: AbortSignal.timeout(90000)
+        signal: AbortSignal.any([req.signal, AbortSignal.timeout(90000)])
       }
     );
 
@@ -277,6 +277,11 @@ serve(async (req) => {
 
     if (!results.length) return json({ error: "Não foi possível obter uma comparação válida para os supermercados selecionados." }, 502);
 
+    if (req.signal.aborted) {
+      console.info("Basket estimate cancelled by client before trial consumption:", { requestId });
+      return json({ error: "A comparação foi cancelada.", code: "request_cancelled" }, 499);
+    }
+
     if (!hasPremium) {
       const trialResponse = await fetch(new URL("/rest/v1/rpc/consume_free_comparison_trial", supabaseUrl), {
         method: "POST", headers: adminHeaders,
@@ -318,6 +323,10 @@ serve(async (req) => {
       disclaimer: "Estimativa recolhida por IA. O valor apresentado pode não corresponder exatamente ao preço de catálogo ou incluir todos os descontos e promoções aplicáveis."
     });
   } catch (error) {
+    if (req.signal.aborted) {
+      console.info("Basket estimate upstream work aborted after client cancellation.");
+      return json({ error: "A comparação foi cancelada.", code: "request_cancelled" }, 499);
+    }
     const message = error instanceof Error ? error.message : String(error || "Unknown error");
     const timedOut = /timed out|timeout|abort/i.test(message);
     console.error("listora-basket-estimate error:", { message, name: error instanceof Error ? error.name : typeof error });
