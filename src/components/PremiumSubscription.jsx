@@ -10,6 +10,7 @@ export default function PremiumSubscription({ session, language="pt-PT", compact
  const [busy,setBusy]=useState("");
  const [error,setError]=useState("");
  const [demoPanel,setDemoPanel]=useState(false);
+ const [premiumStatusRetry,setPremiumStatusRetry]=useState(0);
  const subscriptionTrackedRef=useRef(false);
  const premiumSuccessReturn=useRef(new URLSearchParams(window.location.search).get("premium")==="success");
  const isEnglish=language==="en";
@@ -21,6 +22,8 @@ export default function PremiumSubscription({ session, language="pt-PT", compact
  },[session?.access_token,isEnglish]);
  useEffect(()=>{refresh();},[refresh]);
  useEffect(()=>{if(premiumSuccessReturn.current&&status?.isPremium&&!status?.isDemo&&!subscriptionTrackedRef.current){subscriptionTrackedRef.current=true;trackEvent("premium_subscription_active",{plan:"monthly",currency:"EUR",value:1.99});const url=new URL(window.location.href);url.searchParams.delete("premium");url.searchParams.delete("session_id");window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);}},[status?.isPremium,status?.isDemo]);
+ useEffect(()=>{if(!premiumSuccessReturn.current||status?.isPremium||!session?.access_token||premiumStatusRetry>=5)return;const timer=window.setTimeout(()=>{setPremiumStatusRetry(value=>value+1);refresh();},2500);return()=>window.clearTimeout(timer);},[status?.isPremium,session?.access_token,premiumStatusRetry,refresh]);
+
  useEffect(()=>{const open=()=>{requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelector(".premium-subscription-compact, .premium-subscription")?.scrollIntoView({behavior:"smooth",block:"center"})));};window.addEventListener("listoria:open-premium",open);return()=>window.removeEventListener("listoria:open-premium",open);},[]);
  const runDemoAction=async(action)=>{
   setBusy(action);setError("");
