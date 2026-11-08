@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase.js";
+import { trackEvent } from "../lib/analytics.js";
 import { Sparkles, ShieldCheck, CreditCard, RefreshCw, CheckCircle2, FlaskConical, RotateCcw, CircleAlert, Ban } from "lucide-react";
 
 const PLANS = [{ id:"monthly", name:"Mensal", price:"1,99 €", period:"por mês" }];
@@ -9,6 +10,7 @@ export default function PremiumSubscription({ session, language="pt-PT", compact
  const [busy,setBusy]=useState("");
  const [error,setError]=useState("");
  const [demoPanel,setDemoPanel]=useState(false);
+ const subscriptionTrackedRef=useRef(false);
  const isEnglish=language==="en";
  const refresh=useCallback(async()=>{
   if(!supabase||!session?.access_token)return;
@@ -17,6 +19,7 @@ export default function PremiumSubscription({ session, language="pt-PT", compact
   setStatus(data);
  },[session?.access_token,isEnglish]);
  useEffect(()=>{refresh();},[refresh]);
+ useEffect(()=>{if(status?.isPremium&&!status?.isDemo&&!subscriptionTrackedRef.current){subscriptionTrackedRef.current=true;trackEvent("premium_subscription_active",{plan:"monthly",currency:"EUR",value:1.99});}},[status?.isPremium,status?.isDemo]);
  useEffect(()=>{const open=()=>{requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelector(".premium-subscription-compact, .premium-subscription")?.scrollIntoView({behavior:"smooth",block:"center"})));};window.addEventListener("listoria:open-premium",open);return()=>window.removeEventListener("listoria:open-premium",open);},[]);
  const runDemoAction=async(action)=>{
   setBusy(action);setError("");
@@ -30,6 +33,7 @@ export default function PremiumSubscription({ session, language="pt-PT", compact
  };
  const openCheckout=async(plan)=>{
   setBusy(plan);setError("");
+  trackEvent("begin_checkout",{plan,currency:"EUR",value:1.99});
   try{
    const {data,error:invokeError}=await supabase.functions.invoke("stripe-create-checkout",{body:{plan}});
    if(invokeError){const detail=await invokeError.context?.json?.().catch(()=>null);throw new Error(detail?.error||invokeError.message);}
