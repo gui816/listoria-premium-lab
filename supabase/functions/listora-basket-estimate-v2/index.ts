@@ -169,7 +169,21 @@ serve(async (req) => {
       website: store.website,
       pricePosition: store.price_position
     }));
-    const storeRuns = await Promise.all(stores.map(async (store: any, index: number) => {
+    // Keep Google Search/Gemini concurrency bounded to avoid creating a burst of
+    // upstream requests when users select many supermarkets.
+    let activeRequests = 0;
+    const waitingRequests: Array<() => void> = [];
+    const withConcurrency = async <T>(task: () => Promise<T>): Promise<T> => {
+      if (activeRequests >= 2) await new Promise<void>((resolve) => waitingRequests.push(resolve));
+      activeRequests += 1;
+      try {
+        return await task();
+      } finally {
+        activeRequests -= 1;
+        waitingRequests.shift()?.();
+      }
+    };
+    const storeRuns = await Promise.all(stores.map((store: any, index: number) => withConcurrency(async () => {
       const storePayload = storePayloads[index];
       const storePrompt = prompt.replace(
         "Selected supermarkets: " + JSON.stringify(storePayloads),
@@ -241,9 +255,9 @@ serve(async (req) => {
           groundingChunks: []
         };
       }
-    }));
+    }))));
 
-    const successfulRuns = storeRuns.filter((run: any) => run.parsed);
+    const successfulRuns = storeRuns.filter((run: any) => run.parsed && Array.isArray(run.parsed?.stores) && run.parsed.stores.length > 0);
     const parsed: any = {
       stores: [
         ...successfulRuns.flatMap((run: any) => Array.isArray(run.parsed?.stores) ? run.parsed.stores : []),
