@@ -14,6 +14,7 @@ export function getAnalyticsConsent() {
 
 export function setAnalyticsConsent(consent) {
   try { localStorage.setItem(CONSENT_KEY, consent); } catch {}
+  if (consent === "denied") { try { sessionStorage.removeItem(ATTRIBUTION_KEY); } catch {} }
   if (consent === "granted") {
     captureCampaignAttribution();
     initialiseAnalytics();
@@ -90,7 +91,12 @@ export function trackEvent(eventName, parameters = {}) {
   const attribution = getCampaignAttribution();
   const payload = { ...parameters, ...attribution };
   if (window.gtag) window.gtag("event", eventName, payload);
-  if (window.fbq) window.fbq("trackCustom", eventName, payload);
+  if (window.fbq) {
+    const standardEvents = { list_created: "Lead", family_list_joined: "CompleteRegistration", begin_checkout: "InitiateCheckout" };
+    const standardEvent = standardEvents[eventName];
+    if (standardEvent) window.fbq("track", standardEvent, payload);
+    else window.fbq("trackCustom", eventName, payload);
+  }
 }
 
 export function trackPremiumEvent(eventName, parameters = {}) {
