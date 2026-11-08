@@ -25,6 +25,13 @@ const normaliseItems = (items = []) => items.map((item) => ({
   unit: item.unit || "un"
 })).filter((item) => item.name).sort((a, b) => a.name.localeCompare(b.name));
 
+const LOADING_MESSAGES = [
+  { title: "A identificar produtos equivalentes", detail: "Estamos a procurar as melhores correspondências para cada artigo da tua lista." },
+  { title: "A consultar preços disponíveis", detail: "A pesquisa está a reunir preços e informação das lojas selecionadas." },
+  { title: "A validar os resultados encontrados", detail: "Estamos a verificar se os produtos e os preços são suficientemente fiáveis." },
+  { title: "A preparar a comparação", detail: "Estamos a organizar os valores para te mostrar uma estimativa clara do teu cabaz." }
+];
+
 export default function BasketEstimate({ items, language = "pt-PT", session }) {
   const [countries, setCountries] = useState([]);
   const [countryCode, setCountryCode] = useState(getStoredCountry);
@@ -49,17 +56,10 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
 
   const country = useMemo(() => countries.find((entry) => entry.code === countryCode), [countries, countryCode]);
 
-  const loadingMessages = [
-    { title: "A identificar produtos equivalentes", detail: "Estamos a procurar as melhores correspondências para cada artigo da tua lista." },
-    { title: "A consultar preços disponíveis", detail: "A pesquisa está a reunir preços e informação das lojas selecionadas." },
-    { title: "A validar os resultados encontrados", detail: "Estamos a verificar se os produtos e os preços são suficientemente fiáveis." },
-    { title: "A preparar a comparação", detail: "Estamos a organizar os valores para te mostrar uma estimativa clara do teu cabaz." }
-  ];
-
   useEffect(() => {
     if (!busy) { setLoadingMessageIndex(0); return; }
     const interval = window.setInterval(() => {
-      setLoadingMessageIndex((index) => (index + 1) % loadingMessages.length);
+      setLoadingMessageIndex((index) => (index + 1) % LOADING_MESSAGES.length);
     }, 3200);
     return () => window.clearInterval(interval);
   }, [busy]);
@@ -429,7 +429,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
 
             {!result && (busy ? <div className="basket-estimate-loading" role="status" aria-live="polite">
               <span className="basket-estimate-focus-visual"><Sparkles size={34}/></span>
-              <div className="basket-estimate-focus-copy" aria-live="polite" aria-atomic="true"><strong key={loadingMessageIndex}>{loadingMessages[loadingMessageIndex].title}</strong><small>{loadingMessages[loadingMessageIndex].detail}</small></div>
+              <div className="basket-estimate-focus-copy" aria-live="polite" aria-atomic="true"><strong key={loadingMessageIndex}>{LOADING_MESSAGES[loadingMessageIndex].title}</strong><small>{LOADING_MESSAGES[loadingMessageIndex].detail}</small></div>
               <div className="basket-estimate-loading-track" aria-hidden="true"><span/></div>
               <div className="basket-estimate-focus-stores" aria-label="Supermercados selecionados">{selected.map((name) => <span key={name}>{name}</span>)}</div>
               <div className="basket-estimate-focus-note"><LoaderCircle className="spin" size={15}/> A pesquisa pode demorar alguns instantes</div>
