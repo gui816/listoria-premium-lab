@@ -3611,3 +3611,5 @@ button { -webkit-tap-highlight-color: transparent; }
 .quantity-modal>p{margin:0 0 18px;text-align:center;color:#7c877c;font-size:12px;line-height:1.5}
 .quantity-modal-done{width:100%;min-height:46px;border:0;border-radius:13px;background:var(--green);color:white;font-size:13px;font-weight:800}
 @media(max-width:390px){.quantity-picker-trigger{min-width:52px;padding:0 7px;gap:4px}.quantity-picker-trigger span{font-size:9px}.quantity-picker-trigger strong{font-size:12px}}
+
+.add-main>.quantity-picker-trigger{display:flex;width:auto;height:38px;flex:0 0 auto;border:1px solid #dce6d8;border-radius:12px;background:#f5f8f2;color:var(--green-dark);box-shadow:none}
