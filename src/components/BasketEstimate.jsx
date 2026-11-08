@@ -37,7 +37,6 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
   const [selected, setSelected] = useState([]);
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [loadingStage] = useState(1);
   const [loadingCatalogue, setLoadingCatalogue] = useState(true);
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
