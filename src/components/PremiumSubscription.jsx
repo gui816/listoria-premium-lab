@@ -11,6 +11,7 @@ export default function PremiumSubscription({ session, language="pt-PT", compact
  const [error,setError]=useState("");
  const [demoPanel,setDemoPanel]=useState(false);
  const subscriptionTrackedRef=useRef(false);
+ const premiumSuccessReturn=useRef(new URLSearchParams(window.location.search).get("premium")==="success");
  const isEnglish=language==="en";
  const refresh=useCallback(async()=>{
   if(!supabase||!session?.access_token)return;
@@ -19,7 +20,7 @@ export default function PremiumSubscription({ session, language="pt-PT", compact
   setStatus(data);
  },[session?.access_token,isEnglish]);
  useEffect(()=>{refresh();},[refresh]);
- useEffect(()=>{if(status?.isPremium&&!status?.isDemo&&!subscriptionTrackedRef.current){subscriptionTrackedRef.current=true;trackEvent("premium_subscription_active",{plan:"monthly",currency:"EUR",value:1.99});}},[status?.isPremium,status?.isDemo]);
+ useEffect(()=>{if(premiumSuccessReturn.current&&status?.isPremium&&!status?.isDemo&&!subscriptionTrackedRef.current){subscriptionTrackedRef.current=true;trackEvent("premium_subscription_active",{plan:"monthly",currency:"EUR",value:1.99});const url=new URL(window.location.href);url.searchParams.delete("premium");url.searchParams.delete("session_id");window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);}},[status?.isPremium,status?.isDemo]);
  useEffect(()=>{const open=()=>{requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelector(".premium-subscription-compact, .premium-subscription")?.scrollIntoView({behavior:"smooth",block:"center"})));};window.addEventListener("listoria:open-premium",open);return()=>window.removeEventListener("listoria:open-premium",open);},[]);
  const runDemoAction=async(action)=>{
   setBusy(action);setError("");
