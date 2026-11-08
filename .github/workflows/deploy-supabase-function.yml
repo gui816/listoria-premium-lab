@@ -9,6 +9,7 @@ on:
       - "supabase/functions/listora-list-extract/**"
       - "supabase/functions/listora-basket-estimate/**"
       - "supabase/functions/listora-basket-estimate-v2/**"
+      - "supabase/config.toml"
       - ".github/workflows/deploy-supabase-function.yml"
   workflow_dispatch:
 
