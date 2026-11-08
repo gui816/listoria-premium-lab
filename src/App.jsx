@@ -1526,16 +1526,16 @@ export default function App() {
         {receipts.length === 0 ? <div className="empty-state"><span className="empty-illustration">🧾</span><h3>{t("Ainda não há faturas")}</h3><p>{t("Adiciona o primeiro comprovativo para ficar disponível a toda a família.")}</p></div> : <div className="receipt-list">{receipts.map(receipt => <article className="receipt-card" key={receipt.id}><div className="receipt-card-icon"><Receipt size={21}/></div><div className="receipt-card-main"><strong>{receipt.storeName}</strong><span>{new Date(receipt.purchasedAt + "T12:00:00").toLocaleDateString(language === "en" ? "en-GB" : language)} · {receipt.memberName || t("Membro")}</span>{receipt.notes && <p>{receipt.notes}</p>}</div><div className="receipt-card-side"><strong>{Number(receipt.total).toLocaleString(language === "en" ? "en-GB" : language,{style:"currency",currency:"EUR"})}</strong>{receipt.filePath && <button type="button" onClick={() => openReceipt(receipt)} aria-label={t("Abrir comprovativo")}><ExternalLink size={17}/></button>}<button type="button" onClick={() => removeReceipt(receipt)} aria-label={t("Apagar fatura")}><Trash2 size={16}/></button></div></article>)}</div>}
       </section>}
       <footer className="app-footer"><span><Leaf size={15}/> {t("Menos esquecimentos, mais tempo juntos.")}</span><button onClick={leaveCurrentList}>{t("Sair da lista")} / {t("Criar nova")}</button></footer>
-      {voiceModalOpen && createPortal(<div className="modal-backdrop voice-modal-backdrop" onClick={() => { setVoiceModalOpen(false); setListening(false); recognitionRef.current?.stop(); }}>
+      {voiceModalOpen && createPortal(<div className="modal-backdrop voice-modal-backdrop" onClick={() => { voiceResultReceivedRef.current = true; setVoiceModalOpen(false); setListening(false); recognitionRef.current?.abort(); }}>
         <section className="share-modal voice-modal voice-listening-modal" onClick={event => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="voice-modal-title">
-          <button type="button" className="modal-close" aria-label={t("Fechar")} onClick={() => { setVoiceModalOpen(false); setListening(false); recognitionRef.current?.stop(); }}><X size={20}/></button>
+          <button type="button" className="modal-close" aria-label={t("Fechar")} onClick={() => { voiceResultReceivedRef.current = true; setVoiceModalOpen(false); setListening(false); recognitionRef.current?.abort(); }}><X size={20}/></button>
           <div className="voice-listening-icon"><Mic size={30}/></div>
           <span className="voice-listening-pill"><span/> {t("A ouvir")}</span>
           <h2 id="voice-modal-title">{t("Estou a ouvir!")}</h2>
           <p>{t("Diz-me o que precisas de comprar.")}</p>
           <div className="voice-wave" aria-hidden="true"><span/><span/><span/><span/><span/><span/><span/><span/><span/></div>
           <div className="voice-listening-example"><small>{t("Podes dizer vários produtos de seguida")}</small><strong>“{t("Leite, pão, seis ovos e dois iogurtes.")}”</strong></div>
-          <button type="button" className="primary-button voice-stop-button" onClick={() => { setVoiceModalOpen(false); setListening(false); setImportError(""); recognitionRef.current?.stop(); }}><Mic size={17}/>{t("Terminar gravação")}</button>
+          <button type="button" className="primary-button voice-stop-button" onClick={() => { voiceResultReceivedRef.current = true; setVoiceModalOpen(false); setListening(false); setImportError(""); recognitionRef.current?.stop(); }}><Mic size={17}/>{t("Terminar gravação")}</button>
           <small className="voice-listening-hint">{t("Toca para terminar")}</small>
         </section>
       </div>, document.body)}
