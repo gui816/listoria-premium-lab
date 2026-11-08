@@ -71,6 +71,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
   }, [busy]);
 
   const loadingMessage = [...LOADING_MESSAGES].reverse().find((message) => loadingElapsedSeconds >= message.after) || LOADING_MESSAGES[0];
+  const LoadingIcon = loadingMessage.icon;
 
   // The estimate endpoint returns one completed response; keep the active search state honest
   // instead of rotating through stages that the backend does not expose as live events.
@@ -442,7 +443,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
             </div>
 
             {!result && (busy ? <div className="basket-estimate-loading" role="status" aria-live="polite">
-              <span className={"basket-estimate-focus-visual tone-" + loadingMessage.tone}><loadingMessage.icon size={36}/></span>
+              <span className={"basket-estimate-focus-visual tone-" + loadingMessage.tone}><LoadingIcon size={36}/></span>
               <div className="basket-estimate-focus-copy" aria-live="polite" aria-atomic="true"><strong key={loadingMessage.title}>{loadingMessage.title}</strong><small key={loadingMessage.detail}>{loadingMessage.detail}</small></div>
               <div className="basket-estimate-loading-track" aria-hidden="true"><span/></div>
               <div className="basket-estimate-focus-stores" aria-label="Supermercados selecionados">{selected.map((name) => <span key={name}>{name}</span>)}</div>
