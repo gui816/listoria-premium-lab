@@ -13,6 +13,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
 
+  const requestId = crypto.randomUUID();
+  let stage = "configuration";
   try {
     const geminiKey = Deno.env.get("GEMINI_API_KEY");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -20,6 +22,7 @@ serve(async (req) => {
     if (!geminiKey) return json({ error: "O serviço de estimativa não está configurado (GEMINI_API_KEY)." }, 503);
     if (!supabaseUrl || !serviceKey) return json({ error: "O catálogo internacional não está configurado no Supabase." }, 503);
 
+    stage = "authentication";
     const authorization = req.headers.get("Authorization") || "";
     const accessToken = authorization.replace(/^Bearer\s+/i, "");
     if (!accessToken) return json({ error: "Inicia sessão para utilizar esta funcionalidade." }, 401);
@@ -32,6 +35,7 @@ serve(async (req) => {
     if (!authUser?.id) return json({ error: "Sessão inválida." }, 401);
 
     const adminHeaders = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" };
+    stage = "subscription_check";
     const subscriptionUrl = new URL("/rest/v1/subscriptions", supabaseUrl);
     subscriptionUrl.search = new URLSearchParams({
       select: "status,current_period_end,past_due_grace_until",
@@ -48,6 +52,7 @@ serve(async (req) => {
     const paidCancellation = subscription?.status === "canceled" && subscription.current_period_end && new Date(subscription.current_period_end).getTime() > now;
     const hasPremium = Boolean(subscription && (["active", "trialing"].includes(subscription.status) || graceActive || paidCancellation));
 
+    stage = "demo_subscription_check";
     const demoUrl = new URL("/rest/v1/premium_demo_subscriptions", supabaseUrl);
     demoUrl.search = new URLSearchParams({ select: "status,current_period_end,cancel_at_period_end,past_due_grace_until", user_id: `eq.${authUser.id}`, limit: "1" }).toString();
     const demoResponse = await fetch(demoUrl, { headers: adminHeaders, signal: AbortSignal.timeout(10000) });
@@ -59,7 +64,7 @@ serve(async (req) => {
     const hasDemoPremium = Boolean(demoSubscription && ((demoSubscription.status === "active" && (!demoSubscription.current_period_end || new Date(demoSubscription.current_period_end).getTime() > now)) || demoGrace || demoPaidPeriod));
     const hasAnyPremium = hasPremium || hasDemoPremium;
 
-    const requestId = crypto.randomUUID();
+    stage = "rate_limit_check";
     const rateResponse = await fetch(new URL("/rest/v1/rpc/consume_premium_rate_limit", supabaseUrl), {
       method: "POST", headers: adminHeaders,
       body: JSON.stringify({ p_user_id: authUser.id, p_feature_key: "basket_estimate", p_request_id: requestId, p_limit: 10, p_window_seconds: 60 }),
@@ -69,6 +74,7 @@ serve(async (req) => {
     const rateRows = await rateResponse.json();
     if (rateRows?.[0]?.allowed === false) return json({ error: "Estás a fazer demasiadas pesquisas num curto espaço de tempo. Aguarda um minuto e tenta novamente.", code: "rate_limited", retryAfter: rateRows[0].retry_after_seconds }, 429);
 
+    stage = "request_validation";
     const body = await req.json();
     const countryCode = String(body?.countryCode || "").trim().toUpperCase();
     if (!/^[A-Z]{2}$/.test(countryCode)) return json({ error: "Seleciona um país válido." }, 400);
@@ -83,6 +89,7 @@ serve(async (req) => {
     if (!basket.length) return json({ error: "Não foram encontrados artigos válidos." }, 400);
 
     const headers = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` };
+    stage = "country_catalogue";
     const countryUrl = new URL("/rest/v1/countries", supabaseUrl);
     countryUrl.search = new URLSearchParams({
       select: "code,name,currency_code,currency_locale,default_language",
@@ -96,6 +103,7 @@ serve(async (req) => {
     const country = countries?.[0];
     if (!country) return json({ error: "Este país ainda não está disponível no Listora." }, 404);
 
+    stage = "supermarket_catalogue";
     const supermarketUrl = new URL("/rest/v1/supermarkets", supabaseUrl);
     supermarketUrl.search = new URLSearchParams({
       select: "id,name,price_position,website,display_order",
@@ -148,6 +156,7 @@ serve(async (req) => {
       "Return valid JSON only, using this schema: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes,items:[{requestedName,matchedProductName,brand,packageSize,normalizedUnit,matchType,matchConfidence,matchingNotes,quantity,unit,estimatedUnitPrice,estimatedSubtotal,confidence}]}]}. Use null for unavailable numeric prices and omit no requested items."
     ].join("\n");
 
+    stage = "free_trial_check";
     let freeTrialUsed = false;
     if (!hasAnyPremium) {
       const trialUrl = new URL("/rest/v1/premium_comparison_trials", supabaseUrl);
@@ -160,6 +169,7 @@ serve(async (req) => {
       }
     }
 
+    stage = "gemini_request";
     const ai = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(geminiKey),
       {
@@ -178,6 +188,7 @@ serve(async (req) => {
       }
     );
 
+    stage = "gemini_response";
     const payload = await ai.json().catch(() => ({}));
     if (!ai.ok) {
       const upstreamStatus = ai.status;
@@ -192,11 +203,13 @@ serve(async (req) => {
         code: "gemini_upstream_error"
       }, 502);
     }
+    stage = "gemini_parse";
     const candidate = payload?.candidates?.[0];
     const raw = candidate?.content?.parts?.map((part: any) => part.text || "").join("") || "";
     let parsed: any;
     try { parsed = JSON.parse(raw); } catch { return json({ error: "Não foi possível interpretar a estimativa." }, 502); }
 
+    stage = "result_normalization";
     const known = new Map(stores.map((store: any) => [String(store.name).toLocaleLowerCase(), store]));
     const results = (Array.isArray(parsed?.stores) ? parsed.stores : []).map((estimate: any) => {
       const name = String(estimate?.name || "").trim();
@@ -282,6 +295,7 @@ serve(async (req) => {
       return json({ error: "A comparação foi cancelada.", code: "request_cancelled" }, 499);
     }
 
+    stage = "trial_consumption";
     if (!hasPremium) {
       const trialResponse = await fetch(new URL("/rest/v1/rpc/consume_free_comparison_trial", supabaseUrl), {
         method: "POST", headers: adminHeaders,
@@ -329,12 +343,14 @@ serve(async (req) => {
     }
     const message = error instanceof Error ? error.message : String(error || "Unknown error");
     const timedOut = /timed out|timeout|abort/i.test(message);
-    console.error("listora-basket-estimate error:", { message, name: error instanceof Error ? error.name : typeof error });
+    console.error("listora-basket-estimate error:", { requestId, stage, message, name: error instanceof Error ? error.name : typeof error });
     return json({
       error: timedOut
         ? "A pesquisa de preços demorou mais do que o esperado. Tenta novamente; não perdeste a tua lista."
         : "Ocorreu um erro ao consultar os preços. Tenta novamente dentro de alguns instantes.",
-      code: timedOut ? "estimate_timeout" : "estimate_internal_error"
+      code: timedOut ? "estimate_timeout" : "estimate_internal_error",
+      requestId,
+      stage
     }, timedOut ? 504 : 500);
   }
 });
