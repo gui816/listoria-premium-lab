@@ -1505,6 +1505,24 @@ export default function App() {
         </form>
       </section>
       </div>
+      {showQuantityModal && createPortal(
+        <div className="quantity-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) { setShowQuantityModal(false); requestAnimationFrame(() => productNameInputRef.current?.focus({ preventScroll: true })); } }}>
+          <section className="quantity-modal" role="dialog" aria-modal="true" aria-labelledby="quantity-modal-title">
+            <div className="quantity-modal-heading">
+              <div><span>{t("QUANTIDADE")}</span><h2 id="quantity-modal-title">{t("Quantos precisas?")}</h2></div>
+              <button type="button" aria-label={t("Fechar")} onClick={() => { setShowQuantityModal(false); requestAnimationFrame(() => productNameInputRef.current?.focus({ preventScroll: true })); }}><X size={19}/></button>
+            </div>
+            <div className="quantity-modal-stepper">
+              <button type="button" aria-label={t("Diminuir quantidade")} disabled={Number.parseInt(quantity, 10) <= 1} onClick={() => setQuantity(String(Math.max(1, (Number.parseInt(quantity, 10) || 1) - 1)))}><Minus size={22}/></button>
+              <input aria-label={t("Quantidade")} type="number" inputMode="numeric" min="1" max="999" value={quantity} onChange={event => { const value = event.target.value; if (value === "") { setQuantity(""); return; } setQuantity(String(Math.max(1, Math.min(999, Number.parseInt(value, 10) || 1)))); }} onBlur={() => setQuantity(String(Math.max(1, Math.min(999, Number.parseInt(quantity, 10) || 1))))}/>
+              <button type="button" aria-label={t("Aumentar quantidade")} disabled={Number.parseInt(quantity, 10) >= 999} onClick={() => setQuantity(String(Math.min(999, (Number.parseInt(quantity, 10) || 1) + 1)))}><Plus size={22}/></button>
+            </div>
+            <p>{t("A quantidade será aplicada ao próximo produto que adicionares.")}</p>
+            <button type="button" className="quantity-modal-done" onClick={() => { setShowQuantityModal(false); requestAnimationFrame(() => productNameInputRef.current?.focus({ preventScroll: true })); }}>{t("Confirmar")}</button>
+          </section>
+        </div>,
+        document.body
+      )}
 
       {!showOnboarding && !shoppingMode && activeTab === "shopping" && activeItems.length > 0 && showShoppingNudge && !itemsSectionVisible && !addPanelExpanded && <button type="button" className="shopping-list-floating-nudge" onClick={() => document.querySelector(".items-section")?.scrollIntoView({behavior:"smooth",block:"start"})}><span className="shopping-nudge-icon"><ShoppingBasket size={25}/></span><span className="shopping-nudge-copy"><strong>{items.length} {t("produtos na lista")}</strong><small>{t("Desliza para ver")}</small></span><span className="shopping-nudge-divider"/><span className="shopping-nudge-chevron"><ChevronDown size={24}/><ChevronDown size={24}/></span><span className="shopping-nudge-close" aria-label={t("Fechar aviso")} onClick={e => {e.stopPropagation();setShowShoppingNudge(false);}}><X size={17}/></span></button>}
 
