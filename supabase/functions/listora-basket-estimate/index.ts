@@ -170,15 +170,28 @@ serve(async (req) => {
           tools: [{ google_search: {} }],
           generationConfig: {
             responseMimeType: "application/json",
+            maxOutputTokens: 16000,
             thinkingConfig: { thinkingLevel: "medium" }
           }
         }),
-        signal: AbortSignal.timeout(45000)
+        signal: AbortSignal.timeout(90000)
       }
     );
 
     const payload = await ai.json().catch(() => ({}));
-    if (!ai.ok) return json({ error: payload?.error?.message || "O serviço de estimativa devolveu um erro." }, 502);
+    if (!ai.ok) {
+      const upstreamStatus = ai.status;
+      console.error("Gemini basket estimate failed:", { status: upstreamStatus, message: payload?.error?.message || "Unknown upstream error" });
+      if (upstreamStatus === 429) {
+        return json({ error: "O serviço de pesquisa de preços está temporariamente sobrecarregado. Aguarda um pouco e tenta novamente.", code: "gemini_rate_limited" }, 503);
+      }
+      return json({
+        error: upstreamStatus >= 500
+          ? "O serviço de pesquisa de preços está temporariamente indisponível. Tenta novamente dentro de alguns instantes."
+          : "O serviço de pesquisa de preços rejeitou o pedido. Revê os produtos e tenta novamente.",
+        code: "gemini_upstream_error"
+      }, 502);
+    }
     const candidate = payload?.candidates?.[0];
     const raw = candidate?.content?.parts?.map((part: any) => part.text || "").join("") || "";
     let parsed: any;
@@ -305,7 +318,14 @@ serve(async (req) => {
       disclaimer: "Estimativa recolhida por IA. O valor apresentado pode não corresponder exatamente ao preço de catálogo ou incluir todos os descontos e promoções aplicáveis."
     });
   } catch (error) {
-    console.error("listora-basket-estimate error:", error);
-    return json({ error: "Não foi possível estimar o cabaz. Verifica a ligação e tenta novamente." }, 500);
+    const message = error instanceof Error ? error.message : String(error || "Unknown error");
+    const timedOut = /timed out|timeout|abort/i.test(message);
+    console.error("listora-basket-estimate error:", { message, name: error instanceof Error ? error.name : typeof error });
+    return json({
+      error: timedOut
+        ? "A pesquisa de preços demorou mais do que o esperado. Tenta novamente; não perdeste a tua lista."
+        : "Ocorreu um erro ao consultar os preços. Tenta novamente dentro de alguns instantes.",
+      code: timedOut ? "estimate_timeout" : "estimate_internal_error"
+    }, timedOut ? 504 : 500);
   }
 });

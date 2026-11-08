@@ -281,13 +281,25 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
         body: { items: cleanItems, countryCode, supermarkets: selected }
       });
       if (invokeError) {
-        if (invokeError.context?.status === 403) {
+        const status = invokeError.context?.status;
+        if (status === 403) {
           setShowPremiumPrompt(true);
           setFreeComparisonAvailable(false);
           setFreeComparisonUsed(true);
         }
-        const detail = await invokeError.context?.json?.().catch(() => null);
-        throw new Error(detail?.error || invokeError.message);
+        let detail = null;
+        try { detail = await invokeError.context?.clone?.().json(); } catch {}
+        const message = detail?.error || invokeError.message || "Não foi possível concluir a estimativa.";
+        const code = detail?.code;
+        if (status === 429 || code === "rate_limited") {
+          throw new Error(detail?.retryAfter
+            ? `A comparação está temporariamente limitada. Tenta novamente dentro de ${detail.retryAfter} segundos.`
+            : message);
+        }
+        if (status >= 500) {
+          throw new Error(message);
+        }
+        throw new Error(message);
       }
       if (data?.error) throw new Error(data.error);
       setResult(data);
