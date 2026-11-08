@@ -3590,3 +3590,24 @@ button { -webkit-tap-highlight-color: transparent; }
 .voice-listening-modal .voice-stop-button:disabled{opacity:.9;cursor:wait}
 
 @media(max-width:400px){.floating-add-panel .add-main{gap:6px}.floating-add-panel .inline-quantity-control{height:32px;padding:0 2px}.floating-add-panel .inline-quantity-button{width:20px;flex-basis:20px}.floating-add-panel .inline-quantity-value{min-width:13px;font-size:11px}.floating-add-panel .add-main .add-tool-button{width:36px;height:36px}}
+
+
+/* Compact quantity picker: keep the floating composer focused on product entry. */
+.quantity-picker-trigger{display:flex;align-items:center;justify-content:center;gap:5px;flex:0 0 auto;min-width:58px;height:38px;padding:0 9px;border:1px solid #dce6d8;border-radius:12px;background:#f5f8f2;color:var(--green-dark);touch-action:manipulation}
+.quantity-picker-trigger span{font-size:10px;color:#788678}
+.quantity-picker-trigger strong{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.quantity-modal-backdrop{position:fixed;inset:0;z-index:120;background:#17231c70;display:grid;place-items:center;padding:20px;overscroll-behavior:contain}
+.quantity-modal{width:min(100%,340px);padding:22px;border:1px solid #e2e9df;border-radius:23px;background:#fffefa;box-shadow:0 24px 70px #101b1033;color:var(--ink)}
+.quantity-modal-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.quantity-modal-heading span{font-size:10px;letter-spacing:1.3px;font-weight:800;color:var(--green)}
+.quantity-modal-heading h2{margin:5px 0 0;font-family:Manrope,sans-serif;font-size:21px;letter-spacing:-.6px}
+.quantity-modal-heading>button{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border:1px solid #e5e9e1;border-radius:11px;background:#fffefa;color:#667367}
+.quantity-modal-stepper{display:flex;align-items:center;justify-content:center;gap:22px;margin:26px 0 18px}
+.quantity-modal-stepper button{width:54px;height:54px;display:grid;place-items:center;border:1px solid #d9e5d8;border-radius:17px;background:#edf4eb;color:var(--green-dark);touch-action:manipulation}
+.quantity-modal-stepper button:disabled{opacity:.35}
+.quantity-modal-stepper input{width:76px;border:0;background:transparent;color:var(--ink);font-size:32px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;outline:none}
+.quantity-modal-stepper input::-webkit-inner-spin-button,.quantity-modal-stepper input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.quantity-modal-stepper input[type=number]{-moz-appearance:textfield}
+.quantity-modal>p{margin:0 0 18px;text-align:center;color:#7c877c;font-size:12px;line-height:1.5}
+.quantity-modal-done{width:100%;min-height:46px;border:0;border-radius:13px;background:var(--green);color:white;font-size:13px;font-weight:800}
+@media(max-width:390px){.quantity-picker-trigger{min-width:52px;padding:0 7px;gap:4px}.quantity-picker-trigger span{font-size:9px}.quantity-picker-trigger strong{font-size:12px}}
