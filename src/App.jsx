@@ -1176,12 +1176,14 @@ export default function App() {
         trackEvent("family_invite_shared", { method: "native_share" });
       } else {
         await navigator.clipboard.writeText(message);
+        trackEvent("family_invite_shared", { method: "copy_link" });
         notify(t("Link de convite copiado!"));
       }
     } catch (err) {
       if (err?.name === "AbortError") return;
       try {
         await navigator.clipboard.writeText(listCode);
+        trackEvent("family_invite_shared", { method: "copy_code" });
         notify(t("Código da lista copiado!"));
       } catch {
         window.prompt(t("Copia este link e partilha com a família:"), inviteUrl);
