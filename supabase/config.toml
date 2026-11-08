@@ -1,3 +1,5 @@
 [functions.stripe-webhook]
 verify_jwt = false
-\n[functions.premium-demo-manage]\nverify_jwt = true\n
+
+[functions.premium-demo-manage]
+verify_jwt = true
