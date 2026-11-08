@@ -319,6 +319,9 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
         let detail = null;
         try { detail = await invokeError.context?.clone?.().json(); } catch {}
         const message = detail?.error || invokeError.message || "Não foi possível concluir a estimativa.";
+        const diagnostic = detail?.stage
+          ? " (fase: " + detail.stage + (detail.requestId ? " · ref. " + String(detail.requestId).slice(0, 8) : "") + ")"
+          : "";
         const code = detail?.code;
         if (status === 429 || code === "rate_limited") {
           throw new Error(detail?.retryAfter
@@ -326,7 +329,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
             : message);
         }
         if (status >= 500) {
-          throw new Error(message);
+          throw new Error(message + diagnostic);
         }
         throw new Error(message);
       }
