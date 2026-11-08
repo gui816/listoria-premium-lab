@@ -59,6 +59,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
   const [showPremiumPrompt, setShowPremiumPrompt] = useState(false);
   const [freeComparisonAvailable, setFreeComparisonAvailable] = useState(false);
   const [freeComparisonUsed, setFreeComparisonUsed] = useState(false);
+  const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   const estimateAbortController = useRef(null);
 
   useEffect(() => () => {
@@ -267,6 +268,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
   };
 
   const cancelEstimate = () => {
+    setShowCancelConfirmation(false);
     const controller = estimateAbortController.current;
     if (controller) {
       controller.abort();
@@ -296,6 +298,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
         }
       } catch {}
     }
+    setShowCancelConfirmation(false);
     const controller = new AbortController();
     estimateAbortController.current = controller;
     setBusy(true);
@@ -446,8 +449,20 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
       <section className={"basket-estimate-modal" + (busy ? " is-processing" : "")} role="dialog" aria-modal="true" aria-labelledby="basket-estimate-title">
         <header className="basket-estimate-modal-header">
           <div><span className="basket-estimate-modal-kicker"><Sparkles size={14}/> {busy ? "A COMPARAR O TEU CABAZ" : "COMPARAÇÃO INTELIGENTE"}</span><h2 id="basket-estimate-title">{busy ? "Estamos a analisar o teu cabaz" : "Quanto poderá custar o teu cabaz?"}</h2><p>{cleanItems.length} produtos na lista{busy ? " · " + selected.length + (selected.length === 1 ? " supermercado" : " supermercados") : ""}</p><p className="basket-estimate-quality-hint">A IA procura produtos e preços, compara opções equivalentes e assinala quando não encontra dados fiáveis. Os valores são estimativas, não preços garantidos.</p></div>
-          <button type="button" className="basket-estimate-modal-close" onClick={busy ? cancelEstimate : () => setOpen(false)} aria-label={busy ? "Cancelar estimativa" : "Fechar comparação"}><X size={20}/></button>
+          <button type="button" className="basket-estimate-modal-close" onClick={busy ? () => setShowCancelConfirmation(true) : () => setOpen(false)} aria-label={busy ? "Pedir para cancelar estimativa" : "Fechar comparação"}><X size={20}/></button>
         </header>
+
+        {busy && showCancelConfirmation && <div className="basket-estimate-cancel-confirm-backdrop">
+          <section className="basket-estimate-cancel-confirm" role="alertdialog" aria-modal="true" aria-labelledby="basket-estimate-cancel-title" aria-describedby="basket-estimate-cancel-description">
+            <div className="basket-estimate-cancel-confirm-icon"><X size={22}/></div>
+            <h3 id="basket-estimate-cancel-title">Interromper a comparação?</h3>
+            <p id="basket-estimate-cancel-description">A pesquisa de preços ainda está em curso. Se interromperes agora, os resultados desta comparação não serão apresentados.</p>
+            <div className="basket-estimate-cancel-confirm-actions">
+              <button type="button" className="basket-estimate-cancel-keep" onClick={() => setShowCancelConfirmation(false)}>Continuar a analisar</button>
+              <button type="button" className="basket-estimate-cancel-accept" onClick={cancelEstimate}>Sim, interromper</button>
+            </div>
+          </section>
+        </div>}
 
         <div className="basket-estimate-modal-content">
           <div className="basket-estimate-location-row">
