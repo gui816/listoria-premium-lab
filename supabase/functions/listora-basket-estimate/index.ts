@@ -15,6 +15,7 @@ serve(async (req) => {
 
   const requestId = crypto.randomUUID();
   let stage = "configuration";
+  let diagnosticCode: string | null = null;
   try {
     const geminiKey = Deno.env.get("GEMINI_API_KEY");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -43,8 +44,21 @@ serve(async (req) => {
       order: "created_at.desc",
       limit: "1"
     }).toString();
+    stage = "subscription_check_query";
     const subscriptionResponse = await fetch(subscriptionUrl, { headers: adminHeaders, signal: AbortSignal.timeout(10000) });
-    if (!subscriptionResponse.ok) throw new Error("Não foi possível validar a subscrição Premium.");
+    if (!subscriptionResponse.ok) {
+      const failure = await subscriptionResponse.json().catch(() => ({}));
+      diagnosticCode = String(failure?.code || ("HTTP_" + subscriptionResponse.status)).slice(0, 40);
+      console.error("Premium subscription lookup failed:", {
+        requestId,
+        status: subscriptionResponse.status,
+        code: diagnosticCode,
+        message: String(failure?.message || "Unknown PostgREST error").slice(0, 240),
+        details: String(failure?.details || "").slice(0, 240),
+        hint: String(failure?.hint || "").slice(0, 160)
+      });
+      throw new Error("Não foi possível validar a subscrição Premium.");
+    }
     const subscriptions = await subscriptionResponse.json();
     const subscription = subscriptions?.[0];
     const now = Date.now();
@@ -343,14 +357,15 @@ serve(async (req) => {
     }
     const message = error instanceof Error ? error.message : String(error || "Unknown error");
     const timedOut = /timed out|timeout|abort/i.test(message);
-    console.error("listora-basket-estimate error:", { requestId, stage, message, name: error instanceof Error ? error.name : typeof error });
+    console.error("listora-basket-estimate error:", { requestId, stage, diagnosticCode, message, name: error instanceof Error ? error.name : typeof error });
     return json({
       error: timedOut
         ? "A pesquisa de preços demorou mais do que o esperado. Tenta novamente; não perdeste a tua lista."
         : "Ocorreu um erro ao consultar os preços. Tenta novamente dentro de alguns instantes.",
       code: timedOut ? "estimate_timeout" : "estimate_internal_error",
       requestId,
-      stage
+      stage,
+      diagnosticCode
     }, timedOut ? 504 : 500);
   }
 });
