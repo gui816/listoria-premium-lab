@@ -259,15 +259,20 @@ serve(async (req) => {
 
     const successfulRuns = storeRuns.filter((run: any) => run.parsed && Array.isArray(run.parsed?.stores) && run.parsed.stores.length > 0);
     const parsed: any = {
-      stores: [
-        ...successfulRuns.flatMap((run: any) => Array.isArray(run.parsed?.stores) ? run.parsed.stores : []),
-        ...storeRuns.filter((run: any) => !run.parsed).map((run: any) => ({
+      stores: storeRuns.map((run: any) => {
+        const returnedStores = Array.isArray(run.parsed?.stores) ? run.parsed.stores : [];
+        const matchingStore = returnedStores.find((entry: any) =>
+          String(entry?.name || "").trim().toLocaleLowerCase() === run.supermarket.toLocaleLowerCase()
+        );
+        return matchingStore || {
           name: run.supermarket,
           status: "insufficient_data",
-          notes: "Não foi possível concluir a pesquisa deste supermercado. Os restantes resultados foram preservados.",
+          notes: run.errorCode
+            ? "Não foi possível concluir a pesquisa deste supermercado. Os restantes resultados foram preservados."
+            : "A pesquisa não devolveu um resultado válido para este supermercado.",
           items: []
-        }))
-      ]
+        };
+      })
     };
     const candidate = {
       groundingMetadata: {
