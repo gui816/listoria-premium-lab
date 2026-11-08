@@ -74,10 +74,14 @@ export function trackPageView() {
   if (path === pageViewKey) return;
   pageViewKey = path;
   const attribution = getCampaignAttribution();
-  if (window.gtag) window.gtag("event", "page_view", { page_location: window.location.href, page_title: document.title, ...attribution });
+  const safeUrl = new URL(window.location.href);
+  for (const key of [...safeUrl.searchParams.keys()]) if (!key.startsWith("utm_") && key !== "pagina") safeUrl.searchParams.delete(key);
+  if (window.gtag) window.gtag("event", "page_view", { page_location: safeUrl.toString(), page_title: document.title, ...attribution });
   if (window.fbq) window.fbq("track", "PageView");
   const campaign = String(attribution.utm_campaign || "").toLowerCase();
-  if (window.gtag && Object.keys(attribution).some((key) => key.startsWith("utm_"))) window.gtag("event", "campaign_landing", {
+  const currentParams = new URLSearchParams(window.location.search);
+  const hasCurrentCampaign = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"].some((key) => currentParams.has(key));
+  if (window.gtag && hasCurrentCampaign) window.gtag("event", "campaign_landing", {
     campaign_destination: window.location.hash.includes("comparar") ? "smart_comparison" : (window.location.hash.includes("descobrir") || window.location.hash.includes("funcionalidades") || new URLSearchParams(window.location.search).get("pagina") === "funcionalidades" ? "features" : "home"),
     campaign_name: attribution.utm_campaign || "",
     campaign_source: attribution.utm_source || "",
@@ -93,7 +97,7 @@ export function trackEvent(eventName, parameters = {}) {
   const payload = { ...parameters, ...attribution };
   if (window.gtag) window.gtag("event", eventName, payload);
   if (window.fbq) {
-    const standardEvents = { list_created: "Lead", family_list_joined: "CompleteRegistration", begin_checkout: "InitiateCheckout" };
+    const standardEvents = { list_created: "Lead", begin_checkout: "InitiateCheckout" };
     const standardEvent = standardEvents[eventName];
     if (standardEvent) window.fbq("track", standardEvent, payload);
     else window.fbq("trackCustom", eventName, payload);
