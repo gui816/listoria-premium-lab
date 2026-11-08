@@ -1690,7 +1690,7 @@ export default function App() {
         </section>
       </div>}
       {hasAnalyticsProviders && analyticsConsent === "unknown" && <aside className="analytics-consent-banner" role="dialog" aria-label={t("Preferências de privacidade")}>
-        <div className="analytics-consent-copy"><strong>{t("A tua privacidade importa.")}</strong><p>{t("Com a tua autorização, usamos cookies de análise para perceber que campanhas trazem utilizadores e melhorar a Listora. Não recolhemos nomes, produtos nem conteúdo das listas.")} <a href="/privacy" target="_blank" rel="noreferrer">{t("Saber mais")}</a></p></div>
+        <div className="analytics-consent-copy"><strong>{t("A tua privacidade importa.")}</strong><p>{t("Com a tua autorização, usamos cookies de análise para perceber que campanhas trazem utilizadores e melhorar a Listora. Não recolhemos nomes, produtos nem conteúdo das listas.")}</p></div>
         <div className="analytics-consent-actions"><button type="button" className="analytics-consent-reject" onClick={() => chooseAnalyticsConsent("denied")}>{t("Rejeitar")}</button><button type="button" className="analytics-consent-accept" onClick={() => chooseAnalyticsConsent("granted")}>{t("Aceitar análise")}</button></div>
       </aside>}
       {hasAnalyticsProviders && analyticsConsent !== "unknown" && <button type="button" className="analytics-privacy-button" onClick={() => setShowPrivacySettings(value => !value)} aria-label={t("Gerir privacidade")} title={t("Gerir privacidade")}><ShieldCheck size={17}/></button>}
