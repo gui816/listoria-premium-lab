@@ -77,10 +77,11 @@ export function trackPageView() {
   if (window.gtag) window.gtag("event", "page_view", { page_location: window.location.href, page_title: document.title, ...attribution });
   if (window.fbq) window.fbq("track", "PageView");
   const campaign = String(attribution.utm_campaign || "").toLowerCase();
-  if (window.gtag) window.gtag("event", "campaign_landing", {
+  if (window.gtag && Object.keys(attribution).some((key) => key.startsWith("utm_"))) window.gtag("event", "campaign_landing", {
     campaign_destination: window.location.hash.includes("comparar") ? "smart_comparison" : (window.location.hash.includes("descobrir") || window.location.hash.includes("funcionalidades") || new URLSearchParams(window.location.search).get("pagina") === "funcionalidades" ? "features" : "home"),
     campaign_name: attribution.utm_campaign || "",
-    campaign_source: attribution.utm_source || ""
+    campaign_source: attribution.utm_source || "",
+    campaign_content: attribution.utm_content || ""
   });
   if (window.fbq && (window.location.hash || new URLSearchParams(window.location.search).has("pagina"))) window.fbq("track", "ViewContent");
 }
