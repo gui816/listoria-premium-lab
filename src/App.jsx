@@ -268,7 +268,7 @@ export default function App() {
   const [recentlyAddedItemId, setRecentlyAddedItemId] = useState("");
   const addedFeedbackTimerRef = useRef(null);
   const [showShare, setShowShare] = useState(false);
-  const [showDiscover, setShowDiscover] = useState(() => window.location.hash === "#descobrir");
+  const [showDiscover, setShowDiscover] = useState(() => window.location.hash === "#descobrir" || window.location.hash === "#funcionalidades" || new URLSearchParams(window.location.search).get("pagina") === "funcionalidades");
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [showGuidedTourIntro, setShowGuidedTourIntro] = useState(false);
@@ -472,7 +472,7 @@ export default function App() {
   }, [listCode]);
 
   useEffect(() => {
-    const syncDiscoverRoute = () => setShowDiscover(window.location.hash === "#descobrir");
+    const syncDiscoverRoute = () => setShowDiscover(window.location.hash === "#descobrir" || window.location.hash === "#funcionalidades" || new URLSearchParams(window.location.search).get("pagina") === "funcionalidades");
     window.addEventListener("hashchange", syncDiscoverRoute);
     window.addEventListener("popstate", syncDiscoverRoute);
     return () => { window.removeEventListener("hashchange", syncDiscoverRoute); window.removeEventListener("popstate", syncDiscoverRoute); };
@@ -491,8 +491,10 @@ export default function App() {
     setGuidedTourStep(null);
     setShowGuidedTourIntro(false);
   }
-  function openDiscover() { setShowDiscover(true); if (window.location.hash !== "#descobrir") window.history.pushState({ page: "discover" }, "", "#descobrir"); window.scrollTo({ top: 0, behavior: "smooth" }); }
-  function closeDiscover() { setShowDiscover(false); if (window.location.hash === "#descobrir") window.history.pushState({}, "", window.location.pathname + window.location.search); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  function openDiscover() { setShowDiscover(true); if (window.location.hash !== "#descobrir") window.history.pushState({ page: "discover" }, "", `${window.location.pathname}${window.location.search}#descobrir`); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  function closeDiscover() { setShowDiscover(false); if (window.location.hash === "#descobrir" || window.location.hash === "#funcionalidades" || new URLSearchParams(window.location.search).has("pagina")) { const url = new URL(window.location.href); url.hash = ""; url.searchParams.delete("pagina"); window.history.pushState({}, "", `${url.pathname}${url.search}`); } window.scrollTo({ top: 0, behavior: "smooth" }); }
+  function startFromDiscover() { closeDiscover(); window.setTimeout(() => document.getElementById("create-list-card")?.scrollIntoView({ behavior: "smooth", block: "center" }), 90); }
+  function scrollToCreateList() { document.getElementById("create-list-card")?.scrollIntoView({ behavior: "smooth", block: "center" }); }
 
   async function shareLandingPage() {
     const url = `${window.location.origin}${window.location.pathname}`;
@@ -1278,7 +1280,13 @@ export default function App() {
         <div className="eyebrow"><Sparkles size={15}/>{t("CONHECE A LISTORA")}</div>
         <h1>{t("As compras da família.")}<br/><span>{t("Mais simples e inteligentes.")}</span></h1>
         <p className="discover-intro">{t("A Listora ajuda a organizar as compras de toda a família num só lugar: da lista partilhada às fotografias, voz e faturas, com ajuda da inteligência artificial.")}</p>
-        <button type="button" className="primary-button discover-cta" onClick={closeDiscover}>{t("Criar a minha lista")}<ArrowRight size={18}/></button>
+        <button type="button" className="primary-button discover-cta" onClick={startFromDiscover}>{t("Criar lista grátis")}<ArrowRight size={18}/></button>
+        <div className="discover-section-heading"><span className="discover-kicker">{t("O ESSENCIAL PARA A FAMÍLIA")}</span><h2>{t("Tudo começa numa lista partilhada.")}</h2><p>{t("Organiza as compras em conjunto e adiciona produtos da forma que te for mais simples.")}</p></div>
+        <div className="discover-feature-grid discover-primary-features">
+          <article className="discover-feature"><div className="discover-art"><div className="discover-family-bubbles"><span>G</span><span>M</span><span>+</span></div><div className="discover-sync-line"><Check size={15}/>{t("Sincronizada")}</div></div><span className="discover-kicker">{t("EM FAMÍLIA")}</span><h2>{t("Todos contribuem para a mesma lista.")}</h2><p>{t("Convida a família e mantém a lista partilhada atualizada para que todos saibam o que falta comprar.")}</p></article>
+          <article className="discover-feature"><div className="discover-art"><div className="discover-art-paper"><span/><span/><span/><span/></div><span className="discover-art-icon"><Camera size={25}/></span><span className="discover-ai-tag"><Sparkles size={12}/> IA</span></div><span className="discover-kicker">{t("FOTOGRAFIA + IA")}</span><h2>{t("Uma fotografia. Uma lista pronta a rever.")}</h2><p>{t("Fotografa uma lista manuscrita, uma folha de papel ou um quadro. A inteligência artificial analisa a imagem e identifica os produtos para confirmares antes de adicionar.")}</p></article>
+          <article className="discover-feature"><div className="discover-art"><div className="discover-voice-orb"><Mic size={29}/></div><div className="discover-wave">{[10,18,28,16,34,21,13,26,17].map((h,i)=><i key={i} style={{height:h}}/>)}</div><span className="discover-ai-tag"><Sparkles size={12}/> IA</span></div><span className="discover-kicker">{t("VOZ + IA")}</span><h2>{t("Diz vários produtos de seguida.")}</h2><p>{t("Diz, por exemplo, «leite, pão e seis ovos». A inteligência artificial interpreta a voz e prepara os produtos para reveres e adicionares à lista.")}</p></article>
+        </div>
         <section className="discover-smart-comparison">
           <div className="discover-smart-copy">
             <span className="discover-kicker"><Sparkles size={13}/> {t("SMART COMPARISON · IA")}</span>
@@ -1290,6 +1298,7 @@ export default function App() {
               <span><Check size={14}/>{t("Percebe quando um produto é equivalente ou não tem correspondência fiável.")}</span>
             </div>
             <small>{t("Os valores são indicativos: dependem dos dados encontrados e devem ser confirmados junto do supermercado.")}</small>
+            <button type="button" className="discover-inline-cta" onClick={startFromDiscover}>{t("Experimentar comparação grátis")}<ArrowRight size={16}/></button>
           </div>
           <div className="discover-smart-visual" aria-label={t("Ilustração da comparação inteligente")}>
             <div className="discover-smart-visual-top"><span><Sparkles size={14}/> SMART COMPARISON</span><b>{t("A tua lista")}</b></div>
@@ -1312,22 +1321,23 @@ export default function App() {
           </div>
           <span className="discover-premium-price">1,99 € <small>/ mês</small></span>
         </section>
-        <div className="discover-feature-grid">
-          <article className="discover-feature"><div className="discover-art"><div className="discover-art-paper"><span/><span/><span/><span/></div><span className="discover-art-icon"><Camera size={25}/></span><span className="discover-ai-tag"><Sparkles size={12}/> IA</span></div><span className="discover-kicker">{t("FOTOGRAFIA + IA")}</span><h2>{t("Uma fotografia. Uma lista pronta a rever.")}</h2><p>{t("Fotografa uma lista manuscrita, uma folha de papel ou um quadro. A inteligência artificial analisa a imagem e identifica os produtos para confirmares antes de adicionar.")}</p></article>
-          <article className="discover-feature"><div className="discover-art"><div className="discover-voice-orb"><Mic size={29}/></div><div className="discover-wave">{[10,18,28,16,34,21,13,26,17].map((h,i)=><i key={i} style={{height:h}}/>)}</div><span className="discover-ai-tag"><Sparkles size={12}/> IA</span></div><span className="discover-kicker">{t("VOZ + IA")}</span><h2>{t("Diz vários produtos de seguida.")}</h2><p>{t("Diz, por exemplo, «leite, pão e seis ovos». A inteligência artificial interpreta a voz e prepara os produtos para reveres e adicionares à lista.")}</p></article>
-          <article className="discover-feature"><div className="discover-art"><div className="discover-receipt-art"><Receipt size={25}/><span/><span/><b>24,80 €</b></div><span className="discover-art-icon"><Camera size={22}/></span></div><span className="discover-kicker">{t("FATURAS")}</span><h2>{t("Guarda as faturas das compras.")}</h2><p>{t("Fotografa as faturas para as guardar na Listora e consultar mais tarde. Os dados que possam ser extraídos por reconhecimento automático devem ser revistos quando necessário.")}</p></article>
-          <article className="discover-feature"><div className="discover-art"><div className="discover-family-bubbles"><span>G</span><span>M</span><span>+</span></div><div className="discover-sync-line"><Check size={15}/>{t("Sincronizada")}</div></div><span className="discover-kicker">{t("EM FAMÍLIA")}</span><h2>{t("Todos contribuem para a mesma lista.")}</h2><p>{t("Convida a família e mantém a lista partilhada atualizada para que todos saibam o que falta comprar.")}</p></article>
+        <div className="discover-section-heading discover-secondary-heading"><span className="discover-kicker">{t("MAIS FORMAS DE SIMPLIFICAR")}</span><h2>{t("Pequenos detalhes que fazem a diferença.")}</h2><p>{t("Tudo o que ajuda a manter as compras e a rotina da família organizadas.")}</p></div>
+        <div className="discover-feature-grid discover-secondary-features">
           <article className="discover-feature"><div className="discover-art"><div className="discover-mini-list"><span><Check size={13}/>Leite</span><span><Check size={13}/>Pão</span><span className="discover-muted-item">○ Fruta</span></div><span className="discover-art-icon"><ShoppingBasket size={22}/></span></div><span className="discover-kicker">{t("NO SUPERMERCADO")}</span><h2>{t("Compra com mais foco.")}</h2><p>{t("Usa o modo supermercado para acompanhar o que já foi comprado e o que falta. É especialmente útil quando várias pessoas fazem compras em simultâneo, porque todos podem acompanhar a mesma lista atualizada.")}</p></article>
+          <article className="discover-feature"><div className="discover-art"><div className="discover-receipt-art"><Receipt size={25}/><span/><span/><b>24,80 €</b></div><span className="discover-art-icon"><Camera size={22}/></span></div><span className="discover-kicker">{t("FATURAS")}</span><h2>{t("Guarda as faturas das compras.")}</h2><p>{t("Fotografa as faturas para as guardar na Listora e consultar mais tarde. Os dados que possam ser extraídos por reconhecimento automático devem ser revistos quando necessário.")}</p></article>
           <article className="discover-feature"><div className="discover-art"><div className="discover-repeat-icon"><Repeat2 size={34}/></div><div className="discover-saved-label"><FileText size={15}/>{t("Lista guardada")}</div></div><span className="discover-kicker">{t("ROTINAS MAIS SIMPLES")}</span><h2>{t("Repete compras habituais.")}</h2><p>{t("Guarda listas reutilizáveis e recupera compras frequentes sem ter de começar sempre do zero.")}</p></article>
         </div>
+
         <section className="discover-ai-note"><div className="discover-ai-note-icon"><Sparkles size={22}/></div><div><h2>{t("Inteligência artificial com confirmação tua.")}</h2><p>{t("A IA ajuda a interpretar imagens e voz, mas pode cometer erros. Revê os resultados antes de os adicionares à lista ou utilizares informação extraída de uma fatura.")}</p></div></section>
-        <section className="discover-bottom-cta"><span className="eyebrow"><Leaf size={15}/>{t("MAIS SIMPLES, JUNTOS")}</span><h2>{t("Vamos organizar as compras?")}</h2><p>{t("Cria uma lista e começa a usar a Listora com a tua família.")}</p><button type="button" className="primary-button" onClick={closeDiscover}>{t("Criar a minha lista")}<ArrowRight size={18}/></button></section>
+        <section className="discover-bottom-cta"><span className="eyebrow"><Leaf size={15}/>{t("MAIS SIMPLES, JUNTOS")}</span><h2>{t("Vamos organizar as compras?")}</h2><p>{t("Cria uma lista e começa a usar a Listora com a tua família.")}</p><button type="button" className="primary-button" onClick={startFromDiscover}>{t("Criar lista grátis")}<ArrowRight size={18}/></button></section>
       </section> : <section className="welcome-content">
         <div className="welcome-hero-copy">
           <div className="eyebrow"><Leaf size={15}/> {t("MAIS SIMPLES, JUNTOS")}</div>
           <h1>{t("As compras da família.")}<br/><span>{t("Sem esquecimentos.")}</span></h1>
           <p className="welcome-copy">{t("Uma lista partilhada, sempre atualizada. Adiciona o que falta em casa e deixa o resto connosco.")}</p>
-          <button type="button" className="welcome-discover-card" onClick={openDiscover}><span className="welcome-discover-icon"><Sparkles size={22}/></span><span className="welcome-discover-copy"><strong>{t("Descobre tudo o que a Listora pode fazer")}</strong><small>{t("Fotografia e voz com IA, listas partilhadas, faturas e muito mais.")}</small></span><ArrowRight size={21} className="welcome-discover-arrow"/></button>
+          <button type="button" className="primary-button welcome-primary-cta" onClick={scrollToCreateList}>{t("Criar lista grátis")}<ArrowRight size={18}/></button>
+          <small className="welcome-cta-note">{t("Grátis para começar · Sem compromisso")}</small>
+          <button type="button" className="welcome-discover-card" onClick={openDiscover} aria-label={t("Conhece todas as funcionalidades da Listora")}><span className="welcome-discover-icon"><Sparkles size={22}/></span><span className="welcome-discover-copy"><strong>{t("Descobre tudo o que a Listora pode fazer")}</strong><small>{t("Fotografia e voz com IA, listas partilhadas, faturas e muito mais.")}</small></span><ArrowRight size={21} className="welcome-discover-arrow"/></button>
           <div className="welcome-benefits" aria-label={t("Principais vantagens da Listora")}>
             <span><Leaf size={17}/><b>{t("Simples e intuitivo")}</b></span>
             <span><Users size={17}/><b>{t("Gestão em família")}</b></span>
@@ -1338,7 +1348,7 @@ export default function App() {
           </div>
         </div>
         {initialInviteCode && !inviteDismissed && <section className="invite-confirmation" aria-live="polite"><div className="invite-confirmation-icon"><Users size={22}/></div><div className="invite-confirmation-copy"><span className="invite-eyebrow">{t("CONVITE PARA UMA LISTA")}</span><h2>{inviteLookupBusy ? t("A verificar o convite…") : inviteList ? <>{t("Foste convidado para")} «{inviteList.name}»</> : t("Foste convidado para uma lista partilhada")}</h2><p>{inviteList ? t("Queres entrar nesta lista e partilhar as compras com a família?") : t("O código do convite já está preenchido. Confirma o teu nome para entrar.")}</p>{inviteAccepted && <form className="invite-name-entry" onSubmit={e => { e.preventDefault(); setError(""); void joinList(e); }}><label htmlFor="invite-name">{t("O teu nome")}</label><input id="invite-name" value={memberNameInput} onChange={e => setMemberNameInput(e.target.value)} placeholder={t("Escreve o teu nome")} autoComplete="name" maxLength={60} required/><button type="submit" className="invite-accept-button" disabled={loading || inviteLookupBusy}>{loading ? t("A entrar…") : t("Confirmar e entrar")}</button>{error && <p className="invite-error" role="alert">{error}</p>}</form>}</div><div className="invite-actions">{!inviteAccepted && <><button type="button" className="invite-dismiss-button" onClick={() => { setInviteDismissed(true); setJoinCode(""); setInviteList(null); window.history.replaceState({}, "", window.location.pathname); }}>{t("Não, obrigado")}</button><button type="button" className="invite-accept-button" disabled={inviteLookupBusy} onClick={() => setInviteAccepted(true)}>{t("Entrar na lista")}</button></>}</div></section>}
-        <div className={`welcome-card ${initialInviteCode && !inviteDismissed ? "invite-mode" : ""} ${initialInviteCode && !inviteDismissed ? "invite-create-hidden" : ""}`}>
+        <div id="create-list-card" className={`welcome-card ${initialInviteCode && !inviteDismissed ? "invite-mode" : ""} ${initialInviteCode && !inviteDismissed ? "invite-create-hidden" : ""}`}>
           <div className="card-heading"><span className="card-icon"><Plus size={19}/></span><div><h2>{t("Criar uma lista de compras")}</h2><p>{t("Começa uma lista e convida a família.")}</p></div></div>
           <form onSubmit={createList} className={`create-form ${initialInviteCode && !inviteDismissed ? "create-form-secondary" : ""}`}>
             <label htmlFor="member-name">{t("O teu nome")}</label><input id="member-name" value={memberNameInput} onChange={e => setMemberNameInput(e.target.value)} maxLength={60} placeholder={t("Ex.: Guilherme")} required autoComplete="name"/>
