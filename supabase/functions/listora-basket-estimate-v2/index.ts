@@ -255,7 +255,7 @@ serve(async (req) => {
           groundingChunks: []
         };
       }
-    }))));
+    })));
 
     const successfulRuns = storeRuns.filter((run: any) => run.parsed && Array.isArray(run.parsed?.stores) && run.parsed.stores.length > 0);
     const parsed: any = {
@@ -304,7 +304,7 @@ serve(async (req) => {
     }
 
 
-    const known = new Map(stores.map((store: any) => [String(store.name).toLocaleLowerCase(), store]));
+    const known = new Map<string, any>(stores.map((store: any) => [String(store.name).toLocaleLowerCase(), store] as [string, any]));
     const results = (Array.isArray(parsed?.stores) ? parsed.stores : []).map((estimate: any) => {
       const name = String(estimate?.name || "").trim();
       const store = known.get(name.toLocaleLowerCase());
@@ -425,7 +425,7 @@ serve(async (req) => {
       freeTrialUsed,
       disclaimer: "Estimativa recolhida por IA. O valor apresentado pode não corresponder exatamente ao preço de catálogo ou incluir todos os descontos e promoções aplicáveis."
     });
-  } catch (error) {
+  } catch (error: any) {
     const message = error instanceof Error ? error.message : String(error || "Unknown error");
     const timedOut = /timed out|timeout|abort/i.test(message);
     console.error("listora-basket-estimate error:", { message, name: error instanceof Error ? error.name : typeof error });
