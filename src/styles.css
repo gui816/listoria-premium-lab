@@ -3563,3 +3563,14 @@ button { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   .welcome-benefits > .welcome-benefit-featured { transition: none; }
 }
+
+/* Keep the voice dialog open while AI turns the transcript into list items. */
+.voice-listening-modal .modal-close:disabled{opacity:.35;cursor:default}
+.voice-listening-icon.is-processing{background:#edf4e9;color:#286d4c;animation:none;box-shadow:0 0 0 10px #eaf3e9}
+.voice-listening-pill.is-processing{background:#f0f4e9;color:#54734d}
+.voice-listening-pill.is-processing>span{background:#8aab6f;box-shadow:0 0 0 4px #8aab6f22}
+.voice-transcript-panel{display:flex;flex-direction:column;gap:8px;width:100%;padding:15px;border:1px solid #e2eadf;border-radius:16px;background:#f7f9f4;text-align:left;color:#34483a}
+.voice-transcript-panel>small{font-size:11px;color:#78877b;font-weight:650}
+.voice-transcript-panel>strong{font-size:15px;line-height:1.45;font-weight:700;overflow-wrap:anywhere}
+.voice-processing-note{display:flex;align-items:center;justify-content:center;gap:8px;padding-top:8px;border-top:1px solid #e5ece2;color:#477553;font-size:12px;font-weight:650}
+.voice-listening-modal .voice-stop-button:disabled{opacity:.9;cursor:wait}
