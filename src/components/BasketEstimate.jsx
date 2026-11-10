@@ -92,15 +92,16 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
 
   useEffect(() => {
     let active = true;
-    if (!supabase) return () => { active = false; };
+    if (!supabase || !session?.access_token) return () => { active = false; };
     supabase.functions.invoke("premium-status", { body: {} }).then(({ data, error: statusError }) => {
       if (active && !statusError) {
-        setFreeComparisonAvailable(Boolean(data?.freeComparisonAvailable));
-        setFreeComparisonUsed(Boolean(data?.freeComparisonUsed));
+        const premiumActive = Boolean(data?.isPremium);
+        setFreeComparisonAvailable(!premiumActive && Boolean(data?.freeComparisonAvailable));
+        setFreeComparisonUsed(!premiumActive && Boolean(data?.freeComparisonUsed));
       }
     }).catch(() => {});
     return () => { active = false; };
-  }, []);
+  }, [session?.access_token]);
 
   useEffect(() => {
     let active = true;
