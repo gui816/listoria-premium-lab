@@ -133,6 +133,8 @@ serve(async (req) => {
       "Brand, variety, fat percentage, dietary type, origin, preparation, freshness/frozen status and pack size are meaningful attributes when present in the requested name. Preserve them in matching.",
       "Do not assume the same product or price exists in every supermarket. Match each supermarket separately. Store price positioning may inform a cautious estimate, but must never override product equivalence.",
       "",
+      "TIME BUDGET: Work efficiently and avoid exhaustive searches. Use focused searches for the exact item and, when needed, one strong equivalent or a small set of genuinely comparable products. Do not spend disproportionate time on one difficult item; move on and use a responsible comparable-based estimate only when real supporting evidence exists.",
+      "The response must prioritize completing the full basket within the available request time, but NEVER lower evidence standards, invent a product/source/price, or convert insufficient evidence into a fabricated estimate. If evidence is insufficient, return no_reliable_match for that item and continue with the remaining items.",
       "PRICE ESTIMATION AND TRANSPARENCY:",
       "Prefer current prices found through Google Search on the selected supermarket's official website. Distinguish observed prices from estimates. Never present an estimated price as a verified price and do not assume promotions or loyalty discounts apply.",
       "For exact or similar products with an observed price, use estimationMethod=observed_price. For a similar substitute whose price is observed, use estimationMethod=similar_product_price. For a requested item priced from other actual comparable products, use matchType=comparable_estimate and estimationMethod=comparable_products. Set estimationBasis to a concise explanation naming the comparable product(s), observed reference prices and normalized unit basis. Set matchedProductName to null when no actual substitute product was identified.",
@@ -167,6 +169,10 @@ serve(async (req) => {
     // live Google Search grounding, model, thinking level and output schema as control A.
     // This keeps failures and latency independent per retailer.
     const comparisonStartedAt = Date.now();
+    // Reserve time for response normalization and free-trial/cohort bookkeeping.
+    // Gemini Search is the expensive phase, so enforce a hard budget in code.
+    const GEMINI_TIME_BUDGET_MS = 35_000;
+    const geminiDeadlineAt = comparisonStartedAt + GEMINI_TIME_BUDGET_MS;
     const storePayloads = stores.map((store: any) => ({
       name: store.name,
       website: store.website,
@@ -187,6 +193,16 @@ serve(async (req) => {
       }
     };
     const storeRuns = await Promise.all(stores.map((store: any, index: number) => withConcurrency(async () => {
+      const remainingBudgetMs = geminiDeadlineAt - Date.now();
+      if (remainingBudgetMs <= 0) {
+        return {
+          supermarket: store.name,
+          durationMs: 0,
+          errorCode: "deadline_exceeded",
+          parsed: null,
+          groundingChunks: []
+        };
+      }
       const storePayload = storePayloads[index];
       const storePrompt = prompt.replace(
         "Selected supermarkets: " + JSON.stringify(storePayloads),
@@ -208,7 +224,8 @@ serve(async (req) => {
                 thinkingConfig: { thinkingLevel: "medium" }
               }
             }),
-            signal: AbortSignal.any([req.signal, AbortSignal.timeout(65000)])
+            // Bound each in-flight request by the remaining shared budget.
+            signal: AbortSignal.any([req.signal, AbortSignal.timeout(Math.max(1, remainingBudgetMs))])
           }
         );
         const payload = await response.json().catch(() => ({}));
@@ -253,7 +270,9 @@ serve(async (req) => {
         return {
           supermarket: store.name,
           durationMs: Date.now() - startedAt,
-          errorCode: /timed out|timeout|abort/i.test(message) ? "timeout" : "network_error",
+          errorCode: Date.now() >= geminiDeadlineAt
+            ? "deadline_exceeded"
+            : /timed out|timeout|abort/i.test(message) ? "timeout" : "network_error",
           parsed: null,
           groundingChunks: []
         };
@@ -289,7 +308,10 @@ serve(async (req) => {
     };
     const experimentMetrics = {
       variant: "B_parallel_per_supermarket",
+      timeBudgetMs: GEMINI_TIME_BUDGET_MS,
       totalDurationMs: Date.now() - comparisonStartedAt,
+      timeBudgetExhausted: Date.now() >= geminiDeadlineAt,
+      partialResults: storeRuns.some((run: any) => Boolean(run.errorCode)),
       supermarkets: storeRuns.map((run: any) => ({
         name: run.supermarket,
         durationMs: run.durationMs,
@@ -299,7 +321,7 @@ serve(async (req) => {
     console.info("Basket estimate V2 metrics:", experimentMetrics);
     if (!successfulRuns.length) {
       const hasRateLimit = storeRuns.some((run: any) => run.errorCode === "rate_limited");
-      const hasTimeout = storeRuns.some((run: any) => run.errorCode === "timeout");
+      const hasTimeout = storeRuns.some((run: any) => ["timeout", "deadline_exceeded"].includes(run.errorCode));
       return json({
         error: hasRateLimit
           ? "A pesquisa de preços está temporariamente sobrecarregada. Tenta novamente dentro de alguns instantes."
