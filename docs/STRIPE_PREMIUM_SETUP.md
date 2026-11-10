@@ -104,3 +104,17 @@ supabase functions deploy listora-basket-estimate
 ## Important
 
 The app supports anonymous sessions. A guest can use the one free comparison; a permanent account is required before subscribing. Account linking should preserve the Supabase user UUID so the free trial and subscription remain attached to the same identity.
+
+
+## Permanent Premium allowlist
+
+To grant permanent Premium access to selected accounts without creating a Stripe subscription, configure the Supabase Edge Function secret (never commit allowlisted email addresses to source control):
+
+```bash
+supabase secrets set PREMIUM_ALLOWLIST_EMAILS="g.guerreiro844@gmail.com"
+supabase functions deploy premium-status
+supabase functions deploy listora-basket-estimate
+supabase functions deploy stripe-create-checkout
+```
+
+Multiple addresses can be separated by commas. Matching is case-insensitive and uses the authenticated Supabase user's verified session email. Allowlisted accounts bypass subscription and free-trial checks; normal abuse-protection rate limits still apply. Removing an address from the secret revokes the exemption on the next request.
