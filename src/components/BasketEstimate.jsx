@@ -305,7 +305,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
     trackEvent("basket_comparison_started", { item_count: cleanItems.length, supermarket_count: selected.length, country_code: countryCode, source: "smart_comparison" });
     setError("");
     try {
-      const { data, error: invokeError } = await supabase.functions.invoke("listora-basket-estimate", {
+      const { data, error: invokeError } = await supabase.functions.invoke("listora-basket-estimate-v2", {
         body: { items: cleanItems, countryCode, supermarkets: selected },
         signal: controller.signal
       });
