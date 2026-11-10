@@ -167,8 +167,8 @@ serve(async (req) => {
       }
     }
 
-    // V2 experiment: isolate each supermarket while preserving the same product matching,
-    // live Google Search grounding, model, thinking level and output schema as control A.
+    // V2 experiment: isolate each supermarket and use only Gemini 3.5 Flash-Lite,
+    // with Google Search grounding enabled and the existing product-matching output schema.
     // This keeps failures and latency independent per retailer.
     stage = "gemini_request";
     const comparisonStartedAt = Date.now();
@@ -214,7 +214,7 @@ serve(async (req) => {
       const startedAt = Date.now();
       try {
         const response = await fetch(
-          "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(geminiKey),
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=" + encodeURIComponent(geminiKey),
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -465,7 +465,7 @@ serve(async (req) => {
       currency: country.currency_code,
       currencyLocale: country.currency_locale,
       method: "ai_grounded_estimate",
-      model: "gemini-3.8-flash",
+      model: "gemini-3.5-flash-lite",
       experiment: experimentMetrics,
       groundingSources: (candidate?.groundingMetadata?.groundingChunks || [])
         .map((chunk: any) => chunk?.web)
