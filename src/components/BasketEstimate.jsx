@@ -39,6 +39,9 @@ const LOADING_MESSAGES = [
 ];
 
 export default function BasketEstimate({ items, language = "pt-PT", session }) {
+  // V2 is the default experiment arm; append ?estimateVariant=A to the URL to run the control.
+  const estimateVariant = new URLSearchParams(window.location.search).get("estimateVariant")?.toUpperCase() === "A" ? "A" : "B";
+  const estimateFunction = estimateVariant === "A" ? "listora-basket-estimate" : "listora-basket-estimate-v2";
   const [countries, setCountries] = useState([]);
   const [countryCode, setCountryCode] = useState(getStoredCountry);
   const [countrySource, setCountrySource] = useState(getStoredCountry() ? getStoredSource() : "unknown");
@@ -87,7 +90,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
   const itemSignature = useMemo(() => JSON.stringify(cleanItems), [cleanItems]);
   const cacheKey = useMemo(() => {
     if (!countryCode || !selected.length || !cleanItems.length) return "";
-    return "listora-basket-estimate-v4:" + countryCode + ":" + [...selected].sort().join("|") + ":" + itemSignature;
+    return "listora-basket-estimate-v5:" + estimateVariant + ":" + countryCode + ":" + [...selected].sort().join("|") + ":" + itemSignature;
   }, [countryCode, selected, itemSignature, cleanItems.length]);
 
   useEffect(() => {
@@ -302,10 +305,10 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
     const controller = new AbortController();
     estimateAbortController.current = controller;
     setBusy(true);
-    trackEvent("basket_comparison_started", { item_count: cleanItems.length, supermarket_count: selected.length, country_code: countryCode, source: "smart_comparison" });
+    trackEvent("basket_comparison_started", { item_count: cleanItems.length, supermarket_count: selected.length, country_code: countryCode, experiment_variant: estimateVariant, source: "smart_comparison" });
     setError("");
     try {
-      const { data, error: invokeError } = await supabase.functions.invoke("listora-basket-estimate", {
+      const { data, error: invokeError } = await supabase.functions.invoke(estimateFunction, {
         body: { items: cleanItems, countryCode, supermarkets: selected },
         signal: controller.signal
       });
@@ -337,7 +340,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
       }
       if (data?.error) throw new Error(data.error);
       setResult(data);
-      trackEvent("basket_comparison_completed", { item_count: cleanItems.length, supermarket_count: selected.length, country_code: countryCode, used_free_trial: Boolean(data?.freeTrialUsed) });
+      trackEvent("basket_comparison_completed", { item_count: cleanItems.length, supermarket_count: selected.length, country_code: countryCode, experiment_variant: estimateVariant, duration_ms: data?.experiment?.totalDurationMs, used_free_trial: Boolean(data?.freeTrialUsed) });
       setFreeComparisonAvailable(false);
       if (data?.freeTrialUsed) setFreeComparisonUsed(true);
       setShowPremiumPrompt(Boolean(data?.freeTrialUsed));
@@ -349,7 +352,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
       } catch {}
     } catch (estimateError) {
       if (controller.signal.aborted) return;
-      trackEvent("basket_comparison_failed", { country_code: countryCode, error_type: estimateError?.context?.status === 403 ? "premium_required" : "request_failed" });
+      trackEvent("basket_comparison_failed", { country_code: countryCode, experiment_variant: estimateVariant, error_type: estimateError?.context?.status === 403 ? "premium_required" : "request_failed" });
       if (estimateError?.context?.status === 403 || /premium_required/.test(estimateError?.message || "")) setShowPremiumPrompt(true);
       setError(estimateError.message || "Não foi possível estimar o cabaz.");
       if (estimateError?.context?.status === 403) {
