@@ -9,6 +9,8 @@ on:
       - "supabase/functions/listora-list-extract/**"
       - "supabase/functions/listora-basket-estimate/**"
       - "supabase/functions/listora-basket-estimate-v2/**"
+      - "supabase/functions/premium-status/**"
+      - "supabase/functions/stripe-create-checkout/**"
       - "supabase/config.toml"
       - ".github/workflows/deploy-supabase-function.yml"
   workflow_dispatch:
@@ -63,3 +65,21 @@ jobs:
           test -n "$SUPABASE_ACCESS_TOKEN" || (echo "Missing GitHub secret: SUPABASE_ACCESS_TOKEN" && exit 1)
           test -n "$SUPABASE_PROJECT_REF" || (echo "Missing GitHub secret: SUPABASE_PROJECT_REF" && exit 1)
           supabase functions deploy listora-basket-estimate-v2 --yes --remote="$SUPABASE_PROJECT_REF"
+
+      - name: Deploy Premium status function
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || (echo "Missing GitHub secret: SUPABASE_ACCESS_TOKEN" && exit 1)
+          test -n "$SUPABASE_PROJECT_REF" || (echo "Missing GitHub secret: SUPABASE_PROJECT_REF" && exit 1)
+          supabase functions deploy premium-status --yes --remote="$SUPABASE_PROJECT_REF"
+
+      - name: Deploy Stripe checkout function
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || (echo "Missing GitHub secret: SUPABASE_ACCESS_TOKEN" && exit 1)
+          test -n "$SUPABASE_PROJECT_REF" || (echo "Missing GitHub secret: SUPABASE_PROJECT_REF" && exit 1)
+          supabase functions deploy stripe-create-checkout --yes --remote="$SUPABASE_PROJECT_REF"

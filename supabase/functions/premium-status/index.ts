@@ -28,6 +28,6 @@ serve(async(req)=>{
   const isPremium=isAllowlistedPremium || demoActive || Boolean(sub && (["active","trialing"].includes(sub.status)||grace||paidPeriod));
   const activeSubscription=isAllowlistedPremium?{plan_key:"monthly",status:"active",current_period_end:null,cancel_at_period_end:false,past_due_grace_until:null}:(demoActive?{...demoSub,plan_key:"monthly"}:sub);
   const isDemo=Boolean(demoSub);
-  return json({isPremium,isAllowlistedPremium,requiresAccount:user.is_anonymous,isDemo,demoMode:!Deno.env.get("STRIPE_SECRET_KEY"),freeComparisonAvailable:!isPremium&&!trial,freeComparisonUsed:Boolean(trial),subscription:activeSubscription?{plan:activeSubscription.plan_key||"monthly",status:activeSubscription.status,currentPeriodEnd:activeSubscription.current_period_end,cancelAtPeriodEnd:activeSubscription.cancel_at_period_end,graceUntil:activeSubscription.past_due_grace_until}:null});
+  return json({isPremium,isAllowlistedPremium,requiresAccount:user.is_anonymous,isDemo,demoMode:!Deno.env.get("STRIPE_SECRET_KEY"),freeComparisonAvailable:!isPremium&&!trial,freeComparisonUsed:!isPremium&&Boolean(trial),subscription:activeSubscription?{plan:activeSubscription.plan_key||"monthly",status:activeSubscription.status,currentPeriodEnd:activeSubscription.current_period_end,cancelAtPeriodEnd:activeSubscription.cancel_at_period_end,graceUntil:activeSubscription.past_due_grace_until}:null});
  }catch(error){console.error("premium-status:",error);return json({error:"Não foi possível consultar a subscrição."},500);}
 });
