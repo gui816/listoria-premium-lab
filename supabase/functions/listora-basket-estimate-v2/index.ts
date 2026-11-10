@@ -228,9 +228,13 @@ serve(async (req) => {
     const asNamedStores = (value: any) => Array.isArray(value?.stores) ? value.stores : [];
     const normalizeStoreName = (value: unknown) => String(value || "").trim().toLocaleLowerCase();
     const primaryByName = new Map<string, any>(
-      asNamedStores(primaryParsed).map((entry: any) => [normalizeStoreName(entry?.name), entry])
+      asNamedStores(primaryParsed).map((entry: any) => [normalizeStoreName(entry?.name), entry] as [string, any])
     );
-    const missingStores = stores.filter((store: any) => !primaryByName.has(normalizeStoreName(store.name)));
+    const hasAllRequestedItems = (entry: any) => Array.isArray(entry?.items) &&
+      basket.every((item: any) => entry.items.some((candidate: any) =>
+        String(candidate?.requestedName || candidate?.name || "").trim().toLocaleLowerCase() === item.name.toLocaleLowerCase()
+      ));
+    const missingStores = stores.filter((store: any) => !hasAllRequestedItems(primaryByName.get(normalizeStoreName(store.name))));
 
     // Fast no-search fallback for retailers omitted by Search or when Search is
     // unavailable. Reuse actual products/prices found for the same basket at
