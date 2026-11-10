@@ -321,7 +321,7 @@ serve(async (req) => {
     console.info("Basket estimate V2 metrics:", experimentMetrics);
     if (!successfulRuns.length) {
       const hasRateLimit = storeRuns.some((run: any) => run.errorCode === "rate_limited");
-      const hasTimeout = storeRuns.some((run: any) => run.errorCode === "timeout");
+      const hasTimeout = storeRuns.some((run: any) => ["timeout", "deadline_exceeded"].includes(run.errorCode));
       return json({
         error: hasRateLimit
           ? "A pesquisa de preços está temporariamente sobrecarregada. Tenta novamente dentro de alguns instantes."
