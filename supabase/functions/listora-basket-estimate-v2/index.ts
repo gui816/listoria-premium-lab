@@ -31,6 +31,11 @@ serve(async (req) => {
     const authUser = await authResponse.json();
     if (!authUser?.id) return json({ error: "Sessão inválida." }, 401);
 
+    // Permanent Premium exemption for explicitly allowlisted authenticated accounts.
+    const premiumAllowlist = (Deno.env.get("PREMIUM_ALLOWLIST_EMAILS") || "")
+      .split(",").map((email) => email.trim().toLowerCase()).filter(Boolean);
+    const isAllowlistedPremium = Boolean(authUser.email && premiumAllowlist.includes(String(authUser.email).trim().toLowerCase()));
+
     const adminHeaders = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" };
     const subscriptionUrl = new URL("/rest/v1/subscriptions", supabaseUrl);
     subscriptionUrl.search = new URLSearchParams({
@@ -46,7 +51,7 @@ serve(async (req) => {
     const now = Date.now();
     const graceActive = subscription?.status === "past_due" && subscription.past_due_grace_until && new Date(subscription.past_due_grace_until).getTime() > now;
     const paidCancellation = subscription?.status === "canceled" && subscription.current_period_end && new Date(subscription.current_period_end).getTime() > now;
-    const hasPremium = Boolean(subscription && (["active", "trialing"].includes(subscription.status) || graceActive || paidCancellation));
+    const hasPremium = isAllowlistedPremium || Boolean(subscription && (["active", "trialing"].includes(subscription.status) || graceActive || paidCancellation));
 
     const demoUrl = new URL("/rest/v1/premium_demo_subscriptions", supabaseUrl);
     demoUrl.search = new URLSearchParams({ select: "status,current_period_end,cancel_at_period_end,past_due_grace_until", user_id: `eq.${authUser.id}`, limit: "1" }).toString();
