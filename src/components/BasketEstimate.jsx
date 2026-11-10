@@ -87,7 +87,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
   const itemSignature = useMemo(() => JSON.stringify(cleanItems), [cleanItems]);
   const cacheKey = useMemo(() => {
     if (!countryCode || !selected.length || !cleanItems.length) return "";
-    return "listora-basket-estimate-v4:" + countryCode + ":" + [...selected].sort().join("|") + ":" + itemSignature;
+    return "listora-basket-estimate-v5:" + countryCode + ":" + [...selected].sort().join("|") + ":" + itemSignature;
   }, [countryCode, selected, itemSignature, cleanItems.length]);
 
   useEffect(() => {
