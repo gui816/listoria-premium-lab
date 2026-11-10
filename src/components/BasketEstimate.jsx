@@ -541,6 +541,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
                     exact_match: "Correspondência exata",
                     same_brand_variant: "Mesma marca · variante/formato próximo",
                     equivalent_other_brand: "Alternativa equivalente · outra marca",
+                    comparable_estimate: "Preço estimado por produtos comparáveis",
                     no_reliable_match: "Sem correspondência fiável"
                   };
                   return <div className="basket-estimate-product-row" key={product.name + index}>
@@ -548,6 +549,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
                       <strong>{product.name}</strong>
                       <small>{product.quantity} × {product.unit} · {matchLabels[product.matchType] || "Correspondência por validar"}</small>
                       {product.matchedProductName && <small className="basket-estimate-matched-product">Produto considerado: {product.matchedProductName}{product.packageSize ? " · " + product.packageSize : ""}</small>}
+                      {product.estimationBasis && <small>Base da estimativa: {product.estimationBasis}</small>}
                       {product.matchingNotes && <small>{product.matchingNotes}</small>}
                       {product.matchConfidence && <small>Confiança na correspondência: {product.matchConfidence === "high" ? "alta" : product.matchConfidence === "medium" ? "média" : "baixa"}</small>}
                     </span>
