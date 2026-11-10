@@ -275,7 +275,10 @@ serve(async (req) => {
         const matchingStore = returnedStores.find((entry: any) =>
           String(entry?.name || "").trim().toLocaleLowerCase() === run.supermarket.toLocaleLowerCase()
         );
-        return matchingStore || {
+        // Each V2 request is scoped to exactly one retailer. If Gemini returns
+        // that single retailer with a slightly different display name, preserve it
+        // rather than incorrectly converting a complete result into insufficient_data.
+        return matchingStore || (returnedStores.length === 1 ? returnedStores[0] : null) || {
           name: run.supermarket,
           status: "insufficient_data",
           notes: run.errorCode
