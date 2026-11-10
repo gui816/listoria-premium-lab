@@ -35,6 +35,9 @@ serve(async (req) => {
     const authUser = await authResponse.json();
     if (!authUser?.id) return json({ error: "Sessão inválida." }, 401);
 
+    const premiumAllowlist = (Deno.env.get("PREMIUM_ALLOWLIST_EMAILS") || "").split(",").map((email) => email.trim().toLowerCase()).filter(Boolean);
+    const isAllowlistedPremium = Boolean(authUser.email && premiumAllowlist.includes(String(authUser.email).trim().toLowerCase()));
+
     const adminHeaders = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" };
     stage = "subscription_check";
     const subscriptionUrl = new URL("/rest/v1/subscriptions", supabaseUrl);
@@ -64,7 +67,7 @@ serve(async (req) => {
     const now = Date.now();
     const graceActive = subscription?.status === "past_due" && subscription.past_due_grace_until && new Date(subscription.past_due_grace_until).getTime() > now;
     const paidCancellation = subscription?.status === "canceled" && subscription.current_period_end && new Date(subscription.current_period_end).getTime() > now;
-    const hasPremium = Boolean(subscription && (["active", "trialing"].includes(subscription.status) || graceActive || paidCancellation));
+    const hasPremium = isAllowlistedPremium || Boolean(subscription && (["active", "trialing"].includes(subscription.status) || graceActive || paidCancellation));
 
     stage = "demo_subscription_check";
     const demoUrl = new URL("/rest/v1/premium_demo_subscriptions", supabaseUrl);
@@ -310,7 +313,7 @@ serve(async (req) => {
     }
 
     stage = "trial_consumption";
-    if (!hasPremium) {
+    if (!hasAnyPremium) {
       const trialResponse = await fetch(new URL("/rest/v1/rpc/consume_free_comparison_trial", supabaseUrl), {
         method: "POST", headers: adminHeaders,
         body: JSON.stringify({ p_user_id: authUser.id, p_request_id: requestId }),
