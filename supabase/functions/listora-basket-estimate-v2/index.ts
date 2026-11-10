@@ -174,12 +174,6 @@ serve(async (req) => {
     const PRIMARY_TIMEOUT_MS = 28_000;
     const FALLBACK_TIMEOUT_MS = 12_000;
     const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(geminiKey);
-    const selectedStores = stores.map((store: any) => ({
-      name: store.name,
-      website: store.website,
-      pricePosition: store.price_position
-    }));
-
     const callGemini = async (text: string, useSearch: boolean, timeoutMs: number) => {
       const response = await fetch(endpoint, {
         method: "POST",
@@ -210,6 +204,8 @@ serve(async (req) => {
     };
 
     let primaryError: any = null;
+    const primaryStartedAt = Date.now();
+    let primaryDurationMs = 0;
     let primaryParsed: any = { stores: [] };
     let groundingChunks: any[] = [];
     try {
@@ -224,6 +220,7 @@ serve(async (req) => {
       });
     }
 
+    primaryDurationMs = Date.now() - primaryStartedAt;
     if (req.signal.aborted) {
       return json({ error: "A comparação foi cancelada.", code: "request_cancelled" }, 499);
     }
@@ -296,7 +293,7 @@ serve(async (req) => {
     const candidate = { groundingMetadata: { groundingChunks } };
     const experimentMetrics = {
       variant: "single_grounded_request_with_fast_fallback",
-      primaryDurationMs: Math.min(Date.now() - comparisonStartedAt, PRIMARY_TIMEOUT_MS),
+      primaryDurationMs,
       totalDurationMs: Date.now() - comparisonStartedAt,
       primaryFailed: Boolean(primaryError),
       fallbackUsed,
@@ -308,67 +305,6 @@ serve(async (req) => {
     if (req.signal.aborted) {
       return json({ error: "A comparação foi cancelada.", code: "request_cancelled" }, 499);
     }
-
-    if (req.signal.aborted) {
-      console.info("Basket estimate V2 cancelled by client before trial consumption:", { requestId });
-      return json({ error: "A comparação foi cancelada.", code: "request_cancelled" }, 499);
-    }
-
-    const successfulRuns = storeRuns.filter((run: any) => asStoreResults(run.parsed).length > 0);
-    const parsed: any = {
-      stores: storeRuns.map((run: any) => {
-        const returnedStores = asStoreResults(run.parsed);
-        const matchingStore = returnedStores.find((entry: any) =>
-          String(entry?.name || "").trim().toLocaleLowerCase() === run.supermarket.toLocaleLowerCase()
-        );
-        // Each V2 request is scoped to exactly one retailer. If Gemini returns
-        // that single retailer with a slightly different display name, preserve it
-        // rather than incorrectly converting a complete result into insufficient_data.
-        return matchingStore || (returnedStores.length === 1 ? returnedStores[0] : null) || {
-          name: run.supermarket,
-          status: "insufficient_data",
-          notes: run.errorCode
-            ? "Não foi possível concluir a pesquisa deste supermercado. Os restantes resultados foram preservados."
-            : "A pesquisa não devolveu um resultado válido para este supermercado.",
-          items: []
-        };
-      })
-    };
-    const candidate = {
-      groundingMetadata: {
-        groundingChunks: storeRuns.flatMap((run: any) => run.groundingChunks || [])
-      }
-    };
-    const experimentMetrics = {
-      variant: "B_parallel_per_supermarket",
-      timeBudgetMs: GEMINI_TIME_BUDGET_MS,
-      totalDurationMs: Date.now() - comparisonStartedAt,
-      timeBudgetExhausted: Date.now() >= geminiDeadlineAt,
-      partialResults: storeRuns.some((run: any) => Boolean(run.errorCode)),
-      supermarkets: storeRuns.map((run: any) => ({
-        name: run.supermarket,
-        durationMs: run.durationMs,
-        outcome: run.errorCode || (run.parsed ? "success" : "empty_response")
-      }))
-    };
-    console.info("Basket estimate V2 metrics:", experimentMetrics);
-    if (!successfulRuns.length) {
-      const hasRateLimit = storeRuns.some((run: any) => run.errorCode === "rate_limited");
-      const hasTimeout = storeRuns.some((run: any) => ["timeout", "deadline_exceeded"].includes(run.errorCode));
-      return json({
-        error: hasRateLimit
-          ? "A pesquisa de preços está temporariamente sobrecarregada. Tenta novamente dentro de alguns instantes."
-          : hasTimeout
-            ? "A pesquisa de preços demorou mais do que o esperado. Tenta novamente; não perdeste a tua lista."
-            : "Não foi possível concluir a pesquisa de preços. Tenta novamente dentro de alguns instantes.",
-        code: hasRateLimit ? "gemini_rate_limited" : hasTimeout ? "estimate_timeout" : "gemini_upstream_error",
-        experimentMetrics,
-        stage,
-        diagnosticCode: storeRuns.map((run: any) => run.errorCode || "success").join(","),
-        requestId
-      }, hasTimeout ? 504 : 502);
-    }
-
 
     const known = new Map<string, any>(stores.map((store: any) => [String(store.name).toLocaleLowerCase(), store] as [string, any]));
     const results = (Array.isArray(parsed?.stores) ? parsed.stores : []).map((estimate: any) => {
@@ -460,7 +396,9 @@ serve(async (req) => {
       };
     }).filter(Boolean);
 
-    if (!results.length) return json({ error: "Não foi possível obter uma comparação válida para os supermercados selecionados." }, 502);
+    if (!results.length || !results.some((store: any) => store.status === "estimated")) {
+      return json({ error: "Não foi possível obter preços ou estimativas suficientemente fundamentadas. Tenta novamente dentro de alguns instantes.", code: "no_reliable_estimates", experiment: experimentMetrics }, 502);
+    }
 
     stage = "free_trial_consume";
     if (!hasAnyPremium) {
