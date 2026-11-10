@@ -120,38 +120,26 @@ serve(async (req) => {
     const stores = (selected.length ? selected : catalogue.slice(0, 5)).slice(0, 12);
     const currency = country.currency_code;
     const prompt = [
-      "You are a careful grocery product matcher and basket price ESTIMATOR for the specified country and supermarket.",
-      "LIVE RESEARCH: You have Google Search grounding. For each supermarket, actively search the official supermarket website and reliable indexed product pages for the requested product before estimating. Prioritize the supermarket website/domain supplied in the supermarket data. Search using the exact product name, brand, variant and package size. Use live search evidence to identify product names, package sizes and visible prices. Do not claim stock or availability unless the source explicitly confirms it. If no reliable product or price evidence is found, you may provide a clearly labelled market estimate only when responsible; otherwise use no_reliable_match. Never invent URLs, promotions or catalogue references.",
+      "Estimate grocery basket prices for the specified country and supermarkets. Use Google Search grounding and prefer each supermarket's official website.",
+      "Keep the task simple: price every requested item, then sum the basket. Do not write long explanations or perform exhaustive searches.",
       "",
-      "PRODUCT MATCHING AND FALLBACK - follow this order independently for EVERY basket item and EVERY supermarket:",
-      "1. EXACT MATCH: same brand, product name/line, variant, relevant attributes and package size.",
-      "2. SAME BRAND VARIANT: if the exact product is not found, use the closest credible product from the same brand and product family.",
-      "3. SIMILAR PRODUCT: if no credible same-brand option is found, select the closest equivalent from another brand, preserving product category, variant, quality tier and intended use. Prefer comparable package sizes.",
-      "4. COMPARABLE-BASED PRICE ESTIMATE: if no specific substitute product can be found, DO NOT immediately return no_reliable_match. Estimate the requested item price using actual products and prices found in the same supermarket (or reliable local market evidence) that are genuinely comparable in category, quality and use. Normalize observed prices by kg, litre or unit, adjust cautiously for pack size and relevant quality/brand differences, and describe the comparable products and calculation basis in estimationBasis. Do not claim that a comparable product is the requested product.",
-      "5. NO RESPONSIBLE ESTIMATE: use no_reliable_match only when there is not enough relevant evidence to estimate responsibly. Never invent a product, source, observed price or comparison basis.",
-      "Never jump to a competing brand when an exact or credible same-brand match is plausible. Never substitute a different product category. Do not silently treat a different size as the same pack: report its actual package size and normalize the price by kg, litre or unit where possible.",
-      "Brand, variety, fat percentage, dietary type, origin, preparation, freshness/frozen status and pack size are meaningful attributes when present in the requested name. Preserve them in matching.",
-      "Do not assume the same product or price exists in every supermarket. Match each supermarket separately. Store price positioning may inform a cautious estimate, but must never override product equivalence.",
+      "For EACH requested item, follow this order:",
+      "1) Exact product and pack size.",
+      "2) Same brand and product family, closest variant/size.",
+      "3) Equivalent product from another brand, same category and intended use.",
+      "4) If no substitute is found, estimate from actual observed prices of genuinely comparable products. Normalize by kg, litre or unit and explain the basis briefly.",
+      "5) Use no_reliable_match only when there is not enough real evidence for a responsible estimate.",
       "",
-      "TIME BUDGET: Work efficiently and avoid exhaustive searches. Use focused searches for the exact item and, when needed, one strong equivalent or a small set of genuinely comparable products. Do not spend disproportionate time on one difficult item; move on and use a responsible comparable-based estimate only when real supporting evidence exists.",
-      "The response must prioritize completing the full basket within the available request time, but NEVER lower evidence standards, invent a product/source/price, or convert insufficient evidence into a fabricated estimate. If evidence is insufficient, return no_reliable_match for that item and continue with the remaining items.",
-      "PRICE ESTIMATION AND TRANSPARENCY:",
-      "Prefer current prices found through Google Search on the selected supermarket's official website. Distinguish observed prices from estimates. Never present an estimated price as a verified price and do not assume promotions or loyalty discounts apply.",
-      "For exact or similar products with an observed price, use estimationMethod=observed_price. For a similar substitute whose price is observed, use estimationMethod=similar_product_price. For a requested item priced from other actual comparable products, use matchType=comparable_estimate and estimationMethod=comparable_products. Set estimationBasis to a concise explanation naming the comparable product(s), observed reference prices and normalized unit basis. Set matchedProductName to null when no actual substitute product was identified.",
-      "Always return an item-level price when the evidence supports a responsible estimate, even when the exact product cannot be found. A comparable-based estimate must have a real evidence basis and lower confidence / wider range when evidence is weaker. If evidence is insufficient, return no_reliable_match with null prices.",
-      "Return one result for each supplied supermarket. Include every requested basket item exactly once and preserve requestedName, quantity and unit. For each item return matchedProductName (nullable), brand when identifiable, packageSize, normalizedUnit (kg, L or un), matchType, estimationMethod, estimationBasis, matchConfidence, matchingNotes, estimatedUnitPrice and estimatedSubtotal. estimatedSubtotal is the total for the requested quantity. Use matchType exact_match, same_brand_variant, equivalent_other_brand, comparable_estimate or no_reliable_match. Use estimationMethod observed_price, similar_product_price, comparable_products or insufficient_evidence. Use low, medium or high for confidence fields.",
-      "Set supermarket status to estimated when every basket item has a responsible item-level price, including comparable-based estimates. Set status to insufficient_data only if at least one item genuinely has no responsible estimate. Still return all item-level results for transparency.",
-      "For status estimated, the sum of item estimatedSubtotal values must approximately equal estimatedTotal. Keep rangeMin <= estimatedTotal <= rangeMax. Use the exact currency supplied.",
+      "Never invent observed prices, products, URLs, promotions or evidence. Never present an estimate as an observed price. Preserve important attributes such as brand, variety, dietary type, freshness and pack size. Do not substitute a different product category.",
+      "For exact products with observed prices use exact_match + observed_price. For observed substitutes use same_brand_variant or equivalent_other_brand + similar_product_price. For a price derived from actual comparable products use comparable_estimate + comparable_products and provide estimationBasis. If evidence is insufficient use no_reliable_match + insufficient_evidence and null prices.",
+      "Return every requested item exactly once per supermarket, preserving requestedName, quantity and unit. For each item include matchedProductName (null if none), brand, packageSize, normalizedUnit (kg, L or un), matchType, estimationMethod, estimationBasis, matchConfidence, matchingNotes, estimatedUnitPrice and estimatedSubtotal. Keep explanations short.",
+      "A supermarket can be status estimated only when every requested item has a responsible price. Sum estimatedSubtotal values to produce estimatedTotal. Return a sensible range with rangeMin <= estimatedTotal <= rangeMax. If one item has insufficient evidence, still return all other item results and set status insufficient_data; do not invent a missing price.",
       "",
       "Country: " + country.name + " (" + country.code + "). Currency: " + currency + ". Language: " + country.default_language + ".",
-      "Basket (user's exact requested products): " + JSON.stringify(basket),
-      "Selected supermarkets: " + JSON.stringify(stores.map((store: any) => ({
-        name: store.name,
-        website: store.website,
-        pricePosition: store.price_position
-      }))),
-      "Return valid JSON only, using this schema: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes,items:[{requestedName,matchedProductName,brand,packageSize,normalizedUnit,matchType,estimationMethod,estimationBasis,matchConfidence,matchingNotes,quantity,unit,estimatedUnitPrice,estimatedSubtotal,confidence}]}]}. Use null for unavailable numeric prices and matchedProductName when no substitute was identified. Never omit requested items."
-    ].join("\n");
+      "Basket: " + JSON.stringify(basket),
+      "Selected supermarkets: " + JSON.stringify(stores.map((store: any) => ({ name: store.name, website: store.website, pricePosition: store.price_position }))),
+      "Return valid JSON only: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes,items:[{requestedName,matchedProductName,brand,packageSize,normalizedUnit,matchType,estimationMethod,estimationBasis,matchConfidence,matchingNotes,quantity,unit,estimatedUnitPrice,estimatedSubtotal,confidence}]}]}. Use null for unavailable prices and matchedProductName when no substitute was identified. Never omit requested items."
+
 
     let freeTrialUsed = false;
     if (!hasAnyPremium) {
@@ -220,7 +208,7 @@ serve(async (req) => {
               tools: [{ google_search: {} }],
               generationConfig: {
                 responseMimeType: "application/json",
-                maxOutputTokens: 16000,
+                maxOutputTokens: 12000,
                 thinkingConfig: { thinkingLevel: "medium" }
               }
             }),
