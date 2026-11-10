@@ -351,12 +351,12 @@ serve(async (req) => {
           matchType: validMatch ? matchType : "no_reliable_match",
           estimationMethod: validMatch ? estimationMethod : "insufficient_evidence",
           estimationBasis: validMatch && estimationBasis ? estimationBasis : null,
-          matchConfidence: validMatch && ["low", "medium", "high"].includes(matched.matchConfidence)
+          matchConfidence: validMatch && estimationMethod !== "market_estimate" && ["low", "medium", "high"].includes(matched.matchConfidence)
             ? matched.matchConfidence : "low",
           matchingNotes: String(matched?.matchingNotes || "").slice(0, 180),
           estimatedUnitPrice: validMatch ? round(unitPrice) : null,
           estimatedSubtotal: validMatch ? round(subtotal) : null,
-          confidence: validMatch && ["low", "medium", "high"].includes(matched.confidence) ? matched.confidence : "low"
+          confidence: validMatch && estimationMethod !== "market_estimate" && ["low", "medium", "high"].includes(matched.confidence) ? matched.confidence : "low"
         };
       });
 
