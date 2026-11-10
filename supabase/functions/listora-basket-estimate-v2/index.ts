@@ -123,19 +123,22 @@ serve(async (req) => {
       "You are a careful grocery product matcher and basket price ESTIMATOR for the specified country and supermarket.",
       "LIVE RESEARCH: You have Google Search grounding. For each supermarket, actively search the official supermarket website and reliable indexed product pages for the requested product before estimating. Prioritize the supermarket website/domain supplied in the supermarket data. Search using the exact product name, brand, variant and package size. Use live search evidence to identify product names, package sizes and visible prices. Do not claim stock or availability unless the source explicitly confirms it. If no reliable product or price evidence is found, you may provide a clearly labelled market estimate only when responsible; otherwise use no_reliable_match. Never invent URLs, promotions or catalogue references.",
       "",
-      "PRODUCT MATCHING - follow this order independently for EVERY basket item and EVERY supermarket:",
+      "PRODUCT MATCHING AND FALLBACK - follow this order independently for EVERY basket item and EVERY supermarket:",
       "1. EXACT MATCH: same brand, product name/line, variant, relevant attributes and package size.",
-      "2. SAME BRAND VARIANT: same brand and product family, closest available variant or package size.",
-      "3. EQUIVALENT OTHER BRAND: only if no credible same-brand match exists; choose the closest product with the same product type, variant, quality tier and use.",
-      "4. NO RELIABLE MATCH: if you cannot identify a credible equivalent, use no_reliable_match and do not invent a product or price.",
+      "2. SAME BRAND VARIANT: if the exact product is not found, use the closest credible product from the same brand and product family.",
+      "3. SIMILAR PRODUCT: if no credible same-brand option is found, select the closest equivalent from another brand, preserving product category, variant, quality tier and intended use. Prefer comparable package sizes.",
+      "4. COMPARABLE-BASED PRICE ESTIMATE: if no specific substitute product can be found, DO NOT immediately return no_reliable_match. Estimate the requested item price using actual products and prices found in the same supermarket (or reliable local market evidence) that are genuinely comparable in category, quality and use. Normalize observed prices by kg, litre or unit, adjust cautiously for pack size and relevant quality/brand differences, and describe the comparable products and calculation basis in estimationBasis. Do not claim that a comparable product is the requested product.",
+      "5. NO RESPONSIBLE ESTIMATE: use no_reliable_match only when there is not enough relevant evidence to estimate responsibly. Never invent a product, source, observed price or comparison basis.",
       "Never jump to a competing brand when an exact or credible same-brand match is plausible. Never substitute a different product category. Do not silently treat a different size as the same pack: report its actual package size and normalize the price by kg, litre or unit where possible.",
       "Brand, variety, fat percentage, dietary type, origin, preparation, freshness/frozen status and pack size are meaningful attributes when present in the requested name. Preserve them in matching.",
       "Do not assume the same product or price exists in every supermarket. Match each supermarket separately. Store price positioning may inform a cautious estimate, but must never override product equivalence.",
       "",
-      "PRICE ESTIMATION:",
-      "PRICE EVIDENCE: Prefer a current price found through Google Search on the supermarket official website. Distinguish observed prices from estimates in matchingNotes: identify whether the price was found online or estimated. Never present an estimated price as a verified price. Do not assume promotions or loyalty discounts apply. If a live price is not found, estimate cautiously only when there is enough evidence about the exact product or a credible equivalent; otherwise return no_reliable_match. Confidence must reflect the strength and freshness of evidence.",
-      "Return one result for each supplied supermarket. Include every requested basket item exactly once and preserve requestedName, quantity and unit. For matched products return matchedProductName, brand when identifiable, packageSize, normalizedUnit (kg, L or un), matchType, matchConfidence, matchingNotes, estimatedUnitPrice and estimatedSubtotal. estimatedSubtotal is the total for the requested quantity. Use matchType exact_match, same_brand_variant, equivalent_other_brand or no_reliable_match. Use low, medium or high for confidence fields.",
-      "If ANY basket item has no reliable match or no responsible price estimate, set the supermarket status to insufficient_data and do not provide a misleading complete basket total. Still return the item-level matching results for transparency. Only use status estimated when every requested item has a credible match and price.",
+      "PRICE ESTIMATION AND TRANSPARENCY:",
+      "Prefer current prices found through Google Search on the selected supermarket's official website. Distinguish observed prices from estimates. Never present an estimated price as a verified price and do not assume promotions or loyalty discounts apply.",
+      "For exact or similar products with an observed price, use estimationMethod=observed_price. For a similar substitute whose price is observed, use estimationMethod=similar_product_price. For a requested item priced from other actual comparable products, use matchType=comparable_estimate and estimationMethod=comparable_products. Set estimationBasis to a concise explanation naming the comparable product(s), observed reference prices and normalized unit basis. Set matchedProductName to null when no actual substitute product was identified.",
+      "Always return an item-level price when the evidence supports a responsible estimate, even when the exact product cannot be found. A comparable-based estimate must have a real evidence basis and lower confidence / wider range when evidence is weaker. If evidence is insufficient, return no_reliable_match with null prices.",
+      "Return one result for each supplied supermarket. Include every requested basket item exactly once and preserve requestedName, quantity and unit. For each item return matchedProductName (nullable), brand when identifiable, packageSize, normalizedUnit (kg, L or un), matchType, estimationMethod, estimationBasis, matchConfidence, matchingNotes, estimatedUnitPrice and estimatedSubtotal. estimatedSubtotal is the total for the requested quantity. Use matchType exact_match, same_brand_variant, equivalent_other_brand, comparable_estimate or no_reliable_match. Use estimationMethod observed_price, similar_product_price, comparable_products or insufficient_evidence. Use low, medium or high for confidence fields.",
+      "Set supermarket status to estimated when every basket item has a responsible item-level price, including comparable-based estimates. Set status to insufficient_data only if at least one item genuinely has no responsible estimate. Still return all item-level results for transparency.",
       "For status estimated, the sum of item estimatedSubtotal values must approximately equal estimatedTotal. Keep rangeMin <= estimatedTotal <= rangeMax. Use the exact currency supplied.",
       "",
       "Country: " + country.name + " (" + country.code + "). Currency: " + currency + ". Language: " + country.default_language + ".",
@@ -145,7 +148,7 @@ serve(async (req) => {
         website: store.website,
         pricePosition: store.price_position
       }))),
-      "Return valid JSON only, using this schema: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes,items:[{requestedName,matchedProductName,brand,packageSize,normalizedUnit,matchType,matchConfidence,matchingNotes,quantity,unit,estimatedUnitPrice,estimatedSubtotal,confidence}]}]}. Use null for unavailable numeric prices and omit no requested items."
+      "Return valid JSON only, using this schema: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes,items:[{requestedName,matchedProductName,brand,packageSize,normalizedUnit,matchType,estimationMethod,estimationBasis,matchConfidence,matchingNotes,quantity,unit,estimatedUnitPrice,estimatedSubtotal,confidence}]}]}. Use null for unavailable numeric prices and matchedProductName when no substitute was identified. Never omit requested items."
     ].join("\n");
 
     let freeTrialUsed = false;
@@ -321,23 +324,35 @@ serve(async (req) => {
               String(entry?.requestedName || entry?.name || "").trim().toLocaleLowerCase() === item.name.toLocaleLowerCase()
             )
           : null;
-        const matchTypes = ["exact_match", "same_brand_variant", "equivalent_other_brand", "no_reliable_match"];
+        const matchTypes = ["exact_match", "same_brand_variant", "equivalent_other_brand", "comparable_estimate", "no_reliable_match"];
+        const estimationMethods = ["observed_price", "similar_product_price", "comparable_products", "insufficient_evidence"];
         const matchType = matchTypes.includes(matched?.matchType) ? matched.matchType : "no_reliable_match";
+        const estimationMethod = estimationMethods.includes(matched?.estimationMethod)
+          ? matched.estimationMethod
+          : (matchType === "comparable_estimate" ? "comparable_products" : "insufficient_evidence");
         const unitPrice = Number(matched?.estimatedUnitPrice);
         const subtotal = Number(matched?.estimatedSubtotal);
         const validPrice = matchType !== "no_reliable_match" &&
           Number.isFinite(unitPrice) && unitPrice > 0 &&
           Number.isFinite(subtotal) && subtotal > 0;
-        const validMatch = validPrice && String(matched?.matchedProductName || "").trim().length > 0;
+        const estimationBasis = String(matched?.estimationBasis || "").trim().slice(0, 220);
+        const hasIdentifiedProduct = String(matched?.matchedProductName || "").trim().length > 0;
+        const validMatch = validPrice && (
+          matchType === "comparable_estimate"
+            ? estimationMethod === "comparable_products" && estimationBasis.length > 0
+            : hasIdentifiedProduct
+        );
         return {
           name: item.name,
           quantity: item.quantity,
           unit: item.unit,
-          matchedProductName: validMatch ? String(matched.matchedProductName).trim().slice(0, 140) : null,
+          matchedProductName: validMatch && hasIdentifiedProduct ? String(matched.matchedProductName).trim().slice(0, 140) : null,
           brand: validMatch && matched.brand ? String(matched.brand).trim().slice(0, 70) : null,
           packageSize: validMatch && matched.packageSize ? String(matched.packageSize).trim().slice(0, 50) : null,
           normalizedUnit: validMatch && ["kg", "L", "un"].includes(matched.normalizedUnit) ? matched.normalizedUnit : null,
           matchType: validMatch ? matchType : "no_reliable_match",
+          estimationMethod: validMatch ? estimationMethod : "insufficient_evidence",
+          estimationBasis: validMatch && estimationBasis ? estimationBasis : null,
           matchConfidence: validMatch && ["low", "medium", "high"].includes(matched.matchConfidence)
             ? matched.matchConfidence : "low",
           matchingNotes: String(matched?.matchingNotes || "").slice(0, 180),
@@ -350,7 +365,7 @@ serve(async (req) => {
       const hasCompleteMatches = itemResults.length === basket.length &&
         itemResults.every((item: any) => item.matchType !== "no_reliable_match" &&
           Number.isFinite(item.estimatedSubtotal));
-      if (!hasCompleteMatches || estimate.status === "insufficient_data") {
+      if (!hasCompleteMatches) {
         return {
           name: store.name,
           website: store.website,

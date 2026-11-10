@@ -453,7 +453,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
     {open && <div className="basket-estimate-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setOpen(false); }}>
       <section className={"basket-estimate-modal" + (busy ? " is-processing" : "")} role="dialog" aria-modal="true" aria-labelledby="basket-estimate-title">
         <header className="basket-estimate-modal-header">
-          <div><span className="basket-estimate-modal-kicker"><Sparkles size={14}/> {busy ? "A COMPARAR O TEU CABAZ" : "COMPARAÇÃO INTELIGENTE"}</span><h2 id="basket-estimate-title">{busy ? "Estamos a analisar o teu cabaz" : "Quanto poderá custar o teu cabaz?"}</h2><p>{cleanItems.length} produtos na lista{busy ? " · " + selected.length + (selected.length === 1 ? " supermercado" : " supermercados") : ""}</p><p className="basket-estimate-quality-hint">A IA procura produtos e preços, compara opções equivalentes e assinala quando não encontra dados fiáveis. Os valores são estimativas, não preços garantidos.</p></div>
+          <div><span className="basket-estimate-modal-kicker"><Sparkles size={14}/> {busy ? "A COMPARAR O TEU CABAZ" : "COMPARAÇÃO INTELIGENTE"}</span><h2 id="basket-estimate-title">{busy ? "Estamos a analisar o teu cabaz" : "Quanto poderá custar o teu cabaz?"}</h2><p>{cleanItems.length} produtos na lista{busy ? " · " + selected.length + (selected.length === 1 ? " supermercado" : " supermercados") : ""}</p><p className="basket-estimate-quality-hint">A IA procura produtos e preços, apresenta alternativas semelhantes e, quando necessário, estima com base em produtos comparáveis. Os valores não são preços garantidos.</p></div>
           <button type="button" className="basket-estimate-modal-close" onClick={busy ? () => setShowCancelConfirmation(true) : () => setOpen(false)} aria-label={busy ? "Pedir para cancelar estimativa" : "Fechar comparação"}><X size={20}/></button>
         </header>
 
@@ -541,6 +541,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
                     exact_match: "Correspondência exata",
                     same_brand_variant: "Mesma marca · variante/formato próximo",
                     equivalent_other_brand: "Alternativa equivalente · outra marca",
+                    comparable_estimate: "Preço estimado por produtos comparáveis",
                     no_reliable_match: "Sem correspondência fiável"
                   };
                   return <div className="basket-estimate-product-row" key={product.name + index}>
@@ -548,6 +549,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
                       <strong>{product.name}</strong>
                       <small>{product.quantity} × {product.unit} · {matchLabels[product.matchType] || "Correspondência por validar"}</small>
                       {product.matchedProductName && <small className="basket-estimate-matched-product">Produto considerado: {product.matchedProductName}{product.packageSize ? " · " + product.packageSize : ""}</small>}
+                      {product.estimationBasis && <small>Base da estimativa: {product.estimationBasis}</small>}
                       {product.matchingNotes && <small>{product.matchingNotes}</small>}
                       {product.matchConfidence && <small>Confiança na correspondência: {product.matchConfidence === "high" ? "alta" : product.matchConfidence === "medium" ? "média" : "baixa"}</small>}
                     </span>
