@@ -551,6 +551,7 @@ export default function BasketEstimate({ items, language = "pt-PT", session }) {
                       <small>{product.quantity} × {product.unit} · {matchLabels[product.matchType] || "Correspondência por validar"}</small>
                       {product.matchedProductName && <small className="basket-estimate-matched-product">Produto considerado: {product.matchedProductName}{product.packageSize ? " · " + product.packageSize : ""}</small>}
                       {product.estimationBasis && <small>Base da estimativa: {product.estimationBasis}</small>}
+                      {product.estimationMethod === "market_estimate" && <small>Estimativa indicativa de mercado; não é um preço observado no catálogo.</small>}
                       {product.matchingNotes && <small>{product.matchingNotes}</small>}
                       {product.matchConfidence && <small>Confiança na correspondência: {product.matchConfidence === "high" ? "alta" : product.matchConfidence === "medium" ? "média" : "baixa"}</small>}
                     </span>
