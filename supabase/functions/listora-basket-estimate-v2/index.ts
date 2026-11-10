@@ -135,7 +135,9 @@ serve(async (req) => {
       "Basket: " + JSON.stringify(basket),
       "Selected supermarkets: " + JSON.stringify(stores.map((store: any) => ({ name: store.name, website: store.website, pricePosition: store.price_position }))),
       "Return valid JSON only: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes,items:[{requestedName,matchedProductName,brand,packageSize,normalizedUnit,matchType,estimationMethod,estimationBasis,matchConfidence,matchingNotes,quantity,unit,estimatedUnitPrice,estimatedSubtotal,confidence}]}]}. Never omit requested items. Use null prices only when no relevant evidence exists." 
-    ].join("\\n");let freeTrialUsed = false;
+    ].join("\n");
+
+    let freeTrialUsed = false;
     if (!hasAnyPremium) {
       const trialUrl = new URL("/rest/v1/premium_comparison_trials", supabaseUrl);
       trialUrl.search = new URLSearchParams({ select: "user_id", user_id: `eq.${authUser.id}`, limit: "1" }).toString();
