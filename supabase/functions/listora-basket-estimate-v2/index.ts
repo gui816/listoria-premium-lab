@@ -123,25 +123,19 @@ serve(async (req) => {
       "Estimate grocery basket prices for the specified country and supermarkets. Use Google Search grounding and prefer each supermarket's official website.",
       "Keep the task simple: price every requested item, then sum the basket. Do not write long explanations or perform exhaustive searches.",
       "",
-      "For EACH requested item, follow this order:",
-      "1) Exact product and pack size.",
-      "2) Same brand and product family, closest variant/size.",
-      "3) Equivalent product from another brand, same category and intended use.",
-      "4) If no substitute is found, estimate from actual observed prices of genuinely comparable products. Normalize by kg, litre or unit and explain the basis briefly.",
-      "5) Use no_reliable_match only when there is not enough real evidence for a responsible estimate.",
-      "",
-      "Never invent observed prices, products, URLs, promotions or evidence. Never present an estimate as an observed price. Preserve important attributes such as brand, variety, dietary type, freshness and pack size. Do not substitute a different product category.",
-      "For exact products with observed prices use exact_match + observed_price. For observed substitutes use same_brand_variant or equivalent_other_brand + similar_product_price. For a price derived from actual comparable products use comparable_estimate + comparable_products and provide estimationBasis. If evidence is insufficient use no_reliable_match + insufficient_evidence and null prices.",
-      "Return every requested item exactly once per supermarket, preserving requestedName, quantity and unit. For each item include matchedProductName (null if none), brand, packageSize, normalizedUnit (kg, L or un), matchType, estimationMethod, estimationBasis, matchConfidence, matchingNotes, estimatedUnitPrice and estimatedSubtotal. Keep explanations short.",
-      "A supermarket can be status estimated only when every requested item has a responsible price. Sum estimatedSubtotal values to produce estimatedTotal. Return a sensible range with rangeMin <= estimatedTotal <= rangeMax. If one item has insufficient evidence, still return all other item results and set status insufficient_data; do not invent a missing price.",
+      "For EACH item, find a price in this order: exact product; closest same-brand variant; equivalent product from another brand; then a comparable-based estimate.",
+      "IMPORTANT FOR GENERIC NAMES: names such as bananas, tomatoes, rice, chicken, milk or yogurt are category requests, not failed product searches. Find a representative standard product sold by this supermarket and price it. If the exact named product is unavailable, use the closest equivalent in the same category.",
+      "If no direct substitute is found, search for actual priced products in the same category and use their observed price per kg, litre or unit to calculate a cautious estimate for the requested quantity. This is a comparable_estimate, NOT an exact product match. State the actual comparable products and observed prices in estimationBasis.",
+      "Only return no_reliable_match with null prices if you cannot find any relevant priced product or category evidence after a focused search. Never invent an observed price, product, source, promotion or URL. Never present an estimate as an observed price. Preserve important attributes such as brand, variety, dietary type, freshness and pack size; never change product category.",
+      "Use exact_match + observed_price for an exact observed product; same_brand_variant or equivalent_other_brand + similar_product_price for an observed substitute; comparable_estimate + comparable_products for a price calculated from observed comparable products. For estimates use lower confidence and a wider range where appropriate.",
+      "Return every requested item exactly once per supermarket, preserving requestedName, quantity and unit. Include matchedProductName (null if the price is category-based), packageSize, normalizedUnit (kg, L or un), matchType, estimationMethod, estimationBasis, matchConfidence, matchingNotes, estimatedUnitPrice and estimatedSubtotal. Keep notes short.",
+      "Calculate estimatedSubtotal for the requested quantity and estimatedTotal as the sum of all item subtotals. Return rangeMin <= estimatedTotal <= rangeMax. A supermarket is estimated when every item has either an observed exact/similar price or a defensible comparable-based estimate. Do not fail the entire supermarket because the exact requested product was not found.",
       "",
       "Country: " + country.name + " (" + country.code + "). Currency: " + currency + ". Language: " + country.default_language + ".",
       "Basket: " + JSON.stringify(basket),
       "Selected supermarkets: " + JSON.stringify(stores.map((store: any) => ({ name: store.name, website: store.website, pricePosition: store.price_position }))),
-      "Return valid JSON only: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes,items:[{requestedName,matchedProductName,brand,packageSize,normalizedUnit,matchType,estimationMethod,estimationBasis,matchConfidence,matchingNotes,quantity,unit,estimatedUnitPrice,estimatedSubtotal,confidence}]}]}. Use null for unavailable prices and matchedProductName when no substitute was identified. Never omit requested items."
-
-
-    let freeTrialUsed = false;
+      "Return valid JSON only: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes,items:[{requestedName,matchedProductName,brand,packageSize,normalizedUnit,matchType,estimationMethod,estimationBasis,matchConfidence,matchingNotes,quantity,unit,estimatedUnitPrice,estimatedSubtotal,confidence}]}]}. Never omit requested items. Use null prices only when no relevant evidence exists." 
+    ].join("\\n");let freeTrialUsed = false;
     if (!hasAnyPremium) {
       const trialUrl = new URL("/rest/v1/premium_comparison_trials", supabaseUrl);
       trialUrl.search = new URLSearchParams({ select: "user_id", user_id: `eq.${authUser.id}`, limit: "1" }).toString();
@@ -159,7 +153,7 @@ serve(async (req) => {
     const comparisonStartedAt = Date.now();
     // Reserve time for response normalization and free-trial/cohort bookkeeping.
     // Gemini Search is the expensive phase, so enforce a hard budget in code.
-    const GEMINI_TIME_BUDGET_MS = 35_000;
+    const GEMINI_TIME_BUDGET_MS = 45_000;
     const geminiDeadlineAt = comparisonStartedAt + GEMINI_TIME_BUDGET_MS;
     const storePayloads = stores.map((store: any) => ({
       name: store.name,
@@ -208,8 +202,8 @@ serve(async (req) => {
               tools: [{ google_search: {} }],
               generationConfig: {
                 responseMimeType: "application/json",
-                maxOutputTokens: 12000,
-                thinkingConfig: { thinkingLevel: "medium" }
+                maxOutputTokens: Math.min(12000, Math.max(1500, basket.length * 180)),
+                thinkingConfig: { thinkingLevel: "low" }
               }
             }),
             // Bound each in-flight request by the remaining shared budget.
