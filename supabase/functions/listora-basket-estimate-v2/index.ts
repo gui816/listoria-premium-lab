@@ -205,7 +205,7 @@ serve(async (req) => {
                 thinkingConfig: { thinkingLevel: "medium" }
               }
             }),
-            signal: AbortSignal.timeout(65000)
+            signal: AbortSignal.any([req.signal, AbortSignal.timeout(65000)])
           }
         );
         const payload = await response.json().catch(() => ({}));
@@ -256,6 +256,11 @@ serve(async (req) => {
         };
       }
     })));
+
+    if (req.signal.aborted) {
+      console.info("Basket estimate V2 cancelled by client before trial consumption:", { requestId });
+      return json({ error: "A comparação foi cancelada.", code: "request_cancelled" }, 499);
+    }
 
     const successfulRuns = storeRuns.filter((run: any) => run.parsed && Array.isArray(run.parsed?.stores) && run.parsed.stores.length > 0);
     const parsed: any = {
@@ -426,6 +431,10 @@ serve(async (req) => {
       disclaimer: "Estimativa recolhida por IA. O valor apresentado pode não corresponder exatamente ao preço de catálogo ou incluir todos os descontos e promoções aplicáveis."
     });
   } catch (error: any) {
+    if (req.signal.aborted) {
+      console.info("Basket estimate V2 request cancelled by client.");
+      return json({ error: "A comparação foi cancelada.", code: "request_cancelled" }, 499);
+    }
     const message = error instanceof Error ? error.message : String(error || "Unknown error");
     const timedOut = /timed out|timeout|abort/i.test(message);
     console.error("listora-basket-estimate error:", { message, name: error instanceof Error ? error.name : typeof error });
