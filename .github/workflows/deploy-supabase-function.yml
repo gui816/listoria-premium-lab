@@ -55,8 +55,7 @@ jobs:
           test -n "$SUPABASE_PROJECT_REF" || (echo "Missing GitHub secret: SUPABASE_PROJECT_REF" && exit 1)
           supabase functions deploy listora-basket-estimate --yes --remote="$SUPABASE_PROJECT_REF"
 
-      - name: Deploy experimental basket estimate V2
-        if: github.event_name == 'workflow_dispatch'
+      - name: Deploy parallel basket estimate V2
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
