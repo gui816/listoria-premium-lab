@@ -167,120 +167,147 @@ serve(async (req) => {
       }
     }
 
-    // V2 experiment: isolate each supermarket while preserving the same product matching,
-    // live Google Search grounding, model, thinking level and output schema as control A.
-    // This keeps failures and latency independent per retailer.
+    // One grounded request for the whole basket keeps latency predictable and
+    // lets Gemini compare products across all selected retailers in one pass.
     stage = "gemini_request";
     const comparisonStartedAt = Date.now();
-    // Reserve time for response normalization and free-trial/cohort bookkeeping.
-    // Gemini Search is the expensive phase, so enforce a hard budget in code.
-    const GEMINI_TIME_BUDGET_MS = 45_000;
-    const geminiDeadlineAt = comparisonStartedAt + GEMINI_TIME_BUDGET_MS;
-    const storePayloads = stores.map((store: any) => ({
+    const PRIMARY_TIMEOUT_MS = 28_000;
+    const FALLBACK_TIMEOUT_MS = 12_000;
+    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(geminiKey);
+    const selectedStores = stores.map((store: any) => ({
       name: store.name,
       website: store.website,
       pricePosition: store.price_position
     }));
-    // Keep Google Search/Gemini concurrency bounded to avoid creating a burst of
-    // upstream requests when users select many supermarkets.
-    let activeRequests = 0;
-    const waitingRequests: Array<() => void> = [];
-    const withConcurrency = async <T>(task: () => Promise<T>): Promise<T> => {
-      if (activeRequests >= 2) await new Promise<void>((resolve) => waitingRequests.push(resolve));
-      activeRequests += 1;
-      try {
-        return await task();
-      } finally {
-        activeRequests -= 1;
-        waitingRequests.shift()?.();
-      }
-    };
-    const storeRuns = await Promise.all(stores.map((store: any, index: number) => withConcurrency(async () => {
-      const remainingBudgetMs = geminiDeadlineAt - Date.now();
-      if (remainingBudgetMs <= 0) {
-        return {
-          supermarket: store.name,
-          durationMs: 0,
-          errorCode: "deadline_exceeded",
-          parsed: null,
-          groundingChunks: []
-        };
-      }
-      const storePayload = storePayloads[index];
-      const storePrompt = prompt.replace(
-        "Selected supermarkets: " + JSON.stringify(storePayloads),
-        "Selected supermarkets: " + JSON.stringify([storePayload])
-      );
-      const startedAt = Date.now();
-      try {
-        const response = await fetch(
-          "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(geminiKey),
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ role: "user", parts: [{ text: storePrompt }] }],
-              tools: [{ google_search: {} }],
-              generationConfig: {
-                responseMimeType: "application/json",
-                maxOutputTokens: Math.min(12000, Math.max(1500, basket.length * 180)),
-                thinkingConfig: { thinkingLevel: "low" }
-              }
-            }),
-            // Bound each in-flight request by the remaining shared budget.
-            signal: AbortSignal.any([req.signal, AbortSignal.timeout(Math.max(1, remainingBudgetMs))])
+
+    const callGemini = async (text: string, useSearch: boolean, timeoutMs: number) => {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text }] }],
+          ...(useSearch ? { tools: [{ google_search: {} }] } : {}),
+          generationConfig: {
+            responseMimeType: "application/json",
+            maxOutputTokens: Math.min(10000, Math.max(2200, basket.length * stores.length * 110)),
+            thinkingConfig: { thinkingLevel: "low" }
           }
-        );
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          console.error("Gemini V2 supermarket estimate failed:", {
-            supermarket: store.name,
-            status: response.status,
-            message: payload?.error?.message || "Unknown upstream error"
-          });
-          return {
-            supermarket: store.name,
-            durationMs: Date.now() - startedAt,
-            errorCode: response.status === 429 ? "rate_limited" : response.status >= 500 ? "upstream_unavailable" : "upstream_rejected",
-            parsed: null,
-            groundingChunks: []
-          };
-        }
-        const candidate = payload?.candidates?.[0];
-        const raw = candidate?.content?.parts?.map((part: any) => part.text || "").join("") || "";
-        try {
-          const parsedStore = JSON.parse(raw);
-          return {
-            supermarket: store.name,
-            durationMs: Date.now() - startedAt,
-            errorCode: null,
-            parsed: parsedStore,
-            groundingChunks: candidate?.groundingMetadata?.groundingChunks || []
-          };
-        } catch {
-          console.error("Gemini V2 returned invalid JSON:", { supermarket: store.name });
-          return {
-            supermarket: store.name,
-            durationMs: Date.now() - startedAt,
-            errorCode: "invalid_json",
-            parsed: null,
-            groundingChunks: candidate?.groundingMetadata?.groundingChunks || []
-          };
-        }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error || "Unknown error");
-        console.error("Gemini V2 supermarket request error:", { supermarket: store.name, message });
-        return {
-          supermarket: store.name,
-          durationMs: Date.now() - startedAt,
-          errorCode: Date.now() >= geminiDeadlineAt
-            ? "deadline_exceeded"
-            : /timed out|timeout|abort/i.test(message) ? "timeout" : "network_error",
-          parsed: null,
-          groundingChunks: []
-        };
+        }),
+        signal: AbortSignal.any([req.signal, AbortSignal.timeout(timeoutMs)])
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const error: any = new Error(payload?.error?.message || "Gemini upstream error");
+        error.status = response.status;
+        throw error;
       }
-    })));
+      const candidate = payload?.candidates?.[0];
+      const raw = candidate?.content?.parts?.map((part: any) => part.text || "").join("") || "";
+      return {
+        parsed: JSON.parse(raw),
+        groundingChunks: candidate?.groundingMetadata?.groundingChunks || []
+      };
+    };
+
+    let primaryError: any = null;
+    let primaryParsed: any = { stores: [] };
+    let groundingChunks: any[] = [];
+    try {
+      const primary = await callGemini(prompt, true, PRIMARY_TIMEOUT_MS);
+      primaryParsed = primary.parsed;
+      groundingChunks = primary.groundingChunks;
+    } catch (error) {
+      primaryError = error;
+      console.warn("Grounded basket estimate unavailable; activating fallback:", {
+        status: (error as any)?.status || null,
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+
+    if (req.signal.aborted) {
+      return json({ error: "A comparação foi cancelada.", code: "request_cancelled" }, 499);
+    }
+
+    const asNamedStores = (value: any) => Array.isArray(value?.stores) ? value.stores : [];
+    const normalizeStoreName = (value: unknown) => String(value || "").trim().toLocaleLowerCase();
+    const primaryByName = new Map<string, any>(
+      asNamedStores(primaryParsed).map((entry: any) => [normalizeStoreName(entry?.name), entry])
+    );
+    const missingStores = stores.filter((store: any) => !primaryByName.has(normalizeStoreName(store.name)));
+
+    // Fast no-search fallback for retailers omitted by Search or when Search is
+    // unavailable. Reuse actual products/prices found for the same basket at
+    // other selected retailers; only use broad market estimates when no such
+    // evidence exists, and label those estimates explicitly.
+    let fallbackUsed = false;
+    let fallbackError: string | null = null;
+    if (missingStores.length) {
+      stage = "gemini_fallback";
+      const observedEvidence = asNamedStores(primaryParsed).map((entry: any) => ({
+        supermarket: entry?.name,
+        items: (Array.isArray(entry?.items) ? entry.items : []).map((item: any) => ({
+          requestedName: item?.requestedName || item?.name,
+          matchedProductName: item?.matchedProductName || null,
+          packageSize: item?.packageSize || null,
+          matchType: item?.matchType || null,
+          estimationMethod: item?.estimationMethod || null,
+          estimationBasis: item?.estimationBasis || null,
+          estimatedUnitPrice: item?.estimatedUnitPrice ?? null,
+          estimatedSubtotal: item?.estimatedSubtotal ?? null,
+          unit: item?.unit || null
+        }))
+      }));
+      const fallbackPrompt = [
+        "You are completing a grocery basket estimate. Return one result for EACH missing supermarket and EVERY requested basket item.",
+        "This is a fast fallback: do not use web search, tools, or lengthy reasoning.",
+        "FIRST reuse the observed product and price evidence supplied from other selected supermarkets for the same requested items. Use those real observed prices as comparable evidence, with a cautious retailer adjustment only when the retailer price position supports it: budget slightly lower, mid/mixed similar, premium slightly higher. Do not claim these are prices observed at the missing supermarket.",
+        "For any item without observed comparable evidence, provide a cautious indicative market estimate only if you can reasonably estimate it from general country/category knowledge. Mark estimationMethod as market_estimate and clearly say in estimationBasis that this is a broad indicative estimate, not a found catalogue price. Never invent an observed product, source, URL, promotion or exact match.",
+        "For reused observed evidence, mark matchType comparable_estimate and estimationMethod comparable_products. Include the actual comparable product, supermarket and observed price in estimationBasis. Keep confidence low.",
+        "For generic category names, estimate a representative standard product in that category. Preserve product category and important attributes. If no responsible estimate is possible, use no_reliable_match with null prices.",
+        "Return JSON only using: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes,items:[{requestedName,matchedProductName,brand,packageSize,normalizedUnit,matchType,estimationMethod,estimationBasis,matchConfidence,matchingNotes,quantity,unit,estimatedUnitPrice,estimatedSubtotal,confidence}]}]}.",
+        "Country: " + country.name + " (" + country.code + "), currency " + currency + ", language " + country.default_language + ".",
+        "Basket: " + JSON.stringify(basket),
+        "Missing supermarkets: " + JSON.stringify(missingStores.map((store: any) => ({ name: store.name, pricePosition: store.price_position }))),
+        "Observed evidence from completed retailer searches: " + JSON.stringify(observedEvidence)
+      ].join("\n");
+      try {
+        const fallback = await callGemini(fallbackPrompt, false, FALLBACK_TIMEOUT_MS);
+        for (const entry of asNamedStores(fallback.parsed)) {
+          const name = normalizeStoreName(entry?.name);
+          if (missingStores.some((store: any) => normalizeStoreName(store.name) === name)) {
+            primaryByName.set(name, entry);
+          }
+        }
+        fallbackUsed = true;
+      } catch (error) {
+        fallbackError = error instanceof Error ? error.message : String(error);
+        console.warn("Basket estimate fallback unavailable:", fallbackError);
+      }
+    }
+
+    const parsed: any = {
+      stores: stores.map((store: any) => primaryByName.get(normalizeStoreName(store.name)) || ({
+        name: store.name,
+        status: "insufficient_data",
+        notes: "Não foi possível obter evidência suficiente para estimar este supermercado.",
+        items: []
+      }))
+    };
+    const candidate = { groundingMetadata: { groundingChunks } };
+    const experimentMetrics = {
+      variant: "single_grounded_request_with_fast_fallback",
+      primaryDurationMs: Math.min(Date.now() - comparisonStartedAt, PRIMARY_TIMEOUT_MS),
+      totalDurationMs: Date.now() - comparisonStartedAt,
+      primaryFailed: Boolean(primaryError),
+      fallbackUsed,
+      fallbackFailed: Boolean(fallbackError),
+      returnedStores: parsed.stores.filter((entry: any) => entry.status !== "insufficient_data").length,
+      selectedStores: stores.length
+    };
+    console.info("Basket estimate reliability metrics:", experimentMetrics);
+    if (req.signal.aborted) {
+      return json({ error: "A comparação foi cancelada.", code: "request_cancelled" }, 499);
+    }
 
     if (req.signal.aborted) {
       console.info("Basket estimate V2 cancelled by client before trial consumption:", { requestId });
@@ -356,7 +383,7 @@ serve(async (req) => {
             )
           : null;
         const matchTypes = ["exact_match", "same_brand_variant", "equivalent_other_brand", "comparable_estimate", "no_reliable_match"];
-        const estimationMethods = ["observed_price", "similar_product_price", "comparable_products", "insufficient_evidence"];
+        const estimationMethods = ["observed_price", "similar_product_price", "comparable_products", "market_estimate", "insufficient_evidence"];
         const matchType = matchTypes.includes(matched?.matchType) ? matched.matchType : "no_reliable_match";
         const estimationMethod = estimationMethods.includes(matched?.estimationMethod)
           ? matched.estimationMethod
@@ -370,7 +397,7 @@ serve(async (req) => {
         const hasIdentifiedProduct = String(matched?.matchedProductName || "").trim().length > 0;
         const validMatch = validPrice && (
           matchType === "comparable_estimate"
-            ? estimationMethod === "comparable_products" && estimationBasis.length > 0
+            ? ["comparable_products", "market_estimate"].includes(estimationMethod) && estimationBasis.length > 0
             : hasIdentifiedProduct
         );
         return {
@@ -464,7 +491,7 @@ serve(async (req) => {
       country: { code: country.code, name: country.name },
       currency: country.currency_code,
       currencyLocale: country.currency_locale,
-      method: "ai_grounded_estimate",
+      method: fallbackUsed ? "ai_grounded_with_fallback" : "ai_grounded_estimate",
       model: "gemini-3.8-flash",
       experiment: experimentMetrics,
       groundingSources: (candidate?.groundingMetadata?.groundingChunks || [])
