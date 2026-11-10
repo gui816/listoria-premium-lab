@@ -23,6 +23,8 @@ serve(async (req) => {
   const { data: { user }, error: authError } = await authClient.auth.getUser(token);
   if (authError || !user) return json({ error: "Sessão inválida. Volta a iniciar sessão." }, 401);
   if (user.is_anonymous) return json({ error: "Cria uma conta Listoria antes de subscrever o Premium." }, 403);
+  const premiumAllowlist = (Deno.env.get("PREMIUM_ALLOWLIST_EMAILS") || "").split(",").map((email) => email.trim().toLowerCase()).filter(Boolean);
+  if (user.email && premiumAllowlist.includes(user.email.trim().toLowerCase())) return json({ premiumExempt: true, activated: true });
   const admin = createClient(url, service, { auth: { persistSession: false } });
   if (!stripeKey) {
    const { data: demoSub, error: demoError } = await admin.from("premium_demo_subscriptions").upsert({ user_id: user.id, status: "active", current_period_start: new Date().toISOString(), current_period_end: new Date(Date.now()+30*24*60*60*1000).toISOString(), cancel_at_period_end: false, past_due_grace_until: null }, { onConflict: "user_id" }).select().single();
