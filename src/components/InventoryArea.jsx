@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Archive, ArrowRight, CalendarDays, Check, ChevronDown, LoaderCircle, Minus, Plus, Refrigerator, Search, ShoppingBasket, Trash2 } from "lucide-react";
 import { supabase } from "../lib/supabase.js";
 
@@ -28,6 +28,7 @@ export default function InventoryArea({ shareCode, onAddToShopping }) {
   const [expiryDate, setExpiryDate] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+  const channelRef = useRef(null);
 
   const loadItems = useCallback(async () => {
     if (!shareCode) { setItems([]); setLoading(false); return; }
@@ -39,6 +40,23 @@ export default function InventoryArea({ shareCode, onAddToShopping }) {
   }, [shareCode]);
 
   useEffect(() => { void loadItems(); }, [loadItems]);
+
+  useEffect(() => {
+    if (!shareCode) return undefined;
+    const channel = supabase.channel(`inventory:${shareCode}`, {
+      config: { broadcast: { self: false } }
+    });
+    channel.on("broadcast", { event: "changed" }, () => { void loadItems(); }).subscribe();
+    channelRef.current = channel;
+    return () => {
+      channelRef.current = null;
+      void supabase.removeChannel(channel);
+    };
+  }, [shareCode, loadItems]);
+
+  function broadcastInventoryChange() {
+    channelRef.current?.send({ type: "broadcast", event: "changed", payload: {} });
+  }
 
   const filteredItems = useMemo(() => items.filter(item => {
     const matchesSearch = !search || item.name.toLocaleLowerCase().includes(search.toLocaleLowerCase());
@@ -56,7 +74,7 @@ export default function InventoryArea({ shareCode, onAddToShopping }) {
       p_category: category, p_storage_location: location, p_expiry_date: expiryDate || null
     });
     if (rpcError) setError("Não foi possível guardar. A atualização da base de dados pode ainda não estar aplicada.");
-    else { setItems(data?.items || []); setName(""); setQuantity("1"); setExpiryDate(""); }
+    else { setItems(data?.items || []); setName(""); setQuantity("1"); setExpiryDate(""); broadcastInventoryChange(); }
     setSaving(false);
   }
 
@@ -66,13 +84,13 @@ export default function InventoryArea({ shareCode, onAddToShopping }) {
       p_share_code: shareCode, p_item_id: item.id, p_quantity: nextQuantity
     });
     if (rpcError) setError("Não foi possível atualizar a quantidade.");
-    else setItems(data?.items || []);
+    else { setItems(data?.items || []); broadcastInventoryChange(); }
   }
 
   async function removeItem(item) {
     const { data, error: rpcError } = await supabase.rpc("delete_family_inventory_item", { p_share_code: shareCode, p_item_id: item.id });
     if (rpcError) setError("Não foi possível remover o produto.");
-    else setItems(data?.items || []);
+    else { setItems(data?.items || []); broadcastInventoryChange(); }
   }
 
   async function addToShopping(item) {
@@ -80,7 +98,7 @@ export default function InventoryArea({ shareCode, onAddToShopping }) {
     const success = await onAddToShopping(item);
     if (success) {
       const { data, error: rpcError } = await supabase.rpc("record_inventory_restock_request", { p_share_code: shareCode, p_item_id: item.id });
-      if (!rpcError && data?.items) setItems(data.items);
+      if (!rpcError && data?.items) { setItems(data.items); broadcastInventoryChange(); }
     }
   }
 
