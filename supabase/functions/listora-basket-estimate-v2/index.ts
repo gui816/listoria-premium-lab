@@ -167,14 +167,16 @@ serve(async (req) => {
       }
     }
 
-    // One grounded request for the whole basket keeps latency predictable and
-    // lets Gemini compare products across all selected retailers in one pass.
+    // Isolate each retailer so a larger basket does not become one oversized
+    // Gemini + Search task. Keep concurrency bounded and preserve successful stores.
     stage = "gemini_request";
     const comparisonStartedAt = Date.now();
-    const PRIMARY_TIMEOUT_MS = 28_000;
-    const FALLBACK_TIMEOUT_MS = 12_000;
+    const PRIMARY_TIMEOUT_MS = 42_000;
+    const FALLBACK_TIMEOUT_MS = 18_000;
+    const GEMINI_TIME_BUDGET_MS = 55_000;
+    const geminiDeadlineAt = comparisonStartedAt + GEMINI_TIME_BUDGET_MS;
     const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(geminiKey);
-    const callGemini = async (text: string, useSearch: boolean, timeoutMs: number) => {
+    const callGemini = async (text: string, useSearch: boolean, timeoutMs: number, outputTokenLimit: number) => {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -183,11 +185,11 @@ serve(async (req) => {
           ...(useSearch ? { tools: [{ google_search: {} }] } : {}),
           generationConfig: {
             responseMimeType: "application/json",
-            maxOutputTokens: Math.min(10000, Math.max(2200, basket.length * stores.length * 110)),
+            maxOutputTokens: outputTokenLimit,
             thinkingConfig: { thinkingLevel: "low" }
           }
         }),
-        signal: AbortSignal.any([req.signal, AbortSignal.timeout(timeoutMs)])
+        signal: AbortSignal.any([req.signal, AbortSignal.timeout(Math.max(1, timeoutMs))])
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -197,36 +199,100 @@ serve(async (req) => {
       }
       const candidate = payload?.candidates?.[0];
       const raw = candidate?.content?.parts?.map((part: any) => part.text || "").join("") || "";
+      let parsed: any;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        throw new Error("Gemini returned invalid JSON");
+      }
       return {
-        parsed: JSON.parse(raw),
+        parsed,
         groundingChunks: candidate?.groundingMetadata?.groundingChunks || []
       };
     };
 
-    let primaryError: any = null;
-    const primaryStartedAt = Date.now();
-    let primaryDurationMs = 0;
-    let primaryParsed: any = { stores: [] };
-    let groundingChunks: any[] = [];
-    try {
-      const primary = await callGemini(prompt, true, PRIMARY_TIMEOUT_MS);
-      primaryParsed = primary.parsed;
-      groundingChunks = primary.groundingChunks;
-    } catch (error) {
-      primaryError = error;
-      console.warn("Grounded basket estimate unavailable; activating fallback:", {
-        status: (error as any)?.status || null,
-        message: error instanceof Error ? error.message : String(error)
-      });
-    }
-
-    primaryDurationMs = Date.now() - primaryStartedAt;
-    if (req.signal.aborted) {
-      return json({ error: "A comparação foi cancelada.", code: "request_cancelled" }, 499);
-    }
-
-    const asNamedStores = (value: any) => Array.isArray(value?.stores) ? value.stores : [];
     const normalizeStoreName = (value: unknown) => String(value || "").trim().toLocaleLowerCase();
+    const asNamedStores = (value: any) => asStoreResults(value);
+    const allStoresPayload = stores.map((store: any) => ({
+      name: store.name,
+      website: store.website,
+      pricePosition: store.price_position
+    }));
+    const allStoresLine = "Selected supermarkets: " + JSON.stringify(allStoresPayload);
+
+    let activeRequests = 0;
+    const waitingRequests: Array<() => void> = [];
+    const withConcurrency = async <T>(task: () => Promise<T>): Promise<T> => {
+      if (activeRequests >= 2) await new Promise<void>((resolve) => waitingRequests.push(resolve));
+      activeRequests += 1;
+      try {
+        return await task();
+      } finally {
+        activeRequests -= 1;
+        waitingRequests.shift()?.();
+      }
+    };
+
+    const primaryStartedAt = Date.now();
+    const storeRuns = await Promise.all(stores.map((store: any) => withConcurrency(async () => {
+      const remainingBudgetMs = geminiDeadlineAt - Date.now();
+      if (remainingBudgetMs <= 0 || req.signal.aborted) {
+        return {
+          supermarket: store.name,
+          entry: null,
+          durationMs: 0,
+          errorCode: req.signal.aborted ? "cancelled" : "deadline_exceeded",
+          groundingChunks: []
+        };
+      }
+
+      const storePayload = [{ name: store.name, website: store.website, pricePosition: store.price_position }];
+      const storePrompt = prompt.replace(allStoresLine, "Selected supermarkets: " + JSON.stringify(storePayload));
+      const startedAt = Date.now();
+      try {
+        const response = await callGemini(
+          storePrompt,
+          true,
+          Math.min(PRIMARY_TIMEOUT_MS, remainingBudgetMs),
+          Math.min(7000, Math.max(1800, basket.length * 240))
+        );
+        const returnedStores = asNamedStores(response.parsed);
+        const matchingStore = returnedStores.find((entry: any) =>
+          normalizeStoreName(entry?.name) === normalizeStoreName(store.name)
+        );
+        const entry = matchingStore || (returnedStores.length === 1 ? returnedStores[0] : null);
+        if (!entry) throw new Error("Gemini did not return a valid result for " + store.name);
+        return {
+          supermarket: store.name,
+          entry: { ...entry, name: store.name },
+          durationMs: Date.now() - startedAt,
+          errorCode: null,
+          groundingChunks: response.groundingChunks
+        };
+      } catch (error: any) {
+        const message = error instanceof Error ? error.message : String(error || "Unknown error");
+        const status = Number(error?.status) || null;
+        console.warn("Gemini basket estimate failed for supermarket:", {
+          supermarket: store.name,
+          status,
+          message: message.slice(0, 180)
+        });
+        return {
+          supermarket: store.name,
+          entry: null,
+          durationMs: Date.now() - startedAt,
+          errorCode: status === 429
+            ? "rate_limited"
+            : /timed out|timeout|abort/i.test(message) ? "timeout" : "upstream_error",
+          groundingChunks: []
+        };
+      }
+    })));
+
+    const primaryDurationMs = Date.now() - primaryStartedAt;
+    const primaryError = storeRuns.some((run: any) => Boolean(run.errorCode));
+    const primaryParsed: any = { stores: storeRuns.filter((run: any) => run.entry).map((run: any) => run.entry) };
+    const groundingChunks = storeRuns.flatMap((run: any) => run.groundingChunks || []);
     const primaryByName = new Map<string, any>(
       asNamedStores(primaryParsed).map((entry: any) => [normalizeStoreName(entry?.name), entry] as [string, any])
     );
