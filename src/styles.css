@@ -3777,3 +3777,35 @@ button { -webkit-tap-highlight-color: transparent; }
   .finance-action-card { padding: 13px; }
 }
 @media (prefers-reduced-motion: reduce) { .app-area-navigation .main-tab { transition: none; } }
+
+
+/* One consistent, low-friction product composer for the Home inventory. */
+.inventory-add-composer{display:flex;align-items:center;gap:7px;min-width:0;padding:5px;border:1px solid #dce6d9;border-radius:15px;background:#fbfcf9}
+.inventory-add-composer>input{flex:1 1 auto;width:0;min-width:0;height:42px;padding:0 9px;border:0!important;background:transparent!important;box-shadow:none!important;font-size:14px}
+.inventory-composer-submit,.inventory-composer-tool{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border:0;border-radius:12px;touch-action:manipulation}
+.inventory-composer-submit{background:#245d42;color:#fff}
+.inventory-composer-submit:disabled,.inventory-composer-tool:disabled{opacity:.42}
+.inventory-composer-tool{background:#edf3eb;color:#37694c}
+.inventory-composer-tool.recording{background:#fbe9e6;color:#a23e2b;animation:voice-listening-pulse 1.4s ease-in-out infinite}
+.inventory-capture-file{display:none!important}
+.inventory-capture-status{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:#eff5ed;color:#426b4c;font-size:12px;line-height:1.45}
+.inventory-capture-error{margin:0;padding:10px 12px;border-radius:12px;background:#fff0ed;color:#a23e2b;font-size:12px;line-height:1.45}
+.inventory-capture-preview{display:grid;gap:9px;padding:13px;border:1px solid #dce8d9;border-radius:15px;background:#f8faf6}
+.inventory-capture-preview-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.inventory-capture-preview-heading>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.inventory-capture-preview-heading strong{font-size:13px;color:#294b36}
+.inventory-capture-preview-heading small{font-size:11px;color:#758477;overflow-wrap:anywhere}
+.inventory-capture-preview-heading>button{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;border:0;border-radius:10px;background:#edf2eb;color:#657469}
+.inventory-capture-preview .primary-button{width:100%;min-height:45px;margin:2px 0 0}
+.inventory-add-details{border-top:1px solid #edf0e9;padding-top:8px}
+.inventory-add-details>summary{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:34px;color:#718071;font-size:11px;font-weight:700;cursor:pointer;list-style:none}
+.inventory-add-details>summary::-webkit-details-marker{display:none}
+.inventory-add-details[open]>summary svg{transform:rotate(180deg)}
+.inventory-add-details>.inventory-form-grid{margin-top:10px}
+@media(max-width:420px){
+  .inventory-add-form{padding:13px;gap:9px}
+  .inventory-add-composer{gap:5px;padding:4px}
+  .inventory-composer-submit,.inventory-composer-tool{flex-basis:36px;width:36px;height:38px;border-radius:11px}
+  .inventory-add-composer>input{font-size:13px;padding:0 7px}
+}
+@media(prefers-reduced-motion:reduce){.inventory-composer-tool.recording{animation:none}}
