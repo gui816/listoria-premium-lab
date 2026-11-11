@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { createPortal } from "react-dom";
 import BasketEstimate from "./components/BasketEstimate.jsx";
+import InventoryArea from "./components/InventoryArea.jsx";
 import AccountAccess from "./components/AccountAccess.jsx";
 import { getAnalyticsConsent, hasAnalyticsProviders, setAnalyticsConsent as saveAnalyticsConsent, trackEvent, trackPageView } from "./lib/analytics.js";
 import { supabase, isSupabaseConfigured } from "./lib/supabase.js";
@@ -1426,9 +1427,11 @@ export default function App() {
           <button className="icon-action" onClick={() => setShowShare(true)} aria-label={t("Partilhar")} title={t("Partilhar")}><Share2 size={22}/></button>
         </div>
       </header>
-      {(!shoppingMode || activeTab === "receipts") && <nav className="main-tabs segmented-tabs" aria-label={t("Secções da lista")}>
+      {!shoppingMode && <nav className="main-tabs segmented-tabs main-tabs-expanded" aria-label={t("Áreas da Listora")}>
         <button type="button" className={activeTab === "shopping" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "shopping"} onClick={() => setActiveTab("shopping")}><ShoppingBasket size={17}/> <span className="tab-label">{t("Compras")}</span></button>
-        <button type="button" className={activeTab === "receipts" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "receipts"} onClick={() => setActiveTab("receipts")}><Receipt size={17}/> <span className="tab-label">{t("Faturas")}</span>{receipts.length > 0 && <span className="tab-count">{receipts.length}</span>}</button>
+        <button type="button" className={activeTab === "inventory" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "inventory"} onClick={() => setActiveTab("inventory")}><span aria-hidden="true">🏠</span> <span className="tab-label">{t("Em casa")}</span></button>
+        <button type="button" className={activeTab === "finance" || activeTab === "receipts" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "finance" || activeTab === "receipts"} onClick={() => setActiveTab("finance")}><span aria-hidden="true">◷</span> <span className="tab-label">{t("Financeiro")}</span></button>
+        <button type="button" className={activeTab === "recipes" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "recipes"} onClick={() => setActiveTab("recipes")}><span aria-hidden="true">♨</span> <span className="tab-label">{t("Receitas")}</span></button>
       </nav>}
       {activeTab === "shopping" && <>
       {!shoppingMode && <section className="list-tools" aria-label={t("Gestão da lista")}>
@@ -1550,8 +1553,18 @@ export default function App() {
           </div>
         </section>
       </div>}
+      {activeTab === "inventory" && <InventoryArea shareCode={listCode} language={language} onAddToShopping={(item) => submitItem(item.name, item.quantity || 1, item.category || "auto", true)} />}
+      {activeTab === "finance" && <section className="finance-hub">
+        <div className="finance-hub-heading"><span className="eyebrow">{t("VISÃO DA FAMÍLIA")}</span><h1>{t("Assistente financeiro")}</h1><p>{t("Acompanha o que já gastaste e prepara melhor as próximas compras.")}</p></div>
+        <div className="finance-overview-card"><span>{t("Despesas registadas")}</span><strong>{receipts.reduce((sum, receipt) => sum + (Number(receipt.total) || 0), 0).toLocaleString(language, {style:"currency",currency:"EUR"})}</strong><small>{t("Com base nas faturas guardadas nesta lista.")}</small></div>
+        <div className="finance-action-card"><div className="finance-action-icon"><Receipt size={21}/></div><div><strong>{t("Faturas e histórico")}</strong><p>{t("Consulta os comprovativos e os valores reais das tuas compras.")}</p></div><button type="button" className="secondary-button" onClick={() => setActiveTab("receipts")}>{t("Ver faturas")} <ArrowRight size={16}/></button></div>
+        <div className="finance-note"><Sparkles size={17}/><p>{t("As previsões de despesa serão apresentadas quando existirem dados suficientes de compras e comparações. Não confundimos estimativas com despesas reais.")}</p></div>
+      </section>}
+      {activeTab === "recipes" && <section className="recipes-coming-soon">
+        <div className="recipes-coming-icon">♨</div><span className="eyebrow">{t("A CAMINHO")}</span><h1>{t("Receitas com o que tens em casa")}</h1><p>{t("Estamos a preparar sugestões inteligentes que aproveitam os teus produtos disponíveis e ajudam a reduzir o desperdício.")}</p><div className="recipes-coming-preview"><span>🥕</span><span>🥦</span><span>🍅</span><span>🥚</span><div><strong>{t("Da tua despensa para a mesa")}</strong><small>{t("Sugestões adaptadas aos ingredientes disponíveis.")}</small></div></div>
+      </section>}
       {activeTab === "receipts" && <section className="receipts-section">
-        <div className="receipts-heading"><div><span className="eyebrow">{t("ARQUIVO PARTILHADO")}</span><h1>{t("Faturas de compras")}</h1><p>{t("Comprovativos acessíveis a todos os membros desta lista.")}</p></div></div>
+        <div className="receipts-heading"><div><span className="eyebrow">{t("ARQUIVO PARTILHADO")}</span><h1>{t("Faturas de compras")}</h1><p>{t("Comprovativos acessíveis a todos os membros desta lista.")}</p></div><button type="button" className="secondary-button" onClick={() => setActiveTab("finance")}>← {t("Voltar ao financeiro")}</button></div>
         {receiptAddMode === "choice" && !receiptExtractBusy && <div className="receipt-start-card">
           <div className="receipt-start-icon"><Receipt size={25}/></div>
           <h2>{t("Guardar uma fatura")}</h2>
