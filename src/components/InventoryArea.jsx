@@ -207,6 +207,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
     if (!valid.length || captureBusy || saving) return;
     setCaptureBusy(true);
     setCaptureError("");
+    let insertedCount = 0;
     try {
       for (const item of valid) {
         const categoryId = inferInventoryCategory(item.name);
@@ -221,11 +222,13 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
         });
         if (rpcError) throw new Error("Não foi possível guardar todos os produtos. Verifica a ligação e tenta novamente.");
         setItems(data?.items || []);
+        insertedCount += 1;
       }
       setCapturedItems([]);
       setVoiceTranscript("");
       broadcastInventoryChange();
     } catch (err) {
+      if (insertedCount > 0) setCapturedItems(valid.slice(insertedCount));
       setCaptureError(err.message || "Não foi possível guardar os produtos.");
     } finally {
       setCaptureBusy(false);
@@ -275,7 +278,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
         <button className={`inventory-composer-tool${captureListening ? " recording" : ""}`} type="button" aria-label="Adicionar por voz" title="Dizer vários produtos" disabled={captureBusy || captureListening} onClick={startVoiceCapture}><Mic size={19}/></button>
         <input ref={captureFileRef} className="inventory-capture-file" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={event => { void processCapturePhoto(event.target.files?.[0]); }} />
       </div>
-      {(captureBusy || captureListening) && <div className="inventory-capture-status" role="status" aria-live="polite">{captureBusy ? <LoaderCircle size={16} className="spin"/> : <Mic size={16}/ >}{captureListening ? "A ouvir… diz os produtos e quantidades." : captureSource === "photo" ? "A analisar a fotografia e a identificar os produtos…" : "A interpretar os produtos que disseste…"}</div>}
+      {(captureBusy || captureListening) && <div className="inventory-capture-status" role="status" aria-live="polite">{captureBusy ? <LoaderCircle size={16} className="spin"/> : <Mic size={16} />}{captureListening ? "A ouvir… diz os produtos e quantidades." : captureSource === "photo" ? "A analisar a fotografia e a identificar os produtos…" : "A interpretar os produtos que disseste…"}</div>}
       {captureError && <p className="inventory-capture-error" role="alert">{captureError}</p>}
       {capturedItems.length > 0 && <div className="inventory-capture-preview">
         <div className="inventory-capture-preview-heading"><div><strong>Confirma os produtos</strong><small>{capturedItems.length} identificados{voiceTranscript ? " · " + voiceTranscript : ""}</small></div><button type="button" aria-label="Cancelar importação" onClick={() => { setCapturedItems([]); setVoiceTranscript(""); }}><X size={17}/></button></div>
