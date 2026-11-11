@@ -7,7 +7,7 @@ import AccountAccess from "./components/AccountAccess.jsx";
 import { getAnalyticsConsent, hasAnalyticsProviders, setAnalyticsConsent as saveAnalyticsConsent, trackEvent, trackPageView } from "./lib/analytics.js";
 import { supabase, isSupabaseConfigured } from "./lib/supabase.js";
 import {
-  ArrowRight, ArrowLeft, Sparkles, Check, CheckCheck, ChevronDown, Minus, CircleHelp, Clipboard, Copy, Share2, Download, Repeat2, List, Store, ShieldCheck,
+  ArrowRight, ArrowLeft, Sparkles, Check, CheckCheck, ChevronDown, Minus, CircleHelp, Clipboard, Copy, Share2, Download, Repeat2, List, Store, ShieldCheck, Wallet, ChefHat, Refrigerator,
   Camera, Mic, Leaf, LoaderCircle, Plus, ShoppingBasket, Trash2, Users, LogOut, Wifi, WifiOff, X, FileText, Receipt, Upload, ExternalLink, Zap, Smartphone, Bell
 } from "lucide-react";
 
@@ -1447,11 +1447,11 @@ export default function App() {
           <button className="icon-action" onClick={() => setShowShare(true)} aria-label={t("Partilhar")} title={t("Partilhar")}><Share2 size={22}/></button>
         </div>
       </header>
-      {!shoppingMode && <nav className="main-tabs segmented-tabs main-tabs-expanded" aria-label={t("Áreas da Listora")}>
-        <button type="button" className={activeTab === "shopping" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "shopping"} onClick={() => setActiveTab("shopping")}><ShoppingBasket size={17}/> <span className="tab-label">{t("Compras")}</span></button>
-        <button type="button" className={activeTab === "inventory" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "inventory"} onClick={() => setActiveTab("inventory")}><span aria-hidden="true">🏠</span> <span className="tab-label">{t("Em casa")}</span></button>
-        <button type="button" className={activeTab === "finance" || activeTab === "receipts" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "finance" || activeTab === "receipts"} onClick={() => setActiveTab("finance")}><span aria-hidden="true">◷</span> <span className="tab-label">{t("Financeiro")}</span></button>
-        <button type="button" className={activeTab === "recipes" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "recipes"} onClick={() => setActiveTab("recipes")}><span aria-hidden="true">♨</span> <span className="tab-label">{t("Receitas")}</span></button>
+      {!shoppingMode && <nav className="main-tabs segmented-tabs main-tabs-expanded app-area-navigation" aria-label={t("Áreas da Listora")}>
+        <button type="button" className={activeTab === "shopping" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "shopping"} onClick={() => setActiveTab("shopping")}><ShoppingBasket size={20}/> <span className="tab-label">{t("Compras")}</span></button>
+        <button type="button" className={activeTab === "inventory" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "inventory"} onClick={() => setActiveTab("inventory")}><Refrigerator size={20}/> <span className="tab-label">{t("Em casa")}</span></button>
+        <button type="button" className={activeTab === "finance" || activeTab === "receipts" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "finance" || activeTab === "receipts"} onClick={() => setActiveTab("finance")}><Wallet size={20}/> <span className="tab-label">{t("Financeiro")}</span></button>
+        <button type="button" className={activeTab === "recipes" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "recipes"} onClick={() => setActiveTab("recipes")}><ChefHat size={20}/> <span className="tab-label">{t("Receitas")}</span></button>
       </nav>}
       {activeTab === "shopping" && <>
       {!shoppingMode && <section className="list-tools" aria-label={t("Gestão da lista")}>
