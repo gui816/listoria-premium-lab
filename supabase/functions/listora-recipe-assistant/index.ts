@@ -27,7 +27,7 @@ serve(async (req) => {
     const request = String(body?.request || "").trim().slice(0, 500);
     const imagesInput = Array.isArray(body?.images) ? body.images : [];
     if (imagesInput.length > 3) return json({ error: "Podes enviar no máximo 3 fotografias por pesquisa." }, 400);
-    const images = imagesInput.map((image: Record<string, unknown>) => ({
+    const images: { mimeType: string; data: string }[] = imagesInput.map((image: Record<string, unknown>) => ({
       mimeType: String(image?.mimeType || ""),
       data: String(image?.data || ""),
     }));
