@@ -230,11 +230,31 @@ serve(async (req) => {
     const primaryByName = new Map<string, any>(
       asNamedStores(primaryParsed).map((entry: any) => [normalizeStoreName(entry?.name), entry] as [string, any])
     );
-    const hasAllRequestedItems = (entry: any) => Array.isArray(entry?.items) &&
-      basket.every((item: any) => entry.items.some((candidate: any) =>
-        String(candidate?.requestedName || candidate?.name || "").trim().toLocaleLowerCase() === item.name.toLocaleLowerCase()
-      ));
-    const missingStores = stores.filter((store: any) => !hasAllRequestedItems(primaryByName.get(normalizeStoreName(store.name))));
+    const hasUsableItemPrice = (candidate: any) => {
+      const matchType = String(candidate?.matchType || "");
+      const method = String(candidate?.estimationMethod || "");
+      const unitPrice = Number(candidate?.estimatedUnitPrice);
+      const subtotal = Number(candidate?.estimatedSubtotal);
+      const hasPrice = Number.isFinite(unitPrice) && unitPrice > 0 &&
+        Number.isFinite(subtotal) && subtotal > 0;
+      if (!hasPrice || matchType === "no_reliable_match") return false;
+      if (matchType === "comparable_estimate") {
+        return ["comparable_products", "market_estimate"].includes(method) &&
+          String(candidate?.estimationBasis || "").trim().length > 0;
+      }
+      return Boolean(String(candidate?.matchedProductName || "").trim());
+    };
+    const missingStores = stores.filter((store: any) => {
+      const entry = primaryByName.get(normalizeStoreName(store.name));
+      return basket.some((item: any) => {
+        const candidate = Array.isArray(entry?.items)
+          ? entry.items.find((value: any) =>
+              String(value?.requestedName || value?.name || "").trim().toLocaleLowerCase() === item.name.toLocaleLowerCase()
+            )
+          : null;
+        return !hasUsableItemPrice(candidate);
+      });
+    });
 
     // Fast no-search fallback for retailers omitted by Search or when Search is
     // unavailable. Reuse actual products/prices found for the same basket at
@@ -262,9 +282,12 @@ serve(async (req) => {
         "You are completing a grocery basket estimate. Return one result for EACH missing supermarket and EVERY requested basket item.",
         "This is a fast fallback: do not use web search, tools, or lengthy reasoning.",
         "FIRST reuse the observed product and price evidence supplied from other selected supermarkets for the same requested items. Use those real observed prices as comparable evidence, with a cautious retailer adjustment only when the retailer price position supports it: budget slightly lower, mid/mixed similar, premium slightly higher. Do not claim these are prices observed at the missing supermarket.",
-        "For any item without observed comparable evidence, provide a cautious indicative market estimate only if you can reasonably estimate it from general country/category knowledge. Mark estimationMethod as market_estimate and clearly say in estimationBasis that this is a broad indicative estimate, not a found catalogue price. Never invent an observed product, source, URL, promotion or exact match.",
+        "Your priority is to return the best useful basket estimate, not to reject the basket for weak evidence. Complete every missing or weakly priced item for each listed supermarket.",
+        "For any recognisable grocery item without a found exact or equivalent product, make a best-effort indicative estimate using typical retail prices for this country and category from your general knowledge. Choose a representative standard product and realistic pack size, calculate the requested quantity, and use a deliberately wide range and LOW confidence. Mark estimationMethod as market_estimate and explain the assumptions in estimationBasis. This is not a catalogue price.",
+        "For generic category names, always estimate a representative standard product in that category rather than returning no match. Preserve product category and important attributes. If the requested quantity/unit is ambiguous, state the assumption and use a standard unit or pack.",
+        "Reuse observed prices from other selected supermarkets when available, but identify the source supermarket and observed price and apply only a cautious adjustment supported by the retailer price position. Never claim a reused price was observed at the target supermarket.",
+        "Never invent a live observed price, source, URL, promotion, brand or exact match. Never present a market estimate as a verified price. Use null only for genuinely uninterpretable or non-grocery items where no reasonable category estimate can be made.",
         "For reused observed evidence, mark matchType comparable_estimate and estimationMethod comparable_products. Include the actual comparable product, supermarket and observed price in estimationBasis. Keep confidence low.",
-        "For generic category names, estimate a representative standard product in that category. Preserve product category and important attributes. If no responsible estimate is possible, use no_reliable_match with null prices.",
         "Return JSON only using: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes,items:[{requestedName,matchedProductName,brand,packageSize,normalizedUnit,matchType,estimationMethod,estimationBasis,matchConfidence,matchingNotes,quantity,unit,estimatedUnitPrice,estimatedSubtotal,confidence}]}]}.",
         "Country: " + country.name + " (" + country.code + "), currency " + currency + ", language " + country.default_language + ".",
         "Basket: " + JSON.stringify(basket),
@@ -275,9 +298,29 @@ serve(async (req) => {
         const fallback = await callGemini(fallbackPrompt, false, FALLBACK_TIMEOUT_MS);
         for (const entry of asNamedStores(fallback.parsed)) {
           const name = normalizeStoreName(entry?.name);
-          if (missingStores.some((store: any) => normalizeStoreName(store.name) === name)) {
-            primaryByName.set(name, entry);
-          }
+          if (!missingStores.some((store: any) => normalizeStoreName(store.name) === name)) continue;
+
+          const primaryEntry = primaryByName.get(name);
+          const primaryItems = Array.isArray(primaryEntry?.items) ? primaryEntry.items : [];
+          const fallbackItems = Array.isArray(entry?.items) ? entry.items : [];
+          const mergedItems = basket.map((item: any) => {
+            const requested = item.name.toLocaleLowerCase();
+            const original = primaryItems.find((value: any) =>
+              String(value?.requestedName || value?.name || "").trim().toLocaleLowerCase() === requested
+            );
+            const bestEffort = fallbackItems.find((value: any) =>
+              String(value?.requestedName || value?.name || "").trim().toLocaleLowerCase() === requested
+            );
+            return hasUsableItemPrice(original) ? original : (bestEffort || original || null);
+          }).filter(Boolean);
+
+          primaryByName.set(name, {
+            ...entry,
+            ...(primaryEntry || {}),
+            ...entry,
+            items: mergedItems,
+            notes: entry?.notes || primaryEntry?.notes || ""
+          });
         }
         fallbackUsed = true;
       } catch (error) {
