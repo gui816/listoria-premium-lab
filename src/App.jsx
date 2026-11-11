@@ -1575,12 +1575,13 @@ export default function App() {
         </section>
       </div>}
       {activeTab === "inventory" && <InventoryArea shareCode={listCode} language={language} onAddToShopping={(item) => {
-        const alreadyListed = items.some(current => !current.done && current.name?.trim().toLocaleLowerCase() === item.name?.trim().toLocaleLowerCase());
-        return alreadyListed ? Promise.resolve(true) : submitItem(item.name, item.quantity || 1, item.category || "auto", true);
+        const existingItem = items.find(current => !current.done && current.name?.trim().toLocaleLowerCase() === item.name?.trim().toLocaleLowerCase());
+        if (existingItem) return updateItem(existingItem, { quantity: Math.min(999, (Number(existingItem.quantity) || 1) + (Number(item.quantity) || 1)) }).then(() => true);
+        return submitItem(item.name, item.quantity || 1, item.category || "auto", true);
       }} />}
       {activeTab === "finance" && <section className="finance-hub">
         <div className="finance-hub-heading"><span className="eyebrow">{t("VISÃO DA FAMÍLIA")}</span><h1>{t("Assistente financeiro")}</h1><p>{t("Acompanha o que já gastaste e prepara melhor as próximas compras.")}</p></div>
-        <div className="finance-overview-card"><span>{t("Despesas registadas")}</span><strong>{receipts.reduce((sum, receipt) => sum + (Number(receipt.total) || 0), 0).toLocaleString(language, {style:"currency",currency:"EUR"})}</strong><small>{t("Com base nas faturas guardadas nesta lista.")}</small></div>
+        <div className="finance-overview-card"><span>{t("Despesas registadas")}</span><strong>{receipts.length ? receipts.reduce((sum, receipt) => sum + (Number(receipt.total) || 0), 0).toLocaleString(language, {style:"currency",currency:"EUR"}) : t("Sem dados")}</strong><small>{receipts.length ? t("Com base nas faturas guardadas nesta lista.") : t("Importa uma fatura se quiseres acompanhar as despesas reais.")}</small></div>
         <div className="finance-action-card"><div className="finance-action-icon"><Receipt size={21}/></div><div><strong>{t("Faturas e histórico")}</strong><p>{t("Consulta os comprovativos e os valores reais das tuas compras.")}</p></div><button type="button" className="secondary-button" onClick={() => setActiveTab("receipts")}>{t("Ver faturas")} <ArrowRight size={16}/></button></div>
         <div className="finance-note"><Sparkles size={17}/><p>{t("As previsões de despesa serão apresentadas quando existirem dados suficientes de compras e comparações. Não confundimos estimativas com despesas reais.")}</p></div>
       </section>}
