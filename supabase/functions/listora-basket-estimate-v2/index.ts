@@ -361,7 +361,12 @@ serve(async (req) => {
         "Observed evidence from completed retailer searches: " + JSON.stringify(observedEvidence)
       ].join("\n");
       try {
-        const fallback = await callGemini(fallbackPrompt, false, FALLBACK_TIMEOUT_MS);
+        const fallback = await callGemini(
+          fallbackPrompt,
+          false,
+          FALLBACK_TIMEOUT_MS,
+          Math.min(10000, Math.max(2200, basket.length * missingStores.length * 180))
+        );
         for (const entry of asNamedStores(fallback.parsed)) {
           const name = normalizeStoreName(entry?.name);
           if (!missingStores.some((store: any) => normalizeStoreName(store.name) === name)) continue;
@@ -405,14 +410,20 @@ serve(async (req) => {
     };
     const candidate = { groundingMetadata: { groundingChunks } };
     const experimentMetrics = {
-      variant: "single_grounded_request_with_fast_fallback",
+      variant: "parallel_per_supermarket_with_fast_fallback",
       primaryDurationMs,
       totalDurationMs: Date.now() - comparisonStartedAt,
       primaryFailed: Boolean(primaryError),
+      primaryOutcomes: storeRuns.map((run: any) => ({
+        supermarket: run.supermarket,
+        durationMs: run.durationMs,
+        outcome: run.errorCode || "success"
+      })),
       fallbackUsed,
       fallbackFailed: Boolean(fallbackError),
       returnedStores: parsed.stores.filter((entry: any) => entry.status !== "insufficient_data").length,
-      selectedStores: stores.length
+      selectedStores: stores.length,
+      missingStoresAfterGrounding: missingStores.length
     };
     console.info("Basket estimate reliability metrics:", experimentMetrics);
     if (req.signal.aborted) {
