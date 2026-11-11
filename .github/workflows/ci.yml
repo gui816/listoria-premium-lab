@@ -33,4 +33,4 @@ jobs:
         with:
           deno-version: v2.x
       - name: Type-check basket estimate functions
-        run: deno check supabase/functions/listora-basket-estimate/index.ts supabase/functions/listora-basket-estimate-v2/index.ts
+        run: deno check supabase/functions/listora-basket-estimate/index.ts supabase/functions/listora-basket-estimate-v2/index.ts supabase/functions/listora-recipe-assistant/index.ts
