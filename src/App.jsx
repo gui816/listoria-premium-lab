@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { createPortal } from "react-dom";
 import BasketEstimate from "./components/BasketEstimate.jsx";
+import InventoryArea from "./components/InventoryArea.jsx";
 import AccountAccess from "./components/AccountAccess.jsx";
 import { getAnalyticsConsent, hasAnalyticsProviders, setAnalyticsConsent as saveAnalyticsConsent, trackEvent, trackPageView } from "./lib/analytics.js";
 import { supabase, isSupabaseConfigured } from "./lib/supabase.js";
@@ -811,6 +812,25 @@ export default function App() {
     } catch (err) { setError(err.message); return false; }
   }
 
+  async function movePurchasedToInventory(item) {
+    if (!listCode || !item?.name) return false;
+    const { error: rpcError } = await supabase.rpc("add_family_inventory_item", {
+      p_share_code: listCode,
+      p_name: item.name,
+      p_quantity: Math.max(1, Number(item.quantity) || 1),
+      p_category: item.category || "outros",
+      p_storage_location: "despensa",
+      p_expiry_date: null
+    });
+    if (rpcError) {
+      setError(t("Não foi possível guardar o produto em casa. Tenta novamente."));
+      return false;
+    }
+    notify(t("Produto guardado em casa"));
+    broadcastChange();
+    return true;
+  }
+
   function parseGeminiItems(payload) {
     const text = payload?.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("") || "";
     const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
@@ -1119,7 +1139,8 @@ export default function App() {
       if (rpcError) throw rpcError;
       broadcastChange();
       setItems(data.items);
-    } catch (err) { setError(err.message); }
+      return true;
+    } catch (err) { setError(err.message); return false; }
   }
 
   async function deleteItem(item) {
@@ -1426,9 +1447,11 @@ export default function App() {
           <button className="icon-action" onClick={() => setShowShare(true)} aria-label={t("Partilhar")} title={t("Partilhar")}><Share2 size={22}/></button>
         </div>
       </header>
-      {(!shoppingMode || activeTab === "receipts") && <nav className="main-tabs segmented-tabs" aria-label={t("Secções da lista")}>
+      {!shoppingMode && <nav className="main-tabs segmented-tabs main-tabs-expanded" aria-label={t("Áreas da Listora")}>
         <button type="button" className={activeTab === "shopping" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "shopping"} onClick={() => setActiveTab("shopping")}><ShoppingBasket size={17}/> <span className="tab-label">{t("Compras")}</span></button>
-        <button type="button" className={activeTab === "receipts" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "receipts"} onClick={() => setActiveTab("receipts")}><Receipt size={17}/> <span className="tab-label">{t("Faturas")}</span>{receipts.length > 0 && <span className="tab-count">{receipts.length}</span>}</button>
+        <button type="button" className={activeTab === "inventory" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "inventory"} onClick={() => setActiveTab("inventory")}><span aria-hidden="true">🏠</span> <span className="tab-label">{t("Em casa")}</span></button>
+        <button type="button" className={activeTab === "finance" || activeTab === "receipts" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "finance" || activeTab === "receipts"} onClick={() => setActiveTab("finance")}><span aria-hidden="true">◷</span> <span className="tab-label">{t("Financeiro")}</span></button>
+        <button type="button" className={activeTab === "recipes" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "recipes"} onClick={() => setActiveTab("recipes")}><span aria-hidden="true">♨</span> <span className="tab-label">{t("Receitas")}</span></button>
       </nav>}
       {activeTab === "shopping" && <>
       {!shoppingMode && <section className="list-tools" aria-label={t("Gestão da lista")}>
@@ -1458,6 +1481,7 @@ export default function App() {
             return <article data-item-id={String(item._id)} className={`shopping-item ${item.done ? "is-done" : ""} ${String(item._id) === recentlyAddedItemId ? "is-recently-added" : ""}`} key={item._id}>
               <button className={`check-button ${item.done ? "checked" : ""}`} onClick={() => updateItem(item, { done: !item.done })} aria-label={item.done ? t("Marcar como por comprar") : t("Marcar como comprado")}>{item.done && <Check size={17}/>}</button>
               <div className="item-copy"><span className="item-name">{item.name}</span><span className="item-meta"><span>{cat.emoji} {t(cat.label)}</span><span className="meta-dot">·</span><span>{t("Qtd.")} {item.quantity}</span></span></div>
+              {item.done && <button type="button" className="inventory-save-inline" onClick={() => void movePurchasedToInventory(item)} title={t("Guardar em casa")}><Plus size={14}/><span>{t("Em casa")}</span></button>}
               <button className="delete-button" onClick={() => deleteItem(item)} aria-label={`${t("Remover")} ${item.name}`}><Trash2 size={17}/></button>
             </article>;
           })}</div>
@@ -1472,6 +1496,7 @@ export default function App() {
             return <article className="shopping-item is-done" key={item._id}>
               <button className="check-button checked" onClick={() => updateItem(item, { done: false })} aria-label={t("Marcar como por comprar")}><Check size={17}/></button>
               <div className="item-copy"><span className="item-name">{item.name}</span><span className="item-meta"><span>{cat.emoji} {t(cat.label)}</span><span className="meta-dot">·</span><span>{t("Qtd.")} {item.quantity}</span></span></div>
+              <button type="button" className="inventory-save-inline" onClick={() => void movePurchasedToInventory(item)} title={t("Guardar em casa")}><Plus size={14}/><span>{t("Em casa")}</span></button>
               <button className="delete-button" onClick={() => deleteItem(item)} aria-label={`${t("Remover")} ${item.name}`}><Trash2 size={17}/></button>
             </article>;
           })}</div>}
@@ -1550,8 +1575,22 @@ export default function App() {
           </div>
         </section>
       </div>}
+      {activeTab === "inventory" && <InventoryArea shareCode={listCode} language={language} onAddToShopping={(item) => {
+        const existingItem = items.find(current => !current.done && current.name?.trim().toLocaleLowerCase() === item.name?.trim().toLocaleLowerCase());
+        if (existingItem) return updateItem(existingItem, { quantity: Math.min(999, (Number(existingItem.quantity) || 1) + (Number(item.quantity) || 1)) });
+        return submitItem(item.name, item.quantity || 1, item.category || "auto", true);
+      }} />}
+      {activeTab === "finance" && <section className="finance-hub">
+        <div className="finance-hub-heading"><span className="eyebrow">{t("VISÃO DA FAMÍLIA")}</span><h1>{t("Assistente financeiro")}</h1><p>{t("Acompanha o que já gastaste e prepara melhor as próximas compras.")}</p></div>
+        <div className="finance-overview-card"><span>{t("Despesas registadas")}</span><strong>{receipts.length ? receipts.reduce((sum, receipt) => sum + (Number(receipt.total) || 0), 0).toLocaleString(language, {style:"currency",currency:"EUR"}) : t("Sem dados")}</strong><small>{receipts.length ? t("Com base nas faturas guardadas nesta lista.") : t("Importa uma fatura se quiseres acompanhar as despesas reais.")}</small></div>
+        <div className="finance-action-card"><div className="finance-action-icon"><Receipt size={21}/></div><div><strong>{t("Faturas e histórico")}</strong><p>{t("Consulta os comprovativos e os valores reais das tuas compras.")}</p></div><button type="button" className="secondary-button" onClick={() => setActiveTab("receipts")}>{t("Ver faturas")} <ArrowRight size={16}/></button></div>
+        <div className="finance-note"><Sparkles size={17}/><p>{t("As previsões de despesa serão apresentadas quando existirem dados suficientes de compras e comparações. Não confundimos estimativas com despesas reais.")}</p></div>
+      </section>}
+      {activeTab === "recipes" && <section className="recipes-coming-soon">
+        <div className="recipes-coming-icon">♨</div><span className="eyebrow">{t("A CAMINHO")}</span><h1>{t("Receitas com o que tens em casa")}</h1><p>{t("Estamos a preparar sugestões inteligentes que aproveitam os teus produtos disponíveis e ajudam a reduzir o desperdício.")}</p><div className="recipes-coming-preview"><span>🥕</span><span>🥦</span><span>🍅</span><span>🥚</span><div><strong>{t("Da tua despensa para a mesa")}</strong><small>{t("Sugestões adaptadas aos ingredientes disponíveis.")}</small></div></div>
+      </section>}
       {activeTab === "receipts" && <section className="receipts-section">
-        <div className="receipts-heading"><div><span className="eyebrow">{t("ARQUIVO PARTILHADO")}</span><h1>{t("Faturas de compras")}</h1><p>{t("Comprovativos acessíveis a todos os membros desta lista.")}</p></div></div>
+        <div className="receipts-heading"><div><span className="eyebrow">{t("ARQUIVO PARTILHADO")}</span><h1>{t("Faturas de compras")}</h1><p>{t("Comprovativos acessíveis a todos os membros desta lista.")}</p></div><button type="button" className="secondary-button" onClick={() => setActiveTab("finance")}>← {t("Voltar ao financeiro")}</button></div>
         {receiptAddMode === "choice" && !receiptExtractBusy && <div className="receipt-start-card">
           <div className="receipt-start-icon"><Receipt size={25}/></div>
           <h2>{t("Guardar uma fatura")}</h2>
