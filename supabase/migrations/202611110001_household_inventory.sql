@@ -79,7 +79,7 @@ begin
   on conflict (list_id,normalized_name) do update set
     quantity = least(999, family_inventory_items.quantity + excluded.quantity),
     category = excluded.category, storage_location = excluded.storage_location,
-    expiry_date = coalesce(excluded.expiry_date, public.family_inventory_items.expiry_date),
+    expiry_date = coalesce(excluded.expiry_date, family_inventory_items.expiry_date),
     restock_requested_at = null, updated_at = now()
   returning id into v_item_id;
   insert into public.family_inventory_movements(list_id,inventory_item_id,movement_type,quantity_delta,source)
