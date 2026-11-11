@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowDownToLine, ArrowRight, ChefHat, Clock3, CookingPot, LoaderCircle, RefreshCw, ShoppingBasket, Sparkles, Utensils, WandSparkles } from "lucide-react";
+import { ArrowDownToLine, ArrowRight, Camera, ChefHat, Clock3, ImagePlus, LoaderCircle, RefreshCw, ShoppingBasket, Sparkles, Utensils, WandSparkles, X } from "lucide-react";
 import { supabase } from "../lib/supabase.js";
 
 const COPY = {
   pt: {
     eyebrow:"COZINHAR COM O QUE JÁ TENS", title:"O que vamos cozinhar hoje?",
     intro:"A Listoria usa o que tens em casa para sugerir refeições práticas, reduzir desperdício e preparar o que falta comprar.",
-    prompt:"Ex.: algo rápido, sem forno, vegetariano…", generate:"Sugerir receitas", generating:"A pensar em receitas…",
+    prompt:"Ex.: algo rápido, sem forno, vegetariano…", generate:"Sugerir receitas", generating:"A analisar e preparar receitas…", photoTitle:"Fotografias dos teus ingredientes", photoHint:"Fotografa o frigorífico, a despensa ou os ingredientes.", takePhoto:"Tirar foto", choosePhotos:"Galeria", photoLimit:"Até 3 fotografias por pesquisa", removePhoto:"Remover fotografia", photoTooMany:"Podes adicionar no máximo 3 fotografias.", photoError:"Não foi possível preparar uma das fotografias. Tenta outra imagem.",
     inventory:"A tua despensa", inventoryCount:"produtos disponíveis", empty:"Ainda não tens produtos registados em casa.",
     emptyHint:"Adiciona alguns produtos em Em casa e a Listoria consegue sugerir receitas muito mais úteis.",
     goInventory:"Abrir Em casa", suggestions:"Experimenta pedir", quick:["Uma refeição rápida","Aproveitar o que está a acabar","Uma opção económica"],
@@ -20,7 +20,7 @@ const COPY = {
   en: {
     eyebrow:"COOK WITH WHAT YOU HAVE", title:"What shall we cook today?",
     intro:"Listoria uses what you already have to suggest practical meals, reduce waste and prepare anything missing from your shopping list.",
-    prompt:"E.g. quick meal, no oven, vegetarian…", generate:"Suggest recipes", generating:"Thinking of recipes…",
+    prompt:"E.g. quick meal, no oven, vegetarian…", generate:"Suggest recipes", generating:"Analysing and preparing recipes…", photoTitle:"Photos of your ingredients", photoHint:"Take photos of your fridge, pantry or ingredients.", takePhoto:"Take photo", choosePhotos:"Gallery", photoLimit:"Up to 3 photos per search", removePhoto:"Remove photo", photosSelected:"photos selected", photoTooMany:"You can add up to 3 photos.", photoError:"Couldn’t prepare one of the photos. Try another image.",
     inventory:"Your pantry", inventoryCount:"available products", empty:"You haven't added products to Home yet.",
     emptyHint:"Add a few products in Home and Listoria can make much more useful suggestions.",
     goInventory:"Open Home", suggestions:"Try asking", quick:["A quick meal","Use items nearing expiry","A budget-friendly option"],
@@ -34,7 +34,7 @@ const COPY = {
   es: {
     eyebrow:"COCINA CON LO QUE YA TIENES", title:"¿Qué cocinamos hoy?",
     intro:"Listoria utiliza lo que tienes en casa para sugerir comidas prácticas, reducir el desperdicio y preparar lo que falta.",
-    prompt:"Ej.: algo rápido, sin horno, vegetariano…", generate:"Sugerir recetas", generating:"Pensando recetas…",
+    prompt:"Ej.: algo rápido, sin horno, vegetariano…", generate:"Sugerir recetas", generating:"Analizando y preparando recetas…", photoTitle:"Fotos de tus ingredientes", photoHint:"Fotografía tu frigorífico, despensa o ingredientes.", takePhoto:"Hacer foto", choosePhotos:"Galería", photoLimit:"Hasta 3 fotos por búsqueda", removePhoto:"Eliminar foto", photoTooMany:"Puedes añadir un máximo de 3 fotos.", photoError:"No se pudo preparar una de las fotos. Prueba otra imagen.",
     inventory:"Tu despensa", inventoryCount:"productos disponibles", empty:"Todavía no has añadido productos en Casa.",
     emptyHint:"Añade algunos productos en Casa para recibir sugerencias más útiles.",
     goInventory:"Abrir Casa", suggestions:"Prueba a pedir", quick:["Una comida rápida","Aprovechar productos próximos a caducar","Una opción económica"],
@@ -50,10 +50,14 @@ const COPY = {
 export default function RecipesAssistant({ shareCode, language = "pt-PT", onGoInventory, onAddToShopping }) {
   const lang = language.toLowerCase().startsWith("en") ? "en" : language.toLowerCase().startsWith("es") ? "es" : "pt";
   const t = COPY[lang];
+  const photoLimitText = (label, remaining) => label + (remaining > 0 ? ` · ${remaining} ${lang === "en" ? "remaining" : lang === "es" ? "disponibles" : "disponíveis"}` : "");
   const [inventory, setInventory] = useState([]);
   const [inventoryBusy, setInventoryBusy] = useState(true);
   const [inventoryError, setInventoryError] = useState("");
   const [prompt, setPrompt] = useState("");
+  const [photoFiles, setPhotoFiles] = useState([]);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [recipes, setRecipes] = useState([]);
@@ -80,12 +84,55 @@ export default function RecipesAssistant({ shareCode, language = "pt-PT", onGoIn
     expiryDate: item.expiry_date || null
   })).filter(item => item.name).slice(0, 60), [inventory]);
 
+  async function preparePhoto(file) {
+    if (!file.type.startsWith("image/")) throw new Error(t.photoError);
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error(t.photoError);
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close?.();
+    const blob = await new Promise((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error(t.photoError)), "image/jpeg", 0.76));
+    if (!blob || blob.size > 700 * 1024) throw new Error(t.photoError);
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error(t.photoError));
+      reader.readAsDataURL(blob);
+    });
+    return { name: file.name, preview: dataUrl, mimeType: "image/jpeg", data: dataUrl.split(",")[1] || "" };
+  }
+
+  async function handlePhotoSelection(event) {
+    const selected = Array.from(event.target.files || []);
+    event.target.value = "";
+    if (!selected.length) return;
+    setPhotoError("");
+    if (photoFiles.length + selected.length > 3) {
+      setPhotoError(t.photoTooMany);
+      return;
+    }
+    setPhotoBusy(true);
+    try {
+      const prepared = [];
+      for (const file of selected) prepared.push(await preparePhoto(file));
+      setPhotoFiles(previous => [...previous, ...prepared].slice(0, 3));
+    } catch {
+      setPhotoError(t.photoError);
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
   async function generateRecipes(request = prompt) {
     if (busy) return;
     setBusy(true); setError(""); setNotice(""); setAdded({});
     try {
       const { data, error: invokeError } = await supabase.functions.invoke("listora-recipe-assistant", {
-        body: { inventory: inventorySummary, request: String(request || "").trim().slice(0, 500), language }
+        body: { inventory: inventorySummary, request: String(request || "").trim().slice(0, 500), language, images: photoFiles.map(({ mimeType, data }) => ({ mimeType, data })) }
       });
       if (invokeError) {
         let message = invokeError.message || t.error;
@@ -156,7 +203,20 @@ export default function RecipesAssistant({ shareCode, language = "pt-PT", onGoIn
       <label htmlFor="recipes-request">{t.suggestions}</label>
       <div className="recipes-quick-prompts">{t.quick.map(value => <button type="button" key={value} onClick={() => { setPrompt(value); void generateRecipes(value); }} disabled={busy}>{value}</button>)}</div>
       <textarea id="recipes-request" rows={2} value={prompt} onChange={event => setPrompt(event.target.value)} placeholder={t.prompt} maxLength={500}/>
-      <button type="button" className="recipes-generate-button" onClick={() => generateRecipes()} disabled={busy || inventoryBusy || (!inventorySummary.length && !prompt.trim())}>
+      <div className="recipes-photo-picker">
+        <div className="recipes-photo-picker-copy"><strong>{t.photoTitle}</strong><small>{t.photoHint}</small></div>
+        <div className="recipes-photo-picker-actions">
+          <label className="recipes-photo-action" htmlFor="recipes-camera"><Camera size={17}/>{t.takePhoto}</label>
+          <label className="recipes-photo-action" htmlFor="recipes-gallery"><ImagePlus size={17}/>{t.choosePhotos}</label>
+          <input id="recipes-camera" className="recipes-photo-input" type="file" accept="image/*" capture="environment" onChange={handlePhotoSelection}/>
+          <input id="recipes-gallery" className="recipes-photo-input" type="file" accept="image/*" multiple onChange={handlePhotoSelection}/>
+        </div>
+        <small className="recipes-photo-limit">{photoLimitText(t.photoLimit, 3 - photoFiles.length)}</small>
+        {photoBusy && <p className="recipes-photo-status"><LoaderCircle size={14} className="spin"/>{t.generating}</p>}
+        {photoFiles.length > 0 && <div className="recipes-photo-previews">{photoFiles.map((photo, index) => <div className="recipes-photo-preview" key={`${photo.name}-${index}`}><img src={photo.preview} alt={photo.name}/><button type="button" onClick={() => setPhotoFiles(previous => previous.filter((_, photoIndex) => photoIndex !== index))} aria-label={t.removePhoto}><X size={14}/></button></div>)}</div>}
+        {photoError && <p className="recipes-error" role="alert">{photoError}</p>}
+      </div>
+      <button type="button" className="recipes-generate-button" onClick={() => generateRecipes()} disabled={busy || photoBusy || inventoryBusy || (!inventorySummary.length && !prompt.trim() && !photoFiles.length)}>
         {busy ? <><LoaderCircle size={18} className="spin"/>{t.generating}</> : <><WandSparkles size={18}/>{t.generate}</>}
       </button>
       {inventoryError && <p className="recipes-error" role="alert">{inventoryError}</p>}

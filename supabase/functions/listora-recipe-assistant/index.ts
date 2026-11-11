@@ -25,12 +25,27 @@ serve(async (req) => {
       expiryDate: item?.expiryDate ? String(item.expiryDate).slice(0, 20) : null,
     })).filter((item: { name: string }) => item.name) : [];
     const request = String(body?.request || "").trim().slice(0, 500);
+    const imagesInput = Array.isArray(body?.images) ? body.images : [];
+    if (imagesInput.length > 3) return json({ error: "Podes enviar no máximo 3 fotografias por pesquisa." }, 400);
+    const images = imagesInput.map((image: Record<string, unknown>) => ({
+      mimeType: String(image?.mimeType || ""),
+      data: String(image?.data || ""),
+    }));
+    const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+    for (const image of images) {
+      if (!allowedImageTypes.has(image.mimeType) || !image.data || image.data.length > 940_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(image.data)) {
+        return json({ error: "Uma fotografia é inválida ou demasiado grande. Usa imagens JPG, PNG ou WebP até cerca de 700 KB." }, 400);
+      }
+    }
+    if (images.reduce((total, image) => total + image.data.length, 0) > 2_820_000) {
+      return json({ error: "O conjunto de fotografias é demasiado grande. Tenta enviar menos imagens." }, 413);
+    }
     const language = String(body?.language || "pt-PT").slice(0, 12);
-    if (!inventory.length && !request) return json({ error: "Adiciona produtos em casa ou indica o que gostarias de cozinhar." }, 400);
+    if (!inventory.length && !request && !images.length) return json({ error: "Adiciona produtos em casa, envia fotografias ou indica o que gostarias de cozinhar." }, 400);
 
     const prompt = [
       "You are Listoria, a practical home cooking assistant. Suggest exactly 3 realistic recipes.",
-      "Use the household inventory as the primary source. Prefer recipes that use more existing ingredients and, when expiry dates are supplied, prioritize items expiring soon.",
+      "Use the household inventory and any supplied food photos as sources. Identify visible ingredients from photos, but do not guess hidden contents, quantities, freshness, expiry dates or food safety. Treat photo identification as tentative and explain uncertainty in the recipe tip when relevant. Prefer recipes that use more confirmed existing ingredients and, when expiry dates are supplied, prioritize items expiring soon.",
       "Never claim an ingredient is available unless it clearly matches an inventory item. Set available=true only for ingredients covered by inventory; otherwise false.",
       "Do not invent inventory quantities. If an available ingredient quantity is unclear or insufficient, mark it available=false.",
       "Missing ingredients must be ordinary, reasonably easy-to-buy ingredients. Avoid requiring specialist equipment.",
@@ -42,11 +57,12 @@ serve(async (req) => {
       "User request: " + (request || "Suggest varied everyday meals using what is available.")
     ].join("\n\n");
 
+    const imageParts = images.map((image) => ({ inlineData: { mimeType: image.mimeType, data: image.data } }));
     const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(apiKey), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [{ role: "user", parts: [{ text: prompt }, ...imageParts] }],
         generationConfig: {
           responseMimeType: "application/json",
           responseSchema: {
