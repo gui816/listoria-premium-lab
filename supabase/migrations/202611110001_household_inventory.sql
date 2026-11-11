@@ -77,7 +77,7 @@ begin
   insert into public.family_inventory_items(list_id,name,normalized_name,quantity,category,storage_location,expiry_date)
   values (v_list_id,v_name,lower(regexp_replace(v_name,'\s+',' ','g')),v_quantity,v_category,v_location,p_expiry_date)
   on conflict (list_id,normalized_name) do update set
-    quantity = least(999, public.family_inventory_items.quantity + excluded.quantity),
+    quantity = least(999, family_inventory_items.quantity + excluded.quantity),
     category = excluded.category, storage_location = excluded.storage_location,
     expiry_date = coalesce(excluded.expiry_date, public.family_inventory_items.expiry_date),
     restock_requested_at = null, updated_at = now()
