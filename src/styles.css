@@ -3705,3 +3705,75 @@ button { -webkit-tap-highlight-color: transparent; }
   .inventory-area,.finance-hub,.recipes-coming-soon{padding-bottom:calc(110px + env(safe-area-inset-bottom))}
 }
 @media(min-width:621px){.app-area-navigation{position:relative}}
+
+
+/* Mobile navigation/layout refinement — keep the persistent navigation clear of
+   floating shopping controls and give every section a predictable scroll end. */
+@media (max-width: 620px) {
+  :root { --listoria-bottom-nav-height: 76px; }
+  .app-area-navigation {
+    min-height: var(--listoria-bottom-nav-height);
+    padding: 7px 10px calc(7px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid #dfe7dc;
+    background: rgba(242, 245, 237, .98);
+    box-shadow: 0 -5px 18px rgba(36, 58, 39, .07);
+  }
+  .app-area-navigation .main-tab {
+    min-height: 58px; border: 1px solid transparent; border-radius: 17px;
+    transition: background-color .16s ease, color .16s ease, box-shadow .16s ease;
+  }
+  .app-area-navigation .main-tab.active {
+    border-color: #e1e9df; background: #fffefa;
+    box-shadow: 0 2px 8px rgba(38, 69, 46, .08);
+  }
+  .shopping-actions-dock {
+    bottom: calc(var(--listoria-keyboard-inset, 0px) + var(--listoria-bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 10px);
+  }
+  .app-shell { padding-bottom: calc(210px + env(safe-area-inset-bottom, 0px)) !important; }
+  .inventory-area, .finance-hub, .recipes-coming-soon, .receipts-section {
+    padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px)) !important;
+    min-width: 0;
+  }
+  .inventory-heading, .finance-hub-heading {
+    display: flex; flex-direction: column; align-items: flex-start;
+    gap: 8px; margin: 18px 0 20px;
+  }
+  .finance-hub-heading h1, .inventory-heading h1, .recipes-coming-soon h1, .receipts-heading h1 {
+    max-width: 100%; overflow-wrap: anywhere;
+    font-size: clamp(25px, 7vw, 32px); line-height: 1.12;
+  }
+  .finance-hub-heading p, .inventory-heading p, .recipes-coming-soon > p, .receipts-heading p {
+    max-width: 100%; font-size: 13px; line-height: 1.5;
+  }
+  .finance-overview-card { margin: 16px 0; padding: 19px; gap: 7px; }
+  .finance-overview-card > strong {
+    font-size: clamp(29px, 8vw, 38px); line-height: 1.08; overflow-wrap: anywhere;
+  }
+  .finance-action-card {
+    display: grid; grid-template-columns: 42px minmax(0, 1fr);
+    align-items: center; gap: 10px 12px; padding: 15px;
+  }
+  .finance-action-card > div:nth-child(2) { min-width: 0; }
+  .finance-action-card .secondary-button {
+    grid-column: 1 / -1; width: 100%; min-height: 46px; margin: 2px 0 0;
+    white-space: normal;
+  }
+  .finance-note { align-items: flex-start; gap: 10px; padding: 13px 14px; font-size: 12px; line-height: 1.5; }
+  .finance-note p, .inventory-footnote, .receipt-card-main, .receipt-card-main p {
+    min-width: 0; overflow-wrap: anywhere;
+  }
+  .recipes-coming-preview {
+    grid-template-columns: repeat(4, minmax(0, auto)); gap: 8px; padding: 14px;
+  }
+  .recipes-coming-preview > div { grid-column: 1 / -1; margin: 4px 0 0; }
+  .receipts-heading { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .receipts-heading .secondary-button { width: 100%; min-height: 44px; }
+}
+@media (max-width: 380px) {
+  .app-area-navigation { padding-left: 6px; padding-right: 6px; gap: 0; }
+  .app-area-navigation .main-tab { min-height: 56px; gap: 3px; font-size: 9px; }
+  .app-area-navigation .main-tab svg { width: 19px; height: 19px; }
+  .finance-overview-card { padding: 16px; }
+  .finance-action-card { padding: 13px; }
+}
+@media (prefers-reduced-motion: reduce) { .app-area-navigation .main-tab { transition: none; } }
