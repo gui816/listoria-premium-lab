@@ -1139,7 +1139,8 @@ export default function App() {
       if (rpcError) throw rpcError;
       broadcastChange();
       setItems(data.items);
-    } catch (err) { setError(err.message); }
+      return true;
+    } catch (err) { setError(err.message); return false; }
   }
 
   async function deleteItem(item) {
@@ -1576,7 +1577,7 @@ export default function App() {
       </div>}
       {activeTab === "inventory" && <InventoryArea shareCode={listCode} language={language} onAddToShopping={(item) => {
         const existingItem = items.find(current => !current.done && current.name?.trim().toLocaleLowerCase() === item.name?.trim().toLocaleLowerCase());
-        if (existingItem) return updateItem(existingItem, { quantity: Math.min(999, (Number(existingItem.quantity) || 1) + (Number(item.quantity) || 1)) }).then(() => true);
+        if (existingItem) return updateItem(existingItem, { quantity: Math.min(999, (Number(existingItem.quantity) || 1) + (Number(item.quantity) || 1)) });
         return submitItem(item.name, item.quantity || 1, item.category || "auto", true);
       }} />}
       {activeTab === "finance" && <section className="finance-hub">
