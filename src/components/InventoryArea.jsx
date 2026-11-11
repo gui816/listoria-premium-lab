@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Archive, ArrowRight, CalendarDays, Check, ChevronDown, LoaderCircle, Minus, Plus, Refrigerator, Search, ShoppingBasket, Trash2 } from "lucide-react";
+import { Archive, ArrowRight, CalendarDays, Camera, Check, ChevronDown, LoaderCircle, Mic, Minus, Plus, Refrigerator, Search, ShoppingBasket, Trash2, X } from "lucide-react";
 import { supabase } from "../lib/supabase.js";
 
 const INVENTORY_CATEGORIES = [
@@ -16,7 +16,7 @@ const STORAGE_OPTIONS = [
   { id: "outro", label: "Outro" }
 ];
 
-export default function InventoryArea({ shareCode, onAddToShopping }) {
+export default function InventoryArea({ shareCode, language = "pt-PT", onAddToShopping }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -26,6 +26,14 @@ export default function InventoryArea({ shareCode, onAddToShopping }) {
   const [category, setCategory] = useState("outros");
   const [location, setLocation] = useState("despensa");
   const [expiryDate, setExpiryDate] = useState("");
+  const [capturedItems, setCapturedItems] = useState([]);
+  const [captureBusy, setCaptureBusy] = useState(false);
+  const [captureListening, setCaptureListening] = useState(false);
+  const [captureError, setCaptureError] = useState("");
+  const [captureSource, setCaptureSource] = useState("");
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  const captureFileRef = useRef(null);
+  const recognitionRef = useRef(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const channelRef = useRef(null);
@@ -78,6 +86,152 @@ export default function InventoryArea({ shareCode, onAddToShopping }) {
     setSaving(false);
   }
 
+  function inferInventoryCategory(productName) {
+    const value = productName.toLocaleLowerCase();
+    if (/maçã|banana|laranja|tomate|batata|cebola|alface|cenoura|brócolo|abacate|fruta|legume|pera|uva|limão|morango/.test(value)) return "fruta";
+    if (/leite|iogurte|queijo|manteiga|ovo|carne|frango|peixe|salmão|fiambre|presunto|natas|requeijão/.test(value)) return "frescos";
+    if (/detergente|lixívia|lixivia|limpeza|sabão|sabonete|champô|shampoo|pasta de dentes|desinfetante|papel higiénico/.test(value)) return "limpeza";
+    return "despensa";
+  }
+
+  async function extractCapturedItems(payload, source) {
+    setCaptureBusy(true);
+    setCaptureListening(false);
+    setCaptureError("");
+    setCaptureSource(source);
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke("listora-list-extract", { body: payload });
+      if (invokeError) {
+        let detail = invokeError.message || "Não foi possível contactar o serviço de interpretação.";
+        try {
+          const response = invokeError.context;
+          if (response && typeof response.json === "function") {
+            const body = await response.json();
+            detail = body?.error || body?.message || detail;
+          }
+        } catch { /* Keep the original error. */ }
+        throw new Error(detail);
+      }
+      if (data?.error) throw new Error(data.error);
+      const found = (Array.isArray(data?.items) ? data.items : [])
+        .map(item => ({ name: String(item?.name || item?.product || "").trim().replace(/\s+/g, " ").slice(0, 100), quantity: Math.max(1, Math.min(999, Number.parseInt(item?.quantity, 10) || 1)) }))
+        .filter(item => item.name).slice(0, 60);
+      if (!found.length) throw new Error("Não identificámos produtos. Tenta uma fotografia mais nítida ou fala novamente.");
+      setCapturedItems(found);
+    } catch (err) {
+      setCaptureError(err.message || "Não foi possível interpretar os produtos. Tenta novamente.");
+    } finally {
+      setCaptureBusy(false);
+    }
+  }
+
+  async function processCapturePhoto(file) {
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setCaptureError("Escolhe uma fotografia em formato JPG, PNG ou WebP.");
+      return;
+    }
+    if (file.size > 12 * 1024 * 1024) {
+      setCaptureError("A fotografia deve ter menos de 12 MB.");
+      return;
+    }
+    setCaptureBusy(true);
+    setCaptureSource("photo");
+    setCaptureError("");
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(new Error("Não foi possível ler a fotografia."));
+        reader.readAsDataURL(file);
+      });
+      const [header, fileData] = dataUrl.split(",");
+      const mimeType = header.match(/data:(.*?);base64/)?.[1] || "image/jpeg";
+      await extractCapturedItems({ text: "", mimeType, fileData }, "photo");
+    } catch (err) {
+      setCaptureError(err.message || "Não foi possível ler a fotografia.");
+      setCaptureBusy(false);
+    } finally {
+      if (captureFileRef.current) captureFileRef.current.value = "";
+    }
+  }
+
+  function startVoiceCapture() {
+    setCaptureError("");
+    setVoiceTranscript("");
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setCaptureError("O reconhecimento de voz não está disponível neste navegador. Podes usar o microfone do teclado no campo de produto.");
+      return;
+    }
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = language || "pt-PT";
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognitionRef.current = recognition;
+      recognition.onstart = () => setCaptureListening(true);
+      recognition.onresult = event => {
+        setCaptureListening(false);
+        const transcript = event.results?.[0]?.[0]?.transcript?.trim() || "";
+        if (!transcript) {
+          setCaptureError("Não detetámos produtos na gravação. Tenta novamente.");
+          return;
+        }
+        setVoiceTranscript(transcript);
+        void extractCapturedItems({ text: transcript, mimeType: "", fileData: "" }, "voice");
+      };
+      recognition.onerror = event => {
+        setCaptureListening(false);
+        setCaptureError(event.error === "not-allowed"
+          ? "O acesso ao microfone foi recusado. Permite o microfone nas definições do navegador."
+          : event.error === "no-speech"
+            ? "Não detetámos voz. Toca no microfone e fala depois de aparecer a indicação de escuta."
+            : "Não foi possível reconhecer a voz. Tenta novamente.");
+      };
+      recognition.onend = () => setCaptureListening(false);
+      recognition.start();
+    } catch {
+      setCaptureListening(false);
+      setCaptureError("Não foi possível iniciar o microfone neste dispositivo.");
+    }
+  }
+
+  function updateCapturedItem(index, changes) {
+    setCapturedItems(previous => previous.map((item, itemIndex) => itemIndex === index ? { ...item, ...changes } : item));
+  }
+
+  async function confirmCapturedItems() {
+    const valid = capturedItems.filter(item => item.name.trim());
+    if (!valid.length || captureBusy || saving) return;
+    setCaptureBusy(true);
+    setCaptureError("");
+    try {
+      for (const item of valid) {
+        const categoryId = inferInventoryCategory(item.name);
+        const storageLocation = categoryId === "frescos" ? "frigorifico" : "despensa";
+        const { data, error: rpcError } = await supabase.rpc("add_family_inventory_item", {
+          p_share_code: shareCode,
+          p_name: item.name.trim().slice(0, 100),
+          p_quantity: Math.max(1, Math.min(999, Number.parseInt(item.quantity, 10) || 1)),
+          p_category: categoryId,
+          p_storage_location: storageLocation,
+          p_expiry_date: null
+        });
+        if (rpcError) throw new Error("Não foi possível guardar todos os produtos. Verifica a ligação e tenta novamente.");
+        setItems(data?.items || []);
+      }
+      setCapturedItems([]);
+      setVoiceTranscript("");
+      broadcastInventoryChange();
+    } catch (err) {
+      setCaptureError(err.message || "Não foi possível guardar os produtos.");
+    } finally {
+      setCaptureBusy(false);
+    }
+  }
+
   async function changeQuantity(item, delta) {
     const nextQuantity = Math.max(0, Math.min(999, Number(item.quantity || 0) + delta));
     const { data, error: rpcError } = await supabase.rpc("update_family_inventory_item", {
@@ -113,11 +267,26 @@ export default function InventoryArea({ shareCode, onAddToShopping }) {
     </div>
     {expiringSoon > 0 && <div className="inventory-expiry-alert"><CalendarDays size={17}/><span>{expiringSoon} {expiringSoon === 1 ? "produto próximo" : "produtos próximos"} da validade</span></div>}
     <form className="inventory-add-form" onSubmit={addItem}>
-      <div className="inventory-form-heading"><div><strong>Adicionar a Em casa</strong><small>Regista apenas o essencial. Podes completar depois.</small></div><Archive size={19}/></div>
-      <label htmlFor="inventory-name">Produto</label><input id="inventory-name" value={name} onChange={event => setName(event.target.value)} placeholder="Ex.: Leite, arroz, maçãs…" maxLength={100} required/>
-      <div className="inventory-form-grid"><div><label htmlFor="inventory-quantity">Quantidade</label><input id="inventory-quantity" type="number" inputMode="numeric" min="1" max="999" value={quantity} onChange={event => setQuantity(event.target.value)}/></div><div><label htmlFor="inventory-category">Categoria</label><select id="inventory-category" value={category} onChange={event => setCategory(event.target.value)}>{INVENTORY_CATEGORIES.map(option => <option key={option.id} value={option.id}>{option.emoji} {option.label}</option>)}</select></div></div>
-      <div className="inventory-form-grid"><div><label htmlFor="inventory-location">Onde guardas?</label><select id="inventory-location" value={location} onChange={event => setLocation(event.target.value)}>{STORAGE_OPTIONS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select></div><div><label htmlFor="inventory-expiry">Validade (opcional)</label><input id="inventory-expiry" type="date" value={expiryDate} onChange={event => setExpiryDate(event.target.value)}/></div></div>
-      <button className="primary-button" type="submit" disabled={saving || !name.trim()}>{saving ? <LoaderCircle size={17} className="spin"/> : <Plus size={17}/>} Adicionar produto</button>
+      <div className="inventory-form-heading"><div><strong>Adicionar produtos</strong><small>Escreve, fotografa uma lista ou diz o que tens em casa.</small></div><Archive size={19}/></div>
+      <div className="inventory-add-composer">
+        <input id="inventory-name" value={name} onChange={event => setName(event.target.value)} placeholder="Ex.: Leite, arroz, maçãs…" maxLength={100} aria-label="Nome do produto"/>
+        <button className="inventory-composer-submit" type="submit" aria-label="Adicionar produto" disabled={saving || !name.trim()}>{saving ? <LoaderCircle size={19} className="spin"/> : <Plus size={21}/>}</button>
+        <button className="inventory-composer-tool" type="button" aria-label="Fotografar lista" title="Fotografar uma lista" disabled={captureBusy} onClick={() => captureFileRef.current?.click()}><Camera size={19}/></button>
+        <button className={`inventory-composer-tool${captureListening ? " recording" : ""}`} type="button" aria-label="Adicionar por voz" title="Dizer vários produtos" disabled={captureBusy || captureListening} onClick={startVoiceCapture}><Mic size={19}/></button>
+        <input ref={captureFileRef} className="inventory-capture-file" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={event => { void processCapturePhoto(event.target.files?.[0]); }} />
+      </div>
+      {(captureBusy || captureListening) && <div className="inventory-capture-status" role="status" aria-live="polite">{captureBusy ? <LoaderCircle size={16} className="spin"/> : <Mic size={16}/ >}{captureListening ? "A ouvir… diz os produtos e quantidades." : captureSource === "photo" ? "A analisar a fotografia e a identificar os produtos…" : "A interpretar os produtos que disseste…"}</div>}
+      {captureError && <p className="inventory-capture-error" role="alert">{captureError}</p>}
+      {capturedItems.length > 0 && <div className="inventory-capture-preview">
+        <div className="inventory-capture-preview-heading"><div><strong>Confirma os produtos</strong><small>{capturedItems.length} identificados{voiceTranscript ? " · " + voiceTranscript : ""}</small></div><button type="button" aria-label="Cancelar importação" onClick={() => { setCapturedItems([]); setVoiceTranscript(""); }}><X size={17}/></button></div>
+        {capturedItems.map((item, index) => <div className="import-preview-row" key={index}><input aria-label="Nome do produto" value={item.name} onChange={event => updateCapturedItem(index,{name:event.target.value})}/><input aria-label="Quantidade" type="number" min="1" max="999" value={item.quantity} onChange={event => updateCapturedItem(index,{quantity:event.target.value})}/><button type="button" aria-label="Remover produto" onClick={() => setCapturedItems(previous => previous.filter((_, itemIndex) => itemIndex !== index))}><X size={15}/></button></div>)}
+        <button className="primary-button" type="button" disabled={captureBusy || !capturedItems.some(item => item.name.trim())} onClick={confirmCapturedItems}>{captureBusy ? <LoaderCircle size={17} className="spin"/> : <Check size={17}/>} Adicionar {capturedItems.length} produtos</button>
+      </div>}
+      <details className="inventory-add-details">
+        <summary>Detalhes opcionais <ChevronDown size={15}/></summary>
+        <div className="inventory-form-grid"><div><label htmlFor="inventory-quantity">Quantidade</label><input id="inventory-quantity" type="number" inputMode="numeric" min="1" max="999" value={quantity} onChange={event => setQuantity(event.target.value)}/></div><div><label htmlFor="inventory-category">Categoria</label><select id="inventory-category" value={category} onChange={event => setCategory(event.target.value)}>{INVENTORY_CATEGORIES.map(option => <option key={option.id} value={option.id}>{option.emoji} {option.label}</option>)}</select></div></div>
+        <div className="inventory-form-grid"><div><label htmlFor="inventory-location">Onde guardas?</label><select id="inventory-location" value={location} onChange={event => setLocation(event.target.value)}>{STORAGE_OPTIONS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select></div><div><label htmlFor="inventory-expiry">Validade (opcional)</label><input id="inventory-expiry" type="date" value={expiryDate} onChange={event => setExpiryDate(event.target.value)}/></div></div>
+      </details>
     </form>
     <div className="inventory-list-heading"><div><h2>Os teus produtos</h2><span>{items.length} registados</span></div><div className="inventory-search"><Search size={16}/><input aria-label="Pesquisar produtos" value={search} onChange={event => setSearch(event.target.value)} placeholder="Pesquisar"/></div></div>
     <nav className="inventory-filters" aria-label="Filtrar inventário"><button type="button" className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>Tudo</button>{INVENTORY_CATEGORIES.map(option => <button type="button" key={option.id} className={filter === option.id ? "active" : ""} onClick={() => setFilter(option.id)}>{option.emoji} {option.label}</button>)}</nav>
