@@ -812,6 +812,25 @@ export default function App() {
     } catch (err) { setError(err.message); return false; }
   }
 
+  async function movePurchasedToInventory(item) {
+    if (!listCode || !item?.name) return false;
+    const { error: rpcError } = await supabase.rpc("add_family_inventory_item", {
+      p_share_code: listCode,
+      p_name: item.name,
+      p_quantity: Math.max(1, Number(item.quantity) || 1),
+      p_category: item.category || "outros",
+      p_storage_location: "despensa",
+      p_expiry_date: null
+    });
+    if (rpcError) {
+      setError(t("Não foi possível guardar o produto em casa. Tenta novamente."));
+      return false;
+    }
+    notify(t("Produto guardado em casa"));
+    broadcastChange();
+    return true;
+  }
+
   function parseGeminiItems(payload) {
     const text = payload?.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("") || "";
     const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
@@ -1461,6 +1480,7 @@ export default function App() {
             return <article data-item-id={String(item._id)} className={`shopping-item ${item.done ? "is-done" : ""} ${String(item._id) === recentlyAddedItemId ? "is-recently-added" : ""}`} key={item._id}>
               <button className={`check-button ${item.done ? "checked" : ""}`} onClick={() => updateItem(item, { done: !item.done })} aria-label={item.done ? t("Marcar como por comprar") : t("Marcar como comprado")}>{item.done && <Check size={17}/>}</button>
               <div className="item-copy"><span className="item-name">{item.name}</span><span className="item-meta"><span>{cat.emoji} {t(cat.label)}</span><span className="meta-dot">·</span><span>{t("Qtd.")} {item.quantity}</span></span></div>
+              {item.done && <button type="button" className="inventory-save-inline" onClick={() => void movePurchasedToInventory(item)} title={t("Guardar em casa")}><Plus size={14}/><span>{t("Em casa")}</span></button>}
               <button className="delete-button" onClick={() => deleteItem(item)} aria-label={`${t("Remover")} ${item.name}`}><Trash2 size={17}/></button>
             </article>;
           })}</div>
@@ -1475,6 +1495,7 @@ export default function App() {
             return <article className="shopping-item is-done" key={item._id}>
               <button className="check-button checked" onClick={() => updateItem(item, { done: false })} aria-label={t("Marcar como por comprar")}><Check size={17}/></button>
               <div className="item-copy"><span className="item-name">{item.name}</span><span className="item-meta"><span>{cat.emoji} {t(cat.label)}</span><span className="meta-dot">·</span><span>{t("Qtd.")} {item.quantity}</span></span></div>
+              <button type="button" className="inventory-save-inline" onClick={() => void movePurchasedToInventory(item)} title={t("Guardar em casa")}><Plus size={14}/><span>{t("Em casa")}</span></button>
               <button className="delete-button" onClick={() => deleteItem(item)} aria-label={`${t("Remover")} ${item.name}`}><Trash2 size={17}/></button>
             </article>;
           })}</div>}
@@ -1553,7 +1574,10 @@ export default function App() {
           </div>
         </section>
       </div>}
-      {activeTab === "inventory" && <InventoryArea shareCode={listCode} language={language} onAddToShopping={(item) => submitItem(item.name, item.quantity || 1, item.category || "auto", true)} />}
+      {activeTab === "inventory" && <InventoryArea shareCode={listCode} language={language} onAddToShopping={(item) => {
+        const alreadyListed = items.some(current => !current.done && current.name?.trim().toLocaleLowerCase() === item.name?.trim().toLocaleLowerCase());
+        return alreadyListed ? Promise.resolve(true) : submitItem(item.name, item.quantity || 1, item.category || "auto", true);
+      }} />}
       {activeTab === "finance" && <section className="finance-hub">
         <div className="finance-hub-heading"><span className="eyebrow">{t("VISÃO DA FAMÍLIA")}</span><h1>{t("Assistente financeiro")}</h1><p>{t("Acompanha o que já gastaste e prepara melhor as próximas compras.")}</p></div>
         <div className="finance-overview-card"><span>{t("Despesas registadas")}</span><strong>{receipts.reduce((sum, receipt) => sum + (Number(receipt.total) || 0), 0).toLocaleString(language, {style:"currency",currency:"EUR"})}</strong><small>{t("Com base nas faturas guardadas nesta lista.")}</small></div>
