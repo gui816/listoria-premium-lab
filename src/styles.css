@@ -4061,3 +4061,68 @@ button { -webkit-tap-highlight-color: transparent; }
 .inventory-clear-all:active{background:#f8e9e5}
 .inventory-clear-all:disabled{opacity:.65;cursor:wait}
 @media (min-width:768px){.inventory-clear-all{max-width:360px;margin-left:auto}}
+
+
+/* Supermarket entry is centred below the list heading; progress stays aligned right. */
+.items-section .section-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 12px;
+}
+.items-section .section-heading .items-heading-actions { display: contents; }
+.items-section .items-heading-actions .inline-shopping-progress {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+}
+.items-section .items-heading-actions .shopping-mode-trigger {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  justify-self: center;
+  align-self: center;
+  min-height: 40px;
+  padding: 0 18px;
+  font-size: 12px;
+  box-shadow: 0 5px 14px rgba(31, 55, 38, .12);
+}
+
+/* Keep the exit action viewport-fixed, outside the product-entry dock. */
+.shopping-mode-fab.supermarket-exit-fab {
+  position: fixed !important;
+  z-index: 95;
+  right: max(16px, calc((100vw - 720px) / 2 + 16px));
+  bottom: max(18px, calc(env(safe-area-inset-bottom, 0px) + 12px));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  margin: 0 !important;
+  padding: 0 17px;
+  border: 1px solid #c8dcc2;
+  border-radius: 999px;
+  background: rgba(255, 255, 251, .97);
+  color: #245b3b;
+  box-shadow: 0 8px 24px rgba(31, 55, 38, .22);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.shopping-mode-fab.supermarket-exit-fab:hover {
+  background: #f1f7ef;
+  color: #194a30;
+}
+@media (max-width: 680px) {
+  .items-section .items-heading-actions .shopping-mode-trigger {
+    min-height: 40px;
+    padding: 0 17px;
+    font-size: 12px;
+  }
+  .shopping-mode-fab.supermarket-exit-fab {
+    right: 16px;
+    bottom: max(16px, calc(env(safe-area-inset-bottom, 0px) + 10px));
+    min-height: 44px;
+    padding: 0 15px;
+    font-size: 12px;
+  }
+}
