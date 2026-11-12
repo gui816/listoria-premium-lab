@@ -1474,7 +1474,7 @@ export default function App() {
         <div className="supermarket-progress-track"><span style={{width: `${shoppingProgress}%`}}/></div>
         <div className="supermarket-summary-bottom"><span>{t("Progresso das compras", { done: doneItems.length, total: items.length })}</span></div>
       </section>}
-      {!shoppingMode && <div className="shopping-entry-section">
+      <div className="shopping-entry-section">
   <div className={`shopping-actions-dock${keyboardOpen ? " keyboard-open" : ""}`}>
         {!showOnboarding && !shoppingMode && activeTab === "shopping" && items.length > 0 && !keyboardOpen && !showOtherProducts && <button type="button" className="shopping-mode-fab" onClick={() => { setShoppingMode(true); setShowDone(false); }}><ShoppingBasket size={18} strokeWidth={2.2}/><span>{t("Modo supermercado")}</span></button>}
         {!showOnboarding && shoppingMode && activeTab === "shopping" && <button type="button" className="shopping-mode-fab supermarket-exit-fab" onClick={() => { setShoppingMode(false); setShowDone(false); }}><X size={18} strokeWidth={2.4}/><span>{t("Sair do modo supermercado")}</span></button>}
@@ -1516,7 +1516,7 @@ export default function App() {
           </form>
         </section>
         </div>
-      </div>}
+      </div>
       <nav className="category-tabs" aria-label={t("Filtrar por categoria")} tabIndex={0}>
         {CATEGORIES.map(c => <button key={c.id} className={filter === c.id ? "category-tab active" : "category-tab"} onClick={() => setFilter(c.id)}><span>{c.emoji}</span>{t(c.label)}<span className="tab-count">{c.id === "all" ? activeItems.length : activeItems.filter(item => item.category === c.id).length}</span></button>)}
       </nav>
