@@ -1458,16 +1458,7 @@ export default function App() {
         <button type="button" className={activeTab === "recipes" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "recipes"} onClick={() => setActiveTab("recipes")}><ChefHat size={20}/> <span className="tab-label">{t("Receitas")}</span></button>
       </nav>}
       {activeTab === "shopping" && <>
-      {!shoppingMode && <section className="list-tools" aria-label={t("Gestão da lista")}>
-        <div className="list-tools-saved">
-          <details className="saved-lists-disclosure">
-            <summary><span className="list-tools-icon"><List size={17}/></span><span className="list-tools-label">{t("Listas guardadas")}</span><small>{templates.length}</small><ChevronDown size={15}/></summary>
-            {templates.length > 0 ? <div className="template-chips">{templates.map(template => <button type="button" className="template-chip" key={template.id} onClick={() => useTemplate(template)}><span>{template.name}</span><small>{template.items.length} {t("artigos")}</small></button>)}</div> : <p className="template-hint">{t("Guarda uma compra habitual para a reutilizares noutra semana.")}</p>}
-          </details>
-          <button type="button" className="save-template-button" onClick={saveCurrentTemplate} disabled={!activeItems.length}><Plus size={15}/>{t("Guardar lista atual")}</button>
-        </div>
-        
-      </section>}
+
       {!shoppingMode && activeItems.length > 0 && <BasketEstimate items={activeItems} language={language} session={authSession} />}
       {shoppingMode && <section className="supermarket-summary" aria-label="Progresso das compras">
         <div className="supermarket-summary-top"><div><span className="supermarket-kicker">{t("AS TUAS COMPRAS")}</span><h2>{doneItems.length === items.length && items.length > 0 ? t("Tudo comprado!") : t("Vamos às compras")}</h2></div><strong>{doneItems.length}<span> / {items.length}</span></strong></div>
@@ -1516,6 +1507,16 @@ export default function App() {
           </form>
         </section>
         </div>
+      {!shoppingMode && <section className="list-tools" aria-label={t("Gestão da lista")}>
+        <div className="list-tools-saved">
+          <details className="saved-lists-disclosure">
+            <summary><span className="list-tools-icon"><List size={17}/></span><span className="list-tools-label">{t("Listas guardadas")}</span><small>{templates.length}</small><ChevronDown size={15}/></summary>
+            {templates.length > 0 ? <div className="template-chips">{templates.map(template => <button type="button" className="template-chip" key={template.id} onClick={() => useTemplate(template)}><span>{template.name}</span><small>{template.items.length} {t("artigos")}</small></button>)}</div> : <p className="template-hint">{t("Guarda uma compra habitual para a reutilizares noutra semana.")}</p>}
+          </details>
+          <button type="button" className="save-template-button" onClick={saveCurrentTemplate} disabled={!activeItems.length}><Plus size={15}/>{t("Guardar lista atual")}</button>
+        </div>
+        
+      </section>}
         {!showOnboarding && shoppingMode && activeTab === "shopping" && <button type="button" className="shopping-mode-fab supermarket-exit-fab" onClick={() => { setShoppingMode(false); setShowDone(false); }}><X size={18} strokeWidth={2.4}/><span>{t("Sair do modo supermercado")}</span></button>}
       </div>
       <nav className="category-tabs" aria-label={t("Filtrar por categoria")} tabIndex={0}>

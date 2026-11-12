@@ -4126,3 +4126,18 @@ button { -webkit-tap-highlight-color: transparent; }
     font-size: 12px;
   }
 }
+
+
+/* Saved-list actions follow the product composer, as a secondary list workflow. */
+.shopping-entry-section > .list-tools {
+  margin: 8px 0 16px;
+  padding: 0;
+}
+@media (max-width: 680px) {
+  .shopping-entry-section > .list-tools {
+    margin: 7px 4px 16px;
+  }
+  .shopping-entry-section > .list-tools .list-tools-saved {
+    min-height: 46px;
+  }
+}
