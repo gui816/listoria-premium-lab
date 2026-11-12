@@ -1455,7 +1455,7 @@ button { -webkit-tap-highlight-color: transparent; }
 /* Mobile-first shopping layout: products stay in focus, add controls float above the safe area. */
 @media (max-width: 680px) {
   .app-shell {
-    padding-bottom: calc(190px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
   }
   .add-panel.floating-add-panel {
     position: fixed;
@@ -2292,60 +2292,25 @@ button { -webkit-tap-highlight-color: transparent; }
 
 
 
-/* One mobile dock owns both actions. The supermarket button is a normal flex
-   item above the composer, so content height and keyboard transitions cannot
-   make it overlap the card or product rows. */
-@media (max-width: 680px) {
-  .shopping-actions-dock {
-    position: fixed;
-    z-index: 70;
-    left: max(12px, calc((100vw - 720px) / 2));
-    right: max(12px, calc((100vw - 720px) / 2));
-    bottom: calc(var(--listoria-keyboard-inset, 0px) + max(8px, env(safe-area-inset-bottom, 0px)));
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    max-height: calc(var(--listoria-visual-viewport-height, 100dvh) - 16px - env(safe-area-inset-top, 0px));
-    justify-content: flex-end;
-    pointer-events: none;
-  }
-  .shopping-actions-dock > * { pointer-events: auto; }
-  .shopping-actions-dock > .shopping-mode-fab {
-    position: relative !important;
-    inset: auto !important;
-    align-self: flex-end;
-    flex: 0 0 auto;
-    width: auto !important;
-    height: auto !important;
-    min-height: 42px !important;
-    max-height: 48px !important;
-    margin: 0 0 0 auto !important;
-    z-index: auto !important;
-  }
-  .shopping-actions-dock > .add-panel.floating-add-panel {
-    position: relative !important;
-    inset: auto !important;
-    flex: 0 1 auto;
-    width: 100%;
-    max-width: none;
-    max-height: min(68dvh, calc(var(--listoria-visual-viewport-height, 100dvh) - 24px));
-    min-height: 0;
-    margin: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-  .shopping-actions-dock > .add-panel.floating-add-panel .other-products-panel {
-    max-height: min(34dvh, 260px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
+/* Product entry stays in the normal page flow, matching the Home inventory screen. */
+.shopping-entry-section{display:grid;gap:10px;margin:16px 0 18px}
+.shopping-actions-dock{position:static;display:flex;flex-direction:column;align-items:stretch;gap:10px;width:100%;max-width:720px;margin:0 auto;padding:0;pointer-events:auto}
+.shopping-actions-dock>.shopping-mode-fab{position:static;align-self:flex-end;margin:0;flex:0 0 auto}
+.shopping-actions-dock>.add-panel.floating-add-panel{position:static;inset:auto;z-index:auto;width:100%;max-width:none;max-height:none;min-height:0;margin:0;padding:12px;border:1px solid #dce6dc;border-radius:20px;background:#fff;box-shadow:var(--shadow-soft);overflow:visible;backdrop-filter:none;-webkit-backdrop-filter:none}
+.shopping-actions-dock>.add-panel.floating-add-panel .product-entry-composer{padding:12px;border-radius:15px}
+.shopping-actions-dock>.add-panel.floating-add-panel .quick-suggestions{padding:7px 0 4px}
+.shopping-actions-dock>.add-panel.floating-add-panel .other-products-panel{max-height:min(42dvh,320px);overflow-y:auto}
+@media(max-width:680px){
+ .shopping-entry-section{margin:14px 0 18px}
+ .shopping-actions-dock{gap:8px}
+ .shopping-actions-dock>.add-panel.floating-add-panel{padding:10px;border-radius:18px}
+ .shopping-actions-dock>.add-panel.floating-add-panel .product-entry-composer{padding:11px}
+ .shopping-actions-dock>.shopping-mode-fab{min-height:40px;padding:8px 14px;font-size:12px}
 }
-@media (min-width: 681px) {
-  .shopping-actions-dock { display: contents; }
+@media(min-width:681px){
+ .shopping-actions-dock{display:flex}
 }
-
-
+ 
 /* Owned, actionable product suggestions (separate from Android/Gboard predictions). */
 .quick-suggestions { padding: 7px 0 9px 51px; }
 .quick-suggestions-heading { margin: 0 0 6px; color: #849083; font-size: 10px; font-weight: 750; letter-spacing: .04em; }
