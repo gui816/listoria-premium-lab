@@ -3965,3 +3965,77 @@ button { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   .app-area-navigation .main-tab { transition: none; }
 }
+
+
+/* Consistent mobile page headers and content width across the four Listora areas. */
+.inventory-area,.finance-hub,.recipes-assistant,.receipts-section {
+  width:100%; max-width:720px; margin-left:auto; margin-right:auto;
+}
+.area-page-heading {
+  display:flex; flex-direction:row; align-items:center; justify-content:space-between; gap:16px;
+  min-width:0; margin:20px 0 24px; padding:0;
+  border:0; border-radius:0; background:transparent; box-shadow:none;
+}
+.area-page-heading-copy { display:flex; flex:1 1 auto; flex-direction:column; gap:5px; min-width:0; }
+.area-page-heading .eyebrow {
+  display:block; margin:0; color:#326b53; font-size:10px; font-weight:850;
+  letter-spacing:.14em; line-height:1.35;
+}
+.area-page-heading h1 {
+  max-width:100%; margin:0; color:var(--ink); font-family:Manrope,sans-serif;
+  font-size:clamp(26px,6vw,34px); font-weight:800; letter-spacing:-1.15px;
+  line-height:1.12; overflow-wrap:anywhere;
+}
+.area-page-heading p {
+  max-width:560px; margin:2px 0 0; color:#7b877d;
+  font-size:13px; line-height:1.5;
+}
+.area-page-heading-icon {
+  display:grid; place-items:center; flex:0 0 52px; width:52px; height:52px;
+  border:1px solid #e0e9df; border-radius:16px; background:#eaf2e9; color:#326b53;
+}
+.recipes-assistant { padding-top:8px; }
+.recipes-assistant-hero { overflow:visible; flex-direction:row; align-items:center; }
+.recipes-assistant-hero:after { display:none; }
+.recipes-assistant-hero-icon { display:none; }
+.receipts-heading { display:grid; grid-template-columns:minmax(0,1fr) 52px; align-items:center; }
+.receipts-heading .secondary-button { grid-column:1/-1; justify-self:start; min-height:40px; }
+
+@media(max-width:620px) {
+  .inventory-area,.finance-hub,.recipes-assistant,.receipts-section {
+    padding-left:0; padding-right:0;
+  }
+  .area-page-heading { gap:12px; margin:18px 0 22px; }
+  .area-page-heading h1 { font-size:clamp(25px,7vw,31px); letter-spacing:-.9px; }
+  .area-page-heading p { font-size:13px; line-height:1.45; }
+  .area-page-heading-icon { flex-basis:46px; width:46px; height:46px; border-radius:14px; }
+  .receipts-heading { grid-template-columns:minmax(0,1fr) 46px; }
+  .receipts-heading .secondary-button { width:100%; min-height:42px; }
+  .recipes-assistant { padding-top:8px; }
+}
+@media(max-width:360px) {
+  .area-page-heading { gap:9px; }
+  .area-page-heading-icon { flex-basis:42px; width:42px; height:42px; }
+  .area-page-heading h1 { font-size:25px; }
+}
+
+/* Compact list nudge: right aligned, close to the bottom navigation, never over the composer. */
+@media(max-width:620px) {
+  .shopping-list-floating-nudge {
+    left:auto; right:12px; bottom:calc(var(--listoria-bottom-nav-height,76px) + 14px + env(safe-area-inset-bottom,0px));
+    transform:none; width:max-content; max-width:calc(100vw - 24px);
+    margin:0; gap:7px; padding:6px 9px; border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 6px 20px rgba(22,45,29,.22); z-index:75;
+  }
+  .shopping-nudge-icon { flex:0 0 24px; width:24px; height:24px; }
+  .shopping-nudge-icon svg { width:19px; height:19px; }
+  .shopping-nudge-copy { gap:1px; }
+  .shopping-nudge-copy strong { font-size:11px; line-height:1.2; }
+  .shopping-nudge-copy small { font-size:9px; line-height:1.15; }
+  .shopping-nudge-divider { margin:1px 0; }
+  .shopping-nudge-chevron { height:20px; }
+  .shopping-nudge-chevron svg { width:16px; height:16px; }
+  .shopping-nudge-chevron svg+svg { margin-top:-12px; }
+  .shopping-nudge-close { display:flex; flex:0 0 18px; width:18px; height:18px; }
+  .shopping-nudge-close svg { width:14px; height:14px; }
+}

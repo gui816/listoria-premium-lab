@@ -269,7 +269,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
   const expiringSoon = items.filter(item => item.expiry_date && new Date(item.expiry_date + "T23:59:59") <= new Date(Date.now() + 5 * 86400000)).length;
 
   return <section className="inventory-area">
-    <header className="inventory-heading"><div><span className="eyebrow">A TUA CASA</span><h1>O que tens em casa</h1><p>Os produtos disponíveis para a tua família.</p></div><span className="inventory-heading-icon"><Refrigerator size={25}/></span></header>
+    <header className="inventory-heading area-page-heading"><div className="area-page-heading-copy"><span className="eyebrow">A TUA CASA</span><h1>O que tens em casa</h1><p>Os produtos disponíveis para a tua família.</p></div><span className="area-page-heading-icon"><Refrigerator size={25}/></span></header>
     <div className="inventory-stats">
       <div><strong>{items.length}</strong><span>Produtos</span></div><div><strong>{totalUnits}</strong><span>Unidades</span></div><div><strong>{lowStock}</strong><span>Stock baixo</span></div>
     </div>

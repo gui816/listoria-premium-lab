@@ -1603,7 +1603,7 @@ export default function App() {
         return submitItem(item.name, item.quantity || 1, item.category || "auto", true);
       }} />}
       {activeTab === "finance" && <section className="finance-hub">
-        <div className="finance-hub-heading"><span className="eyebrow">{t("VISÃO DA FAMÍLIA")}</span><h1>{t("Assistente financeiro")}</h1><p>{t("Acompanha o que já gastaste e prepara melhor as próximas compras.")}</p></div>
+        <header className="finance-hub-heading area-page-heading"><div className="area-page-heading-copy"><span className="eyebrow">{t("VISÃO DA FAMÍLIA")}</span><h1>{t("Assistente financeiro")}</h1><p>{t("Acompanha o que já gastaste e prepara melhor as próximas compras.")}</p></div><span className="area-page-heading-icon"><Wallet size={25}/></span></header>
         <div className="finance-overview-card"><span>{t("Despesas registadas")}</span><strong>{receipts.length ? receipts.reduce((sum, receipt) => sum + (Number(receipt.total) || 0), 0).toLocaleString(language, {style:"currency",currency:"EUR"}) : t("Sem dados")}</strong><small>{receipts.length ? t("Com base nas faturas guardadas nesta lista.") : t("Importa uma fatura se quiseres acompanhar as despesas reais.")}</small></div>
         <div className="finance-action-card"><div className="finance-action-icon"><Receipt size={21}/></div><div><strong>{t("Faturas e histórico")}</strong><p>{t("Consulta os comprovativos e os valores reais das tuas compras.")}</p></div><button type="button" className="secondary-button" onClick={() => setActiveTab("receipts")}>{t("Ver faturas")} <ArrowRight size={16}/></button></div>
         <div className="finance-note"><Sparkles size={17}/><p>{t("As previsões de despesa serão apresentadas quando existirem dados suficientes de compras e comparações. Não confundimos estimativas com despesas reais.")}</p></div>
@@ -1614,7 +1614,7 @@ export default function App() {
         return submitItem(item.name, item.quantity || 1, "auto", true);
       }} />}
       {activeTab === "receipts" && <section className="receipts-section">
-        <div className="receipts-heading"><div><span className="eyebrow">{t("ARQUIVO PARTILHADO")}</span><h1>{t("Faturas de compras")}</h1><p>{t("Comprovativos acessíveis a todos os membros desta lista.")}</p></div><button type="button" className="secondary-button" onClick={() => setActiveTab("finance")}>← {t("Voltar ao financeiro")}</button></div>
+        <header className="receipts-heading area-page-heading"><div className="area-page-heading-copy"><span className="eyebrow">{t("ARQUIVO PARTILHADO")}</span><h1>{t("Faturas de compras")}</h1><p>{t("Comprovativos acessíveis a todos os membros desta lista.")}</p></div><span className="area-page-heading-icon"><Receipt size={25}/></span><button type="button" className="secondary-button" onClick={() => setActiveTab("finance")}>← {t("Voltar ao financeiro")}</button></header>
         {receiptAddMode === "choice" && !receiptExtractBusy && <div className="receipt-start-card">
           <div className="receipt-start-icon"><Receipt size={25}/></div>
           <h2>{t("Guardar uma fatura")}</h2>
