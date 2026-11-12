@@ -572,7 +572,7 @@ export default function App() {
 
   useEffect(() => {
     if (guidedTourStep === null) { setGuidedTourRect(null); return; }
-    const selectors = [".main-tabs.segmented-tabs", ".add-panel.floating-add-panel", ".shopping-mode-fab"];
+    const selectors = [".main-tabs.segmented-tabs", ".add-panel.floating-add-panel", ".shopping-mode-trigger"];
     const selector = guidedTourStep === 2 && !items.length ? ".add-panel.floating-add-panel" : selectors[guidedTourStep];
     const target = document.querySelector(selector);
     if (!target) { setGuidedTourRect(null); return; }
@@ -1476,7 +1476,7 @@ export default function App() {
       </section>}
       <div className="shopping-entry-section">
   <div className={`shopping-actions-dock${keyboardOpen ? " keyboard-open" : ""}`}>
-        {!showOnboarding && !shoppingMode && activeTab === "shopping" && items.length > 0 && !keyboardOpen && !showOtherProducts && <button type="button" className="shopping-mode-fab" onClick={() => { setShoppingMode(true); setShowDone(false); }}><ShoppingBasket size={18} strokeWidth={2.2}/><span>{t("Modo supermercado")}</span></button>}
+        
         {!showOnboarding && shoppingMode && activeTab === "shopping" && <button type="button" className="shopping-mode-fab supermarket-exit-fab" onClick={() => { setShoppingMode(false); setShowDone(false); }}><X size={18} strokeWidth={2.4}/><span>{t("Sair do modo supermercado")}</span></button>}
         <section className={`add-panel floating-add-panel${addPanelExpanded ? " expanded" : ""}${keyboardOpen ? " keyboard-open" : ""}`} hidden={shoppingMode}>
           <form onSubmit={addItem}>
@@ -1521,7 +1521,7 @@ export default function App() {
         {CATEGORIES.map(c => <button key={c.id} className={filter === c.id ? "category-tab active" : "category-tab"} onClick={() => setFilter(c.id)}><span>{c.emoji}</span>{t(c.label)}<span className="tab-count">{c.id === "all" ? activeItems.length : activeItems.filter(item => item.category === c.id).length}</span></button>)}
       </nav>
       <section className={shoppingMode ? "items-section supermarket-items-section" : "items-section"}>
-        <div className="section-heading"><div className="section-heading-title"><h2>{shoppingMode ? t("Por comprar") : t("Falta comprar")}</h2><span>{visibleItems.length} {visibleItems.length === 1 ? t("artigo") : t("artigos")}</span></div>{!shoppingMode && items.length > 0 && <div className="inline-shopping-progress" aria-label={`${doneItems.length} ${t("de")} ${items.length} ${t("comprados")}`}><span className="inline-progress-count"><Check size={13}/>{doneItems.length}/{items.length}</span><span className="inline-progress-track"><span style={{width:`${shoppingProgress}%`}}/></span></div>}</div>
+        <div className="section-heading"><div className="section-heading-title"><h2>{shoppingMode ? t("Por comprar") : t("Falta comprar")}</h2><span>{visibleItems.length} {visibleItems.length === 1 ? t("artigo") : t("artigos")}</span></div>{!shoppingMode && items.length > 0 && <div className="items-heading-actions"><button type="button" className="shopping-mode-fab shopping-mode-trigger" onClick={() => { setShoppingMode(true); setShowDone(false); }}><ShoppingBasket size={17} strokeWidth={2.2}/><span>{t("Modo supermercado")}</span></button><div className="inline-shopping-progress" aria-label={`${doneItems.length} ${t("de")} ${items.length} ${t("comprados")}`}><span className="inline-progress-count"><Check size={13}/>{doneItems.length}/{items.length}</span><span className="inline-progress-track"><span style={{width:`${shoppingProgress}%`}}/></span></div></div>}</div>
         {visibleItems.length === 0 ? <div className="empty-state"><span className="empty-illustration">{showDone ? "✨" : "🧺"}</span><h3>{showDone ? t("Ainda não há compras concluídas") : filter === "all" ? t("A lista está vazia") : t("Nada nesta categoria")}</h3><p>{showDone ? t("Quando marcares um artigo como comprado, aparece aqui.") : t("Adiciona o primeiro artigo no campo acima.")}</p></div> : (
           <div className={shoppingMode ? "items-list supermarket-list" : "items-list"}>{(shoppingMode && filter === "all" ? [...visibleItems].sort((a, b) => CATEGORIES.findIndex(cat => cat.id === a.category) - CATEGORIES.findIndex(cat => cat.id === b.category)) : visibleItems).map(item => {
             const cat = CATEGORIES.find(c => c.id === item.category) || CATEGORIES[5];

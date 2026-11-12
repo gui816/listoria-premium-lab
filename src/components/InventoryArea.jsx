@@ -37,6 +37,8 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
   const recognitionRef = useRef(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+  const [inventoryListVisible, setInventoryListVisible] = useState(false);
+  const [inventoryNudgeDismissed, setInventoryNudgeDismissed] = useState(false);
   const channelRef = useRef(null);
 
   const loadItems = useCallback(async () => {
@@ -49,6 +51,24 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
   }, [shareCode]);
 
   useEffect(() => { void loadItems(); }, [loadItems]);
+
+  useEffect(() => {
+    const heading = document.querySelector(".inventory-list-heading");
+    if (!heading) return undefined;
+    const updateVisibility = () => {
+      const bounds = heading.getBoundingClientRect();
+      setInventoryListVisible(bounds.top < window.innerHeight * 0.84 && bounds.bottom > window.innerHeight * 0.12);
+    };
+    updateVisibility();
+    window.addEventListener("scroll", updateVisibility, { passive: true });
+    window.addEventListener("resize", updateVisibility);
+    return () => {
+      window.removeEventListener("scroll", updateVisibility);
+      window.removeEventListener("resize", updateVisibility);
+    };
+  }, [items.length, loading]);
+
+  useEffect(() => { setInventoryNudgeDismissed(false); }, [items.length]);
 
   useEffect(() => {
     if (!shareCode) return undefined;
@@ -309,5 +329,6 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
       </article>;
     })}</div>}
     <p className="inventory-footnote"><Check size={14}/> As alterações ficam sincronizadas com a lista da família.</p>
+    {items.length > 0 && !loading && !inventoryListVisible && !inventoryNudgeDismissed && <button type="button" className="shopping-list-floating-nudge inventory-list-floating-nudge" onClick={() => document.querySelector(".inventory-list-heading")?.scrollIntoView({ behavior: "smooth", block: "start" })}><span className="shopping-nudge-icon"><Refrigerator size={23}/></span><span className="shopping-nudge-copy"><strong>{items.length} {items.length === 1 ? "produto em casa" : "produtos em casa"}</strong><small>Desliza para ver</small></span><span className="shopping-nudge-divider"/><span className="shopping-nudge-chevron"><ChevronDown size={22}/><ChevronDown size={22}/></span><span className="shopping-nudge-close" aria-label="Fechar aviso" onClick={event => { event.stopPropagation(); setInventoryNudgeDismissed(true); }}><X size={16}/></span></button>}
   </section>;
 }
