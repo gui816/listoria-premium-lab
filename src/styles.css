@@ -4039,3 +4039,18 @@ button { -webkit-tap-highlight-color: transparent; }
   .shopping-nudge-close { display:flex; flex:0 0 18px; width:18px; height:18px; }
   .shopping-nudge-close svg { width:14px; height:14px; }
 }
+
+
+/* Contextual actions in the shopping-list heading: compact, inline and never floating. */
+.items-section .section-heading { align-items: center; }
+.items-heading-actions { display: flex; flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 7px; min-width: 0; }
+.items-heading-actions .shopping-mode-fab.shopping-mode-trigger { position: static; min-height: 34px; margin: 0; padding: 0 11px; gap: 6px; border: 1px solid #c8dcc2; border-radius: 999px; box-shadow: none; font-size: 11px; }
+.items-heading-actions .shopping-mode-trigger svg { width: 15px; height: 15px; }
+.items-heading-actions .inline-shopping-progress { margin-left: 0; }
+@media (max-width: 420px) {
+  .items-heading-actions .shopping-mode-trigger { min-height: 32px; padding: 0 9px; font-size: 10px; }
+  .items-heading-actions .shopping-mode-trigger svg { width: 14px; height: 14px; }
+}
+.inventory-list-floating-nudge { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 620px) { .inventory-list-floating-nudge { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); } }
+@media (min-width: 621px) { .inventory-list-floating-nudge { bottom: 24px; } }
