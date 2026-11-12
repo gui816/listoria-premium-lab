@@ -52,6 +52,7 @@ serve(async (req) => {
       "Keep recipes family-friendly, affordable and practical. Vary the suggestions. Respect dietary preferences or constraints in the user's request as far as possible; if a request is unsafe or impossible, explain briefly in the description.",
       "Do not assume allergies are absent. Do not make medical or nutrition claims. Include quantities with common units in the requested language.",
       "Return concise, actionable steps, 3 to 7 per recipe. Use the requested language for every user-facing string.",
+      "Return only valid JSON with this exact shape: {\"recipes\":[{\"id\":string,\"title\":string,\"description\":string,\"timeMinutes\":number,\"servings\":number,\"ingredients\":[{\"name\":string,\"quantity\":string,\"available\":boolean}],\"steps\":[string],\"tip\":string}]}. Include exactly 3 recipes. Do not add markdown fences or extra keys.",
       "Requested language: " + language,
       "Household inventory JSON: " + JSON.stringify(inventory),
       "User request: " + (request || "Suggest varied everyday meals using what is available.")
@@ -65,26 +66,6 @@ serve(async (req) => {
         contents: [{ role: "user", parts: [{ text: prompt }, ...imageParts] }],
         generationConfig: {
           responseMimeType: "application/json",
-          responseSchema: {
-            type: "OBJECT",
-            properties: { recipes: { type: "ARRAY", minItems: 3, maxItems: 3, items: {
-              type: "OBJECT",
-              properties: {
-                id: { type: "STRING" }, title: { type: "STRING" }, description: { type: "STRING" },
-                timeMinutes: { type: "INTEGER" }, servings: { type: "INTEGER" },
-                ingredients: { type: "ARRAY", minItems: 2, maxItems: 24, items: {
-                  type: "OBJECT", properties: {
-                    name: { type: "STRING" }, quantity: { type: "STRING" }, available: { type: "BOOLEAN" }
-                  }, required: ["name", "quantity", "available"], propertyOrdering: ["name", "quantity", "available"]
-                }},
-                steps: { type: "ARRAY", minItems: 3, maxItems: 8, items: { type: "STRING" } },
-                tip: { type: "STRING" }
-              },
-              required: ["id", "title", "description", "timeMinutes", "servings", "ingredients", "steps", "tip"],
-              propertyOrdering: ["id", "title", "description", "timeMinutes", "servings", "ingredients", "steps", "tip"]
-            }}},
-            required: ["recipes"], propertyOrdering: ["recipes"]
-          },
           temperature: 0.65
         }
       })
