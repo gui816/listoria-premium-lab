@@ -19,7 +19,7 @@ export default function ProductEntryComposer({
   voiceTitle = "Voz",
   voiceDescription = "Diz os produtos",
   photoTitle = "Fotografia",
-  photoDescription = "Fotografa uma lista",
+  photoDescription = "Fotografa uma lista ou os produtos",
   addLabel = "Adicionar produto"
 }) {
   return (
