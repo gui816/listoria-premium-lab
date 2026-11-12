@@ -21,6 +21,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [error, setError] = useState("");
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("1");
@@ -275,6 +276,37 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
     else { setItems(data?.items || []); broadcastInventoryChange(); }
   }
 
+  async function clearAllItems() {
+    if (!items.length || clearing) return;
+    const count = items.length;
+    const confirmed = window.confirm(`Queres remover os ${count} ${count === 1 ? "produto" : "produtos"} de Em casa? Esta ação afeta todos os membros da família e não pode ser desfeita.`);
+    if (!confirmed) return;
+
+    setClearing(true);
+    setError("");
+    let remainingItems = items;
+    try {
+      for (const item of items) {
+        const { data, error: rpcError } = await supabase.rpc("delete_family_inventory_item", {
+          p_share_code: shareCode,
+          p_item_id: item.id
+        });
+        if (rpcError) throw rpcError;
+        remainingItems = Array.isArray(data?.items)
+          ? data.items
+          : remainingItems.filter(current => current.id !== item.id);
+        setItems(remainingItems);
+      }
+      broadcastInventoryChange();
+      onNotify?.(`${count} ${count === 1 ? "produto removido" : "produtos removidos"} de Em casa`);
+    } catch (err) {
+      setError("Não foi possível remover todos os produtos. Atualizámos a lista com as alterações já efetuadas.");
+      await loadItems();
+    } finally {
+      setClearing(false);
+    }
+  }
+
   async function addToShopping(item) {
     if (!onAddToShopping) return;
     const success = await onAddToShopping(item);
@@ -328,6 +360,10 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
         <div className="inventory-item-actions"><button type="button" className="inventory-restock" onClick={() => void addToShopping(item)}><ShoppingBasket size={15}/> Repor</button><button type="button" className="inventory-remove" aria-label={"Remover " + item.name} onClick={() => void removeItem(item)}><Trash2 size={15}/></button></div>
       </article>;
     })}</div>}
+    {items.length > 0 && !loading && <button type="button" className="inventory-clear-all" onClick={() => void clearAllItems()} disabled={clearing}>
+      {clearing ? <LoaderCircle className="spin" size={16}/> : <Trash2 size={16}/>}
+      {clearing ? "A remover produtos…" : "Remover todos os produtos"}
+    </button>}
     <p className="inventory-footnote"><Check size={14}/> As alterações ficam sincronizadas com a lista da família.</p>
     {items.length > 0 && !loading && !inventoryListVisible && !inventoryNudgeDismissed && <button type="button" className="shopping-list-floating-nudge inventory-list-floating-nudge" onClick={() => document.querySelector(".inventory-list-heading")?.scrollIntoView({ behavior: "smooth", block: "start" })}><span className="shopping-nudge-icon"><Refrigerator size={23}/></span><span className="shopping-nudge-copy"><strong>{items.length} {items.length === 1 ? "produto em casa" : "produtos em casa"}</strong><small>Desliza para ver</small></span><span className="shopping-nudge-divider"/><span className="shopping-nudge-chevron"><ChevronDown size={22}/><ChevronDown size={22}/></span><span className="shopping-nudge-close" aria-label="Fechar aviso" onClick={event => { event.stopPropagation(); setInventoryNudgeDismissed(true); }}><X size={16}/></span></button>}
   </section>;
