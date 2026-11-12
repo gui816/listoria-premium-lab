@@ -1452,27 +1452,10 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 
-/* Mobile-first shopping layout: products stay in focus, add controls float above the safe area. */
+/* Mobile-first shopping layout: product entry stays in the page flow. */
 @media (max-width: 680px) {
   .app-shell {
     padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
-  }
-  .add-panel.floating-add-panel {
-    position: fixed;
-    z-index: 20;
-    left: max(12px, calc((100vw - 720px) / 2));
-    right: max(12px, calc((100vw - 720px) / 2));
-    bottom: max(8px, env(safe-area-inset-bottom, 0px));
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 8px 12px;
-    border: 1px solid #dce6d8;
-    border-radius: 20px;
-    background: rgba(255, 255, 251, .96);
-    box-shadow: 0 10px 36px rgba(31, 55, 38, .18), 0 2px 8px rgba(31, 55, 38, .07);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    transition: box-shadow .2s ease, border-radius .2s ease;
   }
   .floating-add-panel .add-main {
     min-height: 44px;
