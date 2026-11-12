@@ -279,7 +279,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
   async function clearAllItems() {
     if (!items.length || clearing) return;
     const count = items.length;
-    const confirmed = window.confirm(`Queres remover os ${count} ${count === 1 ? "produtos" : "produtos"} de Em casa? Esta ação afeta todos os membros da família e não pode ser desfeita.`);
+    const confirmed = window.confirm(`Queres remover os ${count} ${count === 1 ? "produto" : "produtos"} de Em casa? Esta ação afeta todos os membros da família e não pode ser desfeita.`);
     if (!confirmed) return;
 
     setClearing(true);
