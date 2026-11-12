@@ -3,6 +3,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { createPortal } from "react-dom";
 import BasketEstimate from "./components/BasketEstimate.jsx";
 import InventoryArea from "./components/InventoryArea.jsx";
+import ProductEntryComposer from "./components/ProductEntryComposer.jsx";
 import RecipesAssistant from "./components/RecipesAssistant.jsx";
 import AccountAccess from "./components/AccountAccess.jsx";
 import { getAnalyticsConsent, hasAnalyticsProviders, setAnalyticsConsent as saveAnalyticsConsent, trackEvent, trackPageView } from "./lib/analytics.js";
@@ -800,7 +801,7 @@ export default function App() {
           if (addedFeedbackTimerRef.current) window.clearTimeout(addedFeedbackTimerRef.current);
           addedFeedbackTimerRef.current = window.setTimeout(() => setRecentlyAddedItemId(""), 1050);
         }
-        notify(t("Produto adicionado"));
+        notify(`${cleanName} — ${t("Produto adicionado")}`);
         try { if (!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) navigator.vibrate?.(12); } catch {}
       }
       setItemHistory(previous => {
@@ -1050,7 +1051,9 @@ export default function App() {
       }
       setImportPreview([]);
       setImportSource("");
-      notify(`${added} ${added === 1 ? "produto adicionado" : "produtos adicionados"}`);
+      const addedNames = validItems.slice(0, 3).map(item => item.name).join(", ");
+      const remaining = validItems.length - Math.min(validItems.length, 3);
+      notify(`${addedNames}${remaining > 0 ? ` +${remaining}` : ""} — ${validItems.length} ${validItems.length === 1 ? "produto adicionado" : "produtos adicionados"}`);
     } finally { setImportBusy(false); }
   }
 
@@ -1512,7 +1515,22 @@ export default function App() {
         <form onSubmit={addItem}>
           {addPanelExpanded && <div className="add-panel-collapse-row"><span>{t("Adicionar produtos")}</span><button type="button" onClick={collapseAddPanel} aria-label={t("Recolher painel de inserção")} title={t("Recolher painel")}><ChevronDown size={18}/><span>{t("Recolher")}</span></button></div>}
           {toast === t("Produto adicionado") && !keyboardOpen && <div className="add-inline-feedback" role="status" aria-live="polite"><Check size={15}/><span>{toast}</span></div>}
-          <div className="add-main"><button type="submit" className="input-plus add-submit-left" aria-label={t("Adicionar artigo")} disabled={!name.trim()}><Plus size={22}/></button><input ref={productNameInputRef} autoComplete="off" value={name} onFocus={() => { setAddPanelExpanded(true); setProductInputFocused(true); setKeyboardOpen(true); }} onBlur={e => { if (e.relatedTarget?.type === "submit") return; setProductInputFocused(false); setKeyboardOpen(false); if (!e.relatedTarget?.closest(".add-panel")) setAddPanelExpanded(false); }} onChange={e => setName(e.target.value)} placeholder={t("Adicionar produto…")} aria-label={t("Nome do artigo")} maxLength={100}/><button type="button" className="quantity-picker-trigger" aria-label={t("Definir quantidade do produto")} aria-haspopup="dialog" aria-expanded={showQuantityModal} onPointerDown={e => e.preventDefault()} onClick={() => { productNameInputRef.current?.blur(); setProductInputFocused(false); setKeyboardOpen(false); setShowQuantityModal(true); }}><span>Qtd.</span><strong>{Math.max(1, Math.min(999, Number.parseInt(quantity, 10) || 1))}</strong></button><div className="add-import-tools add-import-tools-inline" aria-label={t("Adicionar por imagem ou voz")}><div className="add-photo-tool"><button type="button" className="add-tool-button add-tool-photo" aria-label={t("Fotografar lista")} title={t("Fotografa uma lista para reconhecer os produtos")} aria-expanded={showPhotoSource} disabled={importBusy} onClick={() => setShowPhotoSource(true)}><Camera size={19}/></button></div><button type="button" className={listening ? "add-tool-button add-tool-voice recording" : "add-tool-button add-tool-voice"} aria-label={listening ? t("A ouvir… toca para parar") : t("Adicionar por voz")} title={t("Dita vários produtos sem escrever")} disabled={importBusy} onClick={startVoiceImport}><Mic size={19}/></button></div></div>
+          <ProductEntryComposer
+            value={name}
+            onChange={e => setName(e.target.value)}
+            inputRef={productNameInputRef}
+            placeholder={t("Adicionar produto…")}
+            addLabel={t("Adicionar artigo")}
+            title={t("Adicionar produtos")}
+            description={t("Escreve, diz ou fotografa uma lista de produtos.")}
+            onFocus={() => { setAddPanelExpanded(true); setProductInputFocused(true); setKeyboardOpen(true); }}
+            onBlur={e => { if (e.relatedTarget?.type === "submit") return; setProductInputFocused(false); setKeyboardOpen(false); if (!e.relatedTarget?.closest(".add-panel")) setAddPanelExpanded(false); }}
+            onVoice={startVoiceImport}
+            onPhoto={() => setShowPhotoSource(true)}
+            busy={importBusy}
+            listening={listening}
+            extraControl={<button type="button" className="quantity-picker-trigger" aria-label={t("Definir quantidade do produto")} aria-haspopup="dialog" aria-expanded={showQuantityModal} onPointerDown={e => e.preventDefault()} onClick={() => { productNameInputRef.current?.blur(); setProductInputFocused(false); setKeyboardOpen(false); setShowQuantityModal(true); }}><span>Qtd.</span><strong>{Math.max(1, Math.min(999, Number.parseInt(quantity, 10) || 1))}</strong></button>}
+          />
           {repeatSuggestions.length > 0 && !shoppingMode && !keyboardOpen && <details className="repeat-inline-disclosure">
             <summary><span>{t("Repetir compras")}</span><small>{Math.min(repeatSuggestions.length, 4)}</small><ChevronDown size={15}/></summary>
             <div className="repeat-chips">{repeatSuggestions.slice(0, 4).map(item => <button type="button" className="repeat-chip" key={item._id} onClick={async () => { await repeatItem(item.name); setAddPanelExpanded(false); }}><Plus size={13}/>{item.name}</button>)}</div>
@@ -1576,7 +1594,7 @@ export default function App() {
           </div>
         </section>
       </div>}
-      {activeTab === "inventory" && <InventoryArea shareCode={listCode} language={language} onAddToShopping={(item) => {
+      {activeTab === "inventory" && <InventoryArea shareCode={listCode} language={language} onNotify={notify} onAddToShopping={(item) => {
         const existingItem = items.find(current => !current.done && current.name?.trim().toLocaleLowerCase() === item.name?.trim().toLocaleLowerCase());
         if (existingItem) return updateItem(existingItem, { quantity: Math.min(999, (Number(existingItem.quantity) || 1) + (Number(item.quantity) || 1)) });
         return submitItem(item.name, item.quantity || 1, item.category || "auto", true);
@@ -1758,7 +1776,7 @@ export default function App() {
       </aside>}
       {hasAnalyticsProviders && analyticsConsent !== "unknown" && <button type="button" className="analytics-privacy-button" onClick={() => setShowPrivacySettings(value => !value)} aria-label={t("Gerir privacidade")} title={t("Gerir privacidade")}><ShieldCheck size={17}/></button>}
       {hasAnalyticsProviders && showPrivacySettings && <aside className="analytics-privacy-panel" role="dialog" aria-label={t("Preferências de privacidade")}><strong>{t("Preferências de análise")}</strong><p>{t("Podes alterar a tua escolha a qualquer momento.")}</p><div><button type="button" className="analytics-consent-reject" onClick={() => chooseAnalyticsConsent("denied")}>{t("Rejeitar análise")}</button><button type="button" className="analytics-consent-accept" onClick={() => chooseAnalyticsConsent("granted")}>{t("Permitir análise")}</button></div><button type="button" className="analytics-privacy-close" onClick={() => setShowPrivacySettings(false)}>{t("Fechar")}</button></aside>}
-      {toast && toast !== t("Produto adicionado") && <div className="toast"><Check size={16}/>{toast}</div>}
+      {toast && <div className="toast"><Check size={16}/>{toast}</div>}
       {error && <button className="error-toast" onClick={() => setError("")}>{error}<X size={15}/></button>}
     </main>
   );
