@@ -187,11 +187,9 @@ export default function RecipesAssistant({ shareCode, language = "pt-PT", onGoIn
   }
 
   return <section className="recipes-assistant">
-    <header className="recipes-assistant-hero">
-      <div className="recipes-assistant-hero-icon"><ChefHat size={25}/><Sparkles size={14}/></div>
-      <span className="eyebrow">{t.eyebrow}</span>
-      <h1>{t.title}</h1>
-      <p>{t.intro}</p>
+    <header className="recipes-assistant-hero area-page-heading">
+      <div className="area-page-heading-copy"><span className="eyebrow">{t.eyebrow}</span><h1>{t.title}</h1><p>{t.intro}</p></div>
+      <span className="area-page-heading-icon"><ChefHat size={25}/></span>
     </header>
 
     <div className="recipes-pantry-strip">
