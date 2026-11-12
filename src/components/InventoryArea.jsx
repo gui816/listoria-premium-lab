@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Archive, ArrowRight, CalendarDays, Camera, Check, ChevronDown, LoaderCircle, Mic, Minus, Plus, Refrigerator, Search, ShoppingBasket, Trash2, X } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, ChevronDown, LoaderCircle, Minus, Plus, Refrigerator, Search, ShoppingBasket, Trash2, X } from "lucide-react";
+import ProductEntryComposer from "./ProductEntryComposer.jsx";
 import { supabase } from "../lib/supabase.js";
 
 const INVENTORY_CATEGORIES = [
@@ -16,7 +17,7 @@ const STORAGE_OPTIONS = [
   { id: "outro", label: "Outro" }
 ];
 
-export default function InventoryArea({ shareCode, language = "pt-PT", onAddToShopping }) {
+export default function InventoryArea({ shareCode, language = "pt-PT", onAddToShopping, onNotify }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -82,7 +83,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
       p_category: category, p_storage_location: location, p_expiry_date: expiryDate || null
     });
     if (rpcError) setError("Não foi possível guardar. A atualização da base de dados pode ainda não estar aplicada.");
-    else { setItems(data?.items || []); setName(""); setQuantity("1"); setExpiryDate(""); broadcastInventoryChange(); }
+    else { setItems(data?.items || []); setName(""); setQuantity("1"); setExpiryDate(""); broadcastInventoryChange(); onNotify?.(`${cleanName} adicionado a Em casa`); }
     setSaving(false);
   }
 
@@ -157,6 +158,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
   }
 
   function startVoiceCapture() {
+    if (captureListening) { recognitionRef.current?.stop(); setCaptureListening(false); return; }
     setCaptureError("");
     setVoiceTranscript("");
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -227,6 +229,9 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
       setCapturedItems([]);
       setVoiceTranscript("");
       broadcastInventoryChange();
+      const addedNames = valid.slice(0, 3).map(item => item.name).join(", ");
+      const remaining = valid.length - Math.min(valid.length, 3);
+      onNotify?.(`${addedNames}${remaining > 0 ? ` +${remaining}` : ""} — ${valid.length} ${valid.length === 1 ? "produto adicionado a Em casa" : "produtos adicionados a Em casa"}`);
     } catch (err) {
       if (insertedCount > 0) setCapturedItems(valid.slice(insertedCount));
       setCaptureError(err.message || "Não foi possível guardar os produtos.");
@@ -270,21 +275,19 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
     </div>
     {expiringSoon > 0 && <div className="inventory-expiry-alert"><CalendarDays size={17}/><span>{expiringSoon} {expiringSoon === 1 ? "produto próximo" : "produtos próximos"} da validade</span></div>}
     <form className="inventory-add-form" onSubmit={addItem}>
-      <div className="inventory-form-heading"><div><strong>Adicionar produtos</strong><small>Escreve, fotografa uma lista ou diz o que tens em casa.</small></div><Archive size={19}/></div>
-      <div className="inventory-add-composer">
-        <input id="inventory-name" value={name} onChange={event => setName(event.target.value)} placeholder="Ex.: Leite, arroz, maçãs…" maxLength={100} aria-label="Nome do produto"/>
-        <button className="inventory-composer-submit" type="submit" aria-label="Adicionar produto" disabled={saving || !name.trim()}>{saving ? <LoaderCircle size={19} className="spin"/> : <Plus size={21}/>}</button>
-        <button className="inventory-composer-tool" type="button" aria-label="Fotografar lista" title="Fotografar uma lista" disabled={captureBusy} onClick={() => captureFileRef.current?.click()}><Camera size={19}/></button>
-        <button className={`inventory-composer-tool${captureListening ? " recording" : ""}`} type="button" aria-label="Adicionar por voz" title="Dizer vários produtos" disabled={captureBusy || captureListening} onClick={startVoiceCapture}><Mic size={19}/></button>
-        <input ref={captureFileRef} className="inventory-capture-file" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={event => { void processCapturePhoto(event.target.files?.[0]); }} />
-      </div>
-      {(captureBusy || captureListening) && <div className="inventory-capture-status" role="status" aria-live="polite">{captureBusy ? <LoaderCircle size={16} className="spin"/> : <Mic size={16} />}{captureListening ? "A ouvir… diz os produtos e quantidades." : captureSource === "photo" ? "A analisar a fotografia e a identificar os produtos…" : "A interpretar os produtos que disseste…"}</div>}
-      {captureError && <p className="inventory-capture-error" role="alert">{captureError}</p>}
-      {capturedItems.length > 0 && <div className="inventory-capture-preview">
-        <div className="inventory-capture-preview-heading"><div><strong>Confirma os produtos</strong><small>{capturedItems.length} identificados{voiceTranscript ? " · " + voiceTranscript : ""}</small></div><button type="button" aria-label="Cancelar importação" onClick={() => { setCapturedItems([]); setVoiceTranscript(""); }}><X size={17}/></button></div>
-        {capturedItems.map((item, index) => <div className="import-preview-row" key={index}><input aria-label="Nome do produto" value={item.name} onChange={event => updateCapturedItem(index,{name:event.target.value})}/><input aria-label="Quantidade" type="number" min="1" max="999" value={item.quantity} onChange={event => updateCapturedItem(index,{quantity:event.target.value})}/><button type="button" aria-label="Remover produto" onClick={() => setCapturedItems(previous => previous.filter((_, itemIndex) => itemIndex !== index))}><X size={15}/></button></div>)}
-        <button className="primary-button" type="button" disabled={captureBusy || !capturedItems.some(item => item.name.trim())} onClick={confirmCapturedItems}>{captureBusy ? <LoaderCircle size={17} className="spin"/> : <Check size={17}/>} Adicionar {capturedItems.length} produtos</button>
-      </div>}
+      <ProductEntryComposer
+        value={name}
+        onChange={event => setName(event.target.value)}
+        placeholder="Ex.: Leite, arroz, maçãs…"
+        addLabel="Adicionar produto"
+        title="Adicionar produtos"
+        description="Escreve, diz ou fotografa uma lista de produtos."
+        onVoice={startVoiceCapture}
+        onPhoto={() => captureFileRef.current?.click()}
+        busy={captureBusy || saving}
+        listening={captureListening}
+      />
+      <input ref={captureFileRef} className="inventory-capture-file" type="file" accept="image/jpeg,image/png,image/webp" onChange={event => { void processCapturePhoto(event.target.files?.[0]); }} />
       <details className="inventory-add-details">
         <summary>Detalhes opcionais <ChevronDown size={15}/></summary>
         <div className="inventory-form-grid"><div><label htmlFor="inventory-quantity">Quantidade</label><input id="inventory-quantity" type="number" inputMode="numeric" min="1" max="999" value={quantity} onChange={event => setQuantity(event.target.value)}/></div><div><label htmlFor="inventory-category">Categoria</label><select id="inventory-category" value={category} onChange={event => setCategory(event.target.value)}>{INVENTORY_CATEGORIES.map(option => <option key={option.id} value={option.id}>{option.emoji} {option.label}</option>)}</select></div></div>

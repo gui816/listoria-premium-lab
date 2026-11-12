@@ -3896,3 +3896,31 @@ button { -webkit-tap-highlight-color: transparent; }
 .recipes-photo-preview button{position:absolute;top:4px;right:4px;display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:50%;background:#1d3029dd;color:white}
 .recipes-photo-status{display:flex;align-items:center;gap:7px;margin:0;color:#58735c;font-size:11px}
 @media(max-width:420px){.recipes-photo-picker{padding:10px}.recipes-photo-action{min-height:40px;font-size:10px}}
+
+
+/* Shared product-entry composer used in Shopping and Home inventory. */
+.product-entry-composer{display:grid;gap:12px;padding:14px;border:1px solid #dfe7dc;border-radius:18px;background:#fbfcf9}
+.product-entry-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.product-entry-heading>div{display:grid;gap:4px}
+.product-entry-heading strong{font-size:15px;line-height:1.25;color:#243b2d}
+.product-entry-heading small{font-size:12px;line-height:1.45;color:#7b887c}
+.product-entry-field-row{display:flex;align-items:center;gap:7px;min-width:0;padding:5px;border:1px solid #dce6d9;border-radius:14px;background:#fff}
+.product-entry-field-row>input{flex:1 1 auto;width:0;min-width:0;height:44px;padding:0 10px;border:0!important;outline:0;background:transparent!important;box-shadow:none!important;font-size:14px;color:#243b2d}
+.product-entry-field-row>input:focus{outline:0;box-shadow:none!important}
+.product-entry-submit{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border:0;border-radius:12px;background:#245d42;color:white;touch-action:manipulation}
+.product-entry-submit:disabled{opacity:.38}
+.product-entry-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.product-entry-action{display:grid;justify-items:center;align-content:center;gap:6px;min-width:0;min-height:112px;padding:13px 9px;border:1px solid #e0e8dd;border-radius:15px;background:#f1f5ef;color:#315d42;text-align:center;touch-action:manipulation}
+.product-entry-action>strong{font-size:14px;line-height:1.2}
+.product-entry-action>small{font-size:11px;line-height:1.35;color:#7c897e}
+.product-entry-action:disabled{opacity:.5}
+.product-entry-action.is-listening{border-color:#e8b6ad;background:#fff0ed;color:#a23e2b;animation:voice-listening-pulse 1.4s ease-in-out infinite}
+.toast{white-space:normal;overflow-wrap:anywhere;text-align:center;justify-content:center;line-height:1.35}
+@media(max-width:420px){
+ .product-entry-composer{gap:10px;padding:12px}
+ .product-entry-field-row{gap:5px;padding:4px}
+ .product-entry-field-row>input{height:42px;padding:0 7px;font-size:13px}
+ .product-entry-submit{flex-basis:36px;width:36px;height:38px}
+ .product-entry-action{min-height:100px;padding:11px 7px}
+}
+@media(prefers-reduced-motion:reduce){.product-entry-action.is-listening{animation:none}}
