@@ -3,6 +3,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { createPortal } from "react-dom";
 import BasketEstimate from "./components/BasketEstimate.jsx";
 import InventoryArea from "./components/InventoryArea.jsx";
+import RecipesAssistant from "./components/RecipesAssistant.jsx";
 import AccountAccess from "./components/AccountAccess.jsx";
 import { getAnalyticsConsent, hasAnalyticsProviders, setAnalyticsConsent as saveAnalyticsConsent, trackEvent, trackPageView } from "./lib/analytics.js";
 import { supabase, isSupabaseConfigured } from "./lib/supabase.js";
@@ -1586,9 +1587,11 @@ export default function App() {
         <div className="finance-action-card"><div className="finance-action-icon"><Receipt size={21}/></div><div><strong>{t("Faturas e histórico")}</strong><p>{t("Consulta os comprovativos e os valores reais das tuas compras.")}</p></div><button type="button" className="secondary-button" onClick={() => setActiveTab("receipts")}>{t("Ver faturas")} <ArrowRight size={16}/></button></div>
         <div className="finance-note"><Sparkles size={17}/><p>{t("As previsões de despesa serão apresentadas quando existirem dados suficientes de compras e comparações. Não confundimos estimativas com despesas reais.")}</p></div>
       </section>}
-      {activeTab === "recipes" && <section className="recipes-coming-soon">
-        <div className="recipes-coming-icon">♨</div><span className="eyebrow">{t("A CAMINHO")}</span><h1>{t("Receitas com o que tens em casa")}</h1><p>{t("Estamos a preparar sugestões inteligentes que aproveitam os teus produtos disponíveis e ajudam a reduzir o desperdício.")}</p><div className="recipes-coming-preview"><span>🥕</span><span>🥦</span><span>🍅</span><span>🥚</span><div><strong>{t("Da tua despensa para a mesa")}</strong><small>{t("Sugestões adaptadas aos ingredientes disponíveis.")}</small></div></div>
-      </section>}
+      {activeTab === "recipes" && <RecipesAssistant shareCode={listCode} language={language} onGoInventory={() => setActiveTab("inventory")} onAddToShopping={(item) => {
+        const existingItem = items.find(current => !current.done && current.name?.trim().toLocaleLowerCase() === item.name?.trim().toLocaleLowerCase());
+        if (existingItem) return updateItem(existingItem, { quantity: Math.min(999, (Number(existingItem.quantity) || 1) + (Number(item.quantity) || 1)) });
+        return submitItem(item.name, item.quantity || 1, "auto", true);
+      }} />}
       {activeTab === "receipts" && <section className="receipts-section">
         <div className="receipts-heading"><div><span className="eyebrow">{t("ARQUIVO PARTILHADO")}</span><h1>{t("Faturas de compras")}</h1><p>{t("Comprovativos acessíveis a todos os membros desta lista.")}</p></div><button type="button" className="secondary-button" onClick={() => setActiveTab("finance")}>← {t("Voltar ao financeiro")}</button></div>
         {receiptAddMode === "choice" && !receiptExtractBusy && <div className="receipt-start-card">
