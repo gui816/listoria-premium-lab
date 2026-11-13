@@ -2634,8 +2634,21 @@ button { -webkit-tap-highlight-color: transparent; }
   }
   .shopping-actions-dock > .add-panel.floating-add-panel.expanded .repeat-inline-disclosure,
   .shopping-actions-dock > .add-panel.floating-add-panel.expanded .quick-suggestions,
-  .shopping-actions-dock > .add-panel.floating-add-panel.expanded .add-options {
-    display:block;
+  .shopping-actions-dock > .add-panel.floating-add-panel.expanded .add-options,
+  .shopping-actions-dock > .add-panel.floating-add-panel.expanded .ai-import-status {
+    display:flex;
+  }
+  .shopping-actions-dock > .add-panel.floating-add-panel.expanded .ai-import-status {
+    margin:7px 0 9px;
+    padding:9px 12px;
+    border:1px solid #f0d1c8;
+    border-radius:11px;
+    background:#fff5f1;
+    color:#9a4435;
+    font-size:12px;
+    line-height:1.5;
+    align-items:flex-start;
+    white-space:normal;
   }
   .shopping-actions-dock > .add-panel.floating-add-panel.expanded .add-options {
     display:flex;
