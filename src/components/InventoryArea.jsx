@@ -228,102 +228,102 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
     }
   }
 
-  function clearVoiceSilenceTimer() {
-    if (silenceTimerRef.current) {
-      window.clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
-  }
-
   function startVoiceCapture() {
+    setCaptureError("");
+    setVoiceTranscript("");
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setCaptureError("O reconhecimento de voz não é suportado neste navegador. Podes usar o microfone do teclado no campo do produto.");
+      return;
+    }
+
     if (captureListening) {
-      clearVoiceSilenceTimer();
+      setVoiceModalOpen(false);
+      setCaptureListening(false);
       recognitionRef.current?.stop();
       return;
     }
 
-    setCaptureError("");
-    setVoiceTranscript("");
-    voiceTranscriptRef.current = "";
-    recognitionFailedRef.current = false;
-    voiceResultHandledRef.current = false;
-    setVoiceModalOpen(true);
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setCaptureError("O reconhecimento de voz não está disponível neste navegador. Podes usar o microfone do teclado no campo de produto.");
-      return;
-    }
-
     try {
+      // Match the proven Shopping flow: one final speech result, then AI extraction.
+      // Avoid continuous/interim recognition and custom silence timers on Android.
       const recognition = new SpeechRecognition();
-      recognition.lang = language || "pt-PT";
-      recognition.continuous = true;
-      recognition.interimResults = true;
+      recognition.lang = language === "pt-PT" ? "pt-PT" : language === "en" ? "en-US" : language;
+      recognition.continuous = false;
+      recognition.interimResults = false;
       recognition.maxAlternatives = 1;
       recognitionRef.current = recognition;
+      recognitionFailedRef.current = false;
+      voiceResultHandledRef.current = false;
 
-      recognition.onstart = () => setCaptureListening(true);
-      recognition.onresult = event => {
-        const transcript = Array.from(event.results || [])
-          .map(result => result?.[0]?.transcript || "")
-          .join(" ")
-          .replace(/\s+/g, " ")
-          .trim();
-        if (!transcript) return;
-        voiceTranscriptRef.current = transcript;
-        setVoiceTranscript(transcript);
-        clearVoiceSilenceTimer();
-        silenceTimerRef.current = window.setTimeout(() => {
-          if (!voiceResultHandledRef.current) recognition.stop();
-        }, 3000);
+      recognition.onstart = () => {
+        voiceResultHandledRef.current = false;
+        setCaptureError("");
+        setCaptureBusy(false);
+        setCaptureListening(true);
+        setVoiceModalOpen(true);
       };
+
       recognition.onerror = event => {
-        if (recognitionFailedRef.current) return;
+        voiceResultHandledRef.current = true;
         recognitionFailedRef.current = true;
-        clearVoiceSilenceTimer();
+        setCaptureBusy(false);
         setCaptureListening(false);
         setVoiceModalOpen(false);
-        setCaptureError(event.error === "not-allowed" || event.error === "service-not-allowed"
+        const message = event.error === "not-allowed" || event.error === "service-not-allowed"
           ? "O acesso ao microfone foi recusado. Permite o microfone nas definições do navegador."
-          : event.error === "no-speech"
-            ? "Não detetámos voz. Toca no microfone e fala depois de aparecer a indicação de escuta."
-            : event.error === "network"
-              ? "O reconhecimento de voz precisa de uma ligação à Internet. Verifica a ligação e tenta novamente."
-              : "Não foi possível reconhecer a voz. Tenta novamente.");
+          : event.error === "network"
+            ? "O reconhecimento de voz precisa de uma ligação à Internet. Verifica a ligação e tenta novamente."
+            : event.error === "no-speech"
+              ? "Não detetámos voz. Toca no microfone e fala depois de aparecer a indicação de escuta."
+              : "Não foi possível reconhecer a voz. Neste navegador, podes usar o microfone do teclado para ditar no campo do produto.";
+        setCaptureError(message);
       };
-      recognition.onend = () => {
-        clearVoiceSilenceTimer();
+
+      recognition.onnomatch = () => {
+        voiceResultHandledRef.current = true;
+        setCaptureBusy(false);
         setCaptureListening(false);
-        if (recognitionFailedRef.current || voiceResultHandledRef.current) return;
-        const transcript = voiceTranscriptRef.current.trim();
-        if (!transcript) {
+        setVoiceModalOpen(false);
+        setCaptureError("Não percebemos os produtos ditos. Tenta falar um pouco mais devagar.");
+      };
+
+      recognition.onend = () => {
+        setCaptureListening(false);
+        // onresult owns the next step; keep the modal open while AI interprets speech.
+        if (!voiceResultHandledRef.current) {
+          setCaptureBusy(false);
           setVoiceModalOpen(false);
-          setCaptureError("Não detetámos voz. Tenta novamente.");
+          setCaptureError("Não foi detetada voz. Tenta novamente.");
+        }
+      };
+
+      recognition.onresult = async event => {
+        voiceResultHandledRef.current = true;
+        const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+        if (!transcript) {
+          setCaptureBusy(false);
+          setVoiceModalOpen(false);
+          setCaptureError("Não foi detetada voz. Tenta novamente.");
           return;
         }
-        voiceResultHandledRef.current = true;
+
         setVoiceTranscript(transcript);
-        void extractCapturedItems({ text: transcript, mimeType: "", fileData: "" }, "voice");
+        setCaptureListening(false);
+        setVoiceModalOpen(true);
+        await extractCapturedItems({ text: transcript, mimeType: "", fileData: "" }, "voice");
       };
+
       recognition.start();
     } catch {
-      clearVoiceSilenceTimer();
       setCaptureListening(false);
       setVoiceModalOpen(false);
       setCaptureError("Não foi possível iniciar o microfone neste dispositivo.");
     }
   }
 
-  function stopVoiceCapture() {
-    clearVoiceSilenceTimer();
-    if (recognitionRef.current && captureListening) {
-      recognitionRef.current.stop();
-    }
-  }
-
   useEffect(() => () => {
-    clearVoiceSilenceTimer();
     recognitionRef.current?.abort();
   }, []);
 
