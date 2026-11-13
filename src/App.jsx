@@ -865,7 +865,6 @@ export default function App() {
     } catch {
       broadcastChange();
       notify(moved + " produtos adicionados a Em casa. Não foi possível transferir os restantes.");
-      await loadList();
     } finally {
       setInventoryTransferBusy(false);
     }
