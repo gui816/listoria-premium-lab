@@ -35,52 +35,7 @@ serve(async (req) => {
     const authUser = await authResponse.json();
     if (!authUser?.id) return json({ error: "Sessão inválida." }, 401);
 
-    const premiumAllowlist = (Deno.env.get("PREMIUM_ALLOWLIST_EMAILS") || "").split(",").map((email) => email.trim().toLowerCase()).filter(Boolean);
-    const isAllowlistedPremium = Boolean(authUser.email && premiumAllowlist.includes(String(authUser.email).trim().toLowerCase()));
-
     const adminHeaders = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" };
-    stage = "subscription_check";
-    const subscriptionUrl = new URL("/rest/v1/subscriptions", supabaseUrl);
-    subscriptionUrl.search = new URLSearchParams({
-      select: "status,current_period_end,past_due_grace_until",
-      user_id: `eq.${authUser.id}`,
-      order: "created_at.desc",
-      limit: "1"
-    }).toString();
-    stage = "subscription_check_query";
-    const subscriptionResponse = await fetch(subscriptionUrl, { headers: adminHeaders, signal: AbortSignal.timeout(10000) });
-    if (!subscriptionResponse.ok) {
-      const failure = await subscriptionResponse.json().catch(() => ({}));
-      diagnosticCode = String(failure?.code || ("HTTP_" + subscriptionResponse.status)).slice(0, 40);
-      console.error("Premium subscription lookup failed:", {
-        requestId,
-        status: subscriptionResponse.status,
-        code: diagnosticCode,
-        message: String(failure?.message || "Unknown PostgREST error").slice(0, 240),
-        details: String(failure?.details || "").slice(0, 240),
-        hint: String(failure?.hint || "").slice(0, 160)
-      });
-      throw new Error("Não foi possível validar a subscrição Premium.");
-    }
-    const subscriptions = await subscriptionResponse.json();
-    const subscription = subscriptions?.[0];
-    const now = Date.now();
-    const graceActive = subscription?.status === "past_due" && subscription.past_due_grace_until && new Date(subscription.past_due_grace_until).getTime() > now;
-    const paidCancellation = subscription?.status === "canceled" && subscription.current_period_end && new Date(subscription.current_period_end).getTime() > now;
-    const hasPremium = isAllowlistedPremium || Boolean(subscription && (["active", "trialing"].includes(subscription.status) || graceActive || paidCancellation));
-
-    stage = "demo_subscription_check";
-    const demoUrl = new URL("/rest/v1/premium_demo_subscriptions", supabaseUrl);
-    demoUrl.search = new URLSearchParams({ select: "status,current_period_end,cancel_at_period_end,past_due_grace_until", user_id: `eq.${authUser.id}`, limit: "1" }).toString();
-    const demoResponse = await fetch(demoUrl, { headers: adminHeaders, signal: AbortSignal.timeout(10000) });
-    if (!demoResponse.ok) throw new Error("Não foi possível validar o modo de demonstração Premium.");
-    const demoRows = await demoResponse.json();
-    const demoSubscription = demoRows?.[0];
-    const demoGrace = demoSubscription?.status === "past_due" && demoSubscription.past_due_grace_until && new Date(demoSubscription.past_due_grace_until).getTime() > now;
-    const demoPaidPeriod = demoSubscription?.cancel_at_period_end && demoSubscription.current_period_end && new Date(demoSubscription.current_period_end).getTime() > now;
-    const hasDemoPremium = Boolean(demoSubscription && ((demoSubscription.status === "active" && (!demoSubscription.current_period_end || new Date(demoSubscription.current_period_end).getTime() > now)) || demoGrace || demoPaidPeriod));
-    const hasAnyPremium = hasPremium || hasDemoPremium;
-
     stage = "rate_limit_check";
     const rateResponse = await fetch(new URL("/rest/v1/rpc/consume_premium_rate_limit", supabaseUrl), {
       method: "POST", headers: adminHeaders,
@@ -172,19 +127,6 @@ serve(async (req) => {
       }))),
       "Return valid JSON only, using this schema: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes,items:[{requestedName,matchedProductName,brand,packageSize,normalizedUnit,matchType,matchConfidence,matchingNotes,quantity,unit,estimatedUnitPrice,estimatedSubtotal,confidence}]}]}. Use null for unavailable numeric prices and omit no requested items."
     ].join("\n");
-
-    stage = "free_trial_check";
-    let freeTrialUsed = false;
-    if (!hasAnyPremium) {
-      const trialUrl = new URL("/rest/v1/premium_comparison_trials", supabaseUrl);
-      trialUrl.search = new URLSearchParams({ select: "user_id", user_id: `eq.${authUser.id}`, limit: "1" }).toString();
-      const trialCheck = await fetch(trialUrl, { headers: adminHeaders, signal: AbortSignal.timeout(10000) });
-      if (!trialCheck.ok) throw new Error("Não foi possível validar a utilização gratuita.");
-      const existingTrial = await trialCheck.json();
-      if (existingTrial?.length) {
-        return json({ error: "Já utilizaste a tua comparação gratuita. Subscreve o Listoria Premium para continuares a comparar o teu cabaz.", code: "premium_required" }, 403);
-      }
-    }
 
     stage = "gemini_request";
     const ai = await fetch(
@@ -308,21 +250,11 @@ serve(async (req) => {
     if (!results.length) return json({ error: "Não foi possível obter uma comparação válida para os supermercados selecionados." }, 502);
 
     if (req.signal.aborted) {
-      console.info("Basket estimate cancelled by client before trial consumption:", { requestId });
+      console.info("Basket estimate cancelled by client before completion:", { requestId });
       return json({ error: "A comparação foi cancelada.", code: "request_cancelled" }, 499);
     }
 
-    stage = "trial_consumption";
-    if (!hasAnyPremium) {
-      const trialResponse = await fetch(new URL("/rest/v1/rpc/consume_free_comparison_trial", supabaseUrl), {
-        method: "POST", headers: adminHeaders,
-        body: JSON.stringify({ p_user_id: authUser.id, p_request_id: requestId }),
-        signal: AbortSignal.timeout(10000)
-      });
-      if (!trialResponse.ok) throw new Error("Não foi possível confirmar a utilização gratuita.");
-      const trialGranted = await trialResponse.json();
-      if (trialGranted !== true) {
-        return json({ error: "Já utilizaste a tua comparação gratuita. Subscreve o Listoria Premium para continuares a comparar o teu cabaz.", code: "premium_required" }, 403);
+    return json({ error: "Já utilizaste a tua comparação gratuita. Subscreve o Listoria Premium para continuares a comparar o teu cabaz.", code: "premium_required" }, 403);
       }
       freeTrialUsed = true;
       // Record the first successful free comparison as the user's conversion cohort entry.
@@ -350,7 +282,6 @@ serve(async (req) => {
         .filter((source: any, index: number, all: any[]) => all.findIndex((entry: any) => entry.url === source.url) === index)
         .slice(0, 20),
       stores: results,
-      freeTrialUsed,
       disclaimer: "Estimativa recolhida por IA. O valor apresentado pode não corresponder exatamente ao preço de catálogo ou incluir todos os descontos e promoções aplicáveis."
     });
   } catch (error) {
