@@ -1,0 +1,89 @@
+name: Apply Supabase database migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type APPLY to apply pending migrations to the configured Supabase database"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-database-migrations
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    if: ${{ inputs.confirm == 'APPLY' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate database secret
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        shell: bash
+        run: |
+          if [[ -z "$SUPABASE_DB_URL" ]]; then
+            echo "::error::Missing GitHub secret SUPABASE_DB_URL"
+            exit 1
+          fi
+          if [[ "$SUPABASE_DB_URL" != postgres://* && "$SUPABASE_DB_URL" != postgresql://* ]]; then
+            echo "::error::SUPABASE_DB_URL must be a PostgreSQL connection URI"
+            exit 1
+          fi
+          echo "Database connection secret is present (value hidden)."
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Apply pending migrations
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: supabase db push --db-url "$SUPABASE_DB_URL" --yes
+
+      - name: Verify required migrations and database functions
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          declare
+            required_version text;
+          begin
+            foreach required_version in array array[
+              '202611130001',
+              '202611130002',
+              '202611130003'
+            ] loop
+              if not exists (
+                select 1
+                from supabase_migrations.schema_migrations
+                where version = required_version
+              ) then
+                raise exception 'Migration % is not recorded as applied', required_version;
+              end if;
+            end loop;
+
+            if to_regprocedure('public.move_purchased_item_to_inventory(text,uuid)') is null then
+              raise exception 'Missing function move_purchased_item_to_inventory';
+            end if;
+            if to_regprocedure('public.consume_ai_rate_limit(uuid,text,integer,integer)') is null then
+              raise exception 'Missing function consume_ai_rate_limit';
+            end if;
+            if to_regprocedure('public.add_family_inventory_items(text,jsonb)') is null then
+              raise exception 'Missing function add_family_inventory_items';
+            end if;
+          end
+          $$;
+          select 'Verified: all three migrations and required RPC functions are present.' as result;
+          SQL
