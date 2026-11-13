@@ -32,7 +32,7 @@ begin
     v_storage := case when v_item->>'storage_location' in ('frigorifico','congelador','despensa','outro') then v_item->>'storage_location' else 'despensa' end;
     perform public.add_family_inventory_item(p_share_code, v_name, v_quantity, v_category, v_storage, null);
   end loop;
-  return public.family_list_payload(v_list_id);
+  return public.family_inventory_payload(v_list_id);
 end;
 $$;
 
