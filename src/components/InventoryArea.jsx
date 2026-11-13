@@ -132,7 +132,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
     }
     if (data?.error) throw new Error(data.error);
     const found = (Array.isArray(data?.items) ? data.items : [])
-      .map(item => ({ name: String(item?.name || item?.product || "").trim().replace(/\\s+/g, " ").slice(0, 100), quantity: Math.max(1, Math.min(999, Number.parseInt(item?.quantity, 10) || 1)) }))
+      .map(item => ({ name: String(item?.name || item?.product || "").trim().replace(/\s+/g, " ").slice(0, 100), quantity: Math.max(1, Math.min(999, Number.parseInt(item?.quantity, 10) || 1)) }))
       .filter(item => item.name).slice(0, 60);
     if (!found.length) throw new Error("Não identificámos produtos. Tenta uma fotografia mais nítida ou fala novamente.");
     return found;
@@ -205,7 +205,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
       }
       const merged = new Map();
       for (const item of allItems) {
-        const key = item.name.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLocaleLowerCase().replace(/\\s+/g, " ").trim();
+        const key = item.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().replace(/\s+/g, " ").trim();
         const existing = merged.get(key);
         if (existing) existing.quantity = Math.min(999, existing.quantity + item.quantity);
         else merged.set(key, { ...item });
