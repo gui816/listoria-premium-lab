@@ -31,11 +31,16 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
   const [capturedItems, setCapturedItems] = useState([]);
   const [captureBusy, setCaptureBusy] = useState(false);
   const [captureListening, setCaptureListening] = useState(false);
+  const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const [captureError, setCaptureError] = useState("");
   const [captureSource, setCaptureSource] = useState("");
   const [voiceTranscript, setVoiceTranscript] = useState("");
   const captureFileRef = useRef(null);
   const recognitionRef = useRef(null);
+  const silenceTimerRef = useRef(null);
+  const voiceTranscriptRef = useRef("");
+  const recognitionFailedRef = useRef(false);
+  const voiceResultHandledRef = useRef(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [inventoryListVisible, setInventoryListVisible] = useState(false);
@@ -144,6 +149,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
       setCaptureError(err.message || "Não foi possível interpretar os produtos. Tenta novamente.");
     } finally {
       setCaptureBusy(false);
+      if (source === "voice") setVoiceModalOpen(false);
     }
   }
 
@@ -178,10 +184,24 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
     }
   }
 
+  function clearVoiceSilenceTimer() {
+    if (silenceTimerRef.current) {
+      window.clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+  }
+
   function startVoiceCapture() {
-    if (captureListening) { recognitionRef.current?.stop(); setCaptureListening(false); return; }
+    if (captureListening) {
+      clearVoiceSilenceTimer();
+      recognitionRef.current?.stop();
+      return;
+    }
     setCaptureError("");
     setVoiceTranscript("");
+    voiceTranscriptRef.current = "";
+    recognitionFailedRef.current = false;
+    voiceResultHandledRef.current = false;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setCaptureError("O reconhecimento de voz não está disponível neste navegador. Podes usar o microfone do teclado no campo de produto.");
@@ -190,36 +210,76 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
     try {
       const recognition = new SpeechRecognition();
       recognition.lang = language || "pt-PT";
-      recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.continuous = true;
+      recognition.interimResults = true;
       recognition.maxAlternatives = 1;
       recognitionRef.current = recognition;
+      setVoiceModalOpen(true);
+
       recognition.onstart = () => setCaptureListening(true);
       recognition.onresult = event => {
-        setCaptureListening(false);
-        const transcript = event.results?.[0]?.[0]?.transcript?.trim() || "";
-        if (!transcript) {
-          setCaptureError("Não detetámos produtos na gravação. Tenta novamente.");
-          return;
-        }
+        const transcript = Array.from(event.results || [])
+          .map(result => result?.[0]?.transcript || "")
+          .join(" ")
+          .trim();
+        if (!transcript) return;
+
+        voiceTranscriptRef.current = transcript;
         setVoiceTranscript(transcript);
-        void extractCapturedItems({ text: transcript, mimeType: "", fileData: "" }, "voice");
+        clearVoiceSilenceTimer();
+        silenceTimerRef.current = window.setTimeout(() => {
+          recognition.stop();
+        }, 3000);
       };
       recognition.onerror = event => {
+        recognitionFailedRef.current = true;
+        clearVoiceSilenceTimer();
         setCaptureListening(false);
-        setCaptureError(event.error === "not-allowed"
+        setVoiceModalOpen(false);
+        setCaptureError(event.error === "not-allowed" || event.error === "service-not-allowed"
           ? "O acesso ao microfone foi recusado. Permite o microfone nas definições do navegador."
           : event.error === "no-speech"
             ? "Não detetámos voz. Toca no microfone e fala depois de aparecer a indicação de escuta."
-            : "Não foi possível reconhecer a voz. Tenta novamente.");
+            : event.error === "network"
+              ? "O reconhecimento de voz precisa de uma ligação à Internet. Verifica a ligação e tenta novamente."
+              : "Não foi possível reconhecer a voz. Tenta novamente.");
       };
-      recognition.onend = () => setCaptureListening(false);
+      recognition.onend = () => {
+        clearVoiceSilenceTimer();
+        setCaptureListening(false);
+        if (recognitionFailedRef.current || voiceResultHandledRef.current) return;
+
+        const transcript = voiceTranscriptRef.current.trim();
+        if (!transcript) {
+          setVoiceModalOpen(false);
+          setCaptureError("Não detetámos voz. Tenta novamente.");
+          return;
+        }
+
+        voiceResultHandledRef.current = true;
+        setVoiceTranscript(transcript);
+        void extractCapturedItems({ text: transcript, mimeType: "", fileData: "" }, "voice");
+      };
       recognition.start();
     } catch {
+      clearVoiceSilenceTimer();
       setCaptureListening(false);
+      setVoiceModalOpen(false);
       setCaptureError("Não foi possível iniciar o microfone neste dispositivo.");
     }
   }
+
+  function stopVoiceCapture() {
+    clearVoiceSilenceTimer();
+    if (recognitionRef.current && captureListening) {
+      recognitionRef.current.stop();
+    }
+  }
+
+  useEffect(() => () => {
+    clearVoiceSilenceTimer();
+    recognitionRef.current?.abort();
+  }, []);
 
   function updateCapturedItem(index, changes) {
     setCapturedItems(previous => previous.map((item, itemIndex) => itemIndex === index ? { ...item, ...changes } : item));
@@ -340,6 +400,39 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
         listening={captureListening}
       />
       <input ref={captureFileRef} className="inventory-capture-file" type="file" accept="image/jpeg,image/png,image/webp" onChange={event => { void processCapturePhoto(event.target.files?.[0]); }} />
+      {captureError && <p className="inventory-error" role="alert">{captureError}</p>}
+      {voiceModalOpen && <div className="modal-backdrop voice-modal-backdrop" onClick={() => { if (captureBusy) return; recognitionFailedRef.current = true; clearVoiceSilenceTimer(); recognitionRef.current?.abort(); setCaptureListening(false); setVoiceModalOpen(false); }}>
+        <section className="share-modal voice-modal voice-listening-modal" onClick={event => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="inventory-voice-title">
+          <button type="button" className="modal-close" aria-label="Fechar" disabled={captureBusy} onClick={() => { recognitionFailedRef.current = true; clearVoiceSilenceTimer(); recognitionRef.current?.abort(); setCaptureListening(false); setVoiceModalOpen(false); }}><X size={20}/></button>
+          <div className={`voice-listening-icon${captureBusy ? " is-processing" : ""}`}>{captureBusy ? <LoaderCircle size={30} className="spin"/> : <Mic size={30}/>}</div>
+          <span className={`voice-listening-pill${captureBusy ? " is-processing" : ""}`}><span/> {captureBusy ? "A identificar" : "A ouvir"}</span>
+          <h2 id="inventory-voice-title">{captureBusy ? "A identificar os produtos" : "Estou a ouvir!"}</h2>
+          <p>{captureBusy ? "Estamos a organizar os produtos que disseste. Só mais um momento." : "Diz-me que produtos já tens em casa."}</p>
+          {captureBusy ? <div className="voice-transcript-panel"><small>O que percebemos</small><strong>“{voiceTranscript}”</strong><div className="voice-processing-note"><LoaderCircle size={15} className="spin"/>A identificar produtos e quantidades…</div></div> : <>
+            {voiceTranscript && <div className="voice-transcript-panel"><small>O que percebemos</small><strong>“{voiceTranscript}”</strong></div>}
+            <div className="voice-wave" aria-hidden="true"><span/><span/><span/><span/><span/><span/><span/><span/><span/></div>
+            <div className="voice-listening-example"><small>Podes dizer vários produtos de seguida</small><strong>“Leite, arroz, maçãs e dois iogurtes.”</strong></div>
+          </>}
+          <button type="button" className="primary-button voice-stop-button" disabled={captureBusy || !captureListening} onClick={stopVoiceCapture}>{captureBusy ? <><LoaderCircle size={17} className="spin"/>A identificar…</> : <><Mic size={17}/>Terminar gravação</>}</button>
+          <small className="voice-listening-hint">{captureBusy ? "Não feches esta janela. Estamos quase a terminar." : "Também termina automaticamente após 3 segundos de silêncio."}</small>
+        </section>
+      </div>}
+      {capturedItems.length > 0 && <div className="modal-backdrop" onClick={() => !captureBusy && setCapturedItems([])}>
+        <section className="share-modal import-modal inventory-capture-preview" onClick={event => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="inventory-capture-title">
+          <button type="button" className="modal-close" aria-label="Fechar" disabled={captureBusy} onClick={() => setCapturedItems([])}><X size={20}/></button>
+          <div className="share-graphic"><ShoppingBasket size={28}/></div>
+          <h2 id="inventory-capture-title">Confirmar produtos</h2>
+          <p>{captureSource === "photo" ? "Revê os produtos reconhecidos na fotografia." : "Revê os produtos reconhecidos por voz."} Podes corrigir nomes e quantidades antes de os adicionar ao inventário.</p>
+          <div className="import-preview-list">{capturedItems.map((item, index) => <div className="import-preview-row" key={index}>
+            <input aria-label={`Produto ${index + 1}`} value={item.name} maxLength={100} onChange={event => updateCapturedItem(index, { name: event.target.value })}/>
+            <input aria-label={`Quantidade de ${item.name}`} type="number" min="1" max="999" value={item.quantity} onChange={event => updateCapturedItem(index, { quantity: event.target.value })}/>
+            <button type="button" aria-label={`Remover ${item.name}`} disabled={captureBusy} onClick={() => setCapturedItems(previous => previous.filter((_, itemIndex) => itemIndex !== index))}><X size={17}/></button>
+          </div>)}</div>
+          {captureError && <p className="error-message" role="alert">{captureError}</p>}
+          <button type="button" className="primary-button" disabled={captureBusy || !capturedItems.some(item => item.name.trim())} onClick={() => void confirmCapturedItems()}>{captureBusy ? <LoaderCircle size={17} className="spin"/> : <Check size={17}/>} {captureBusy ? "A adicionar…" : `Adicionar ${capturedItems.length} ${capturedItems.length === 1 ? "produto" : "produtos"} a Em casa`}</button>
+          <button type="button" className="secondary-button" disabled={captureBusy} onClick={() => { setCapturedItems([]); setCaptureError(""); }}>Cancelar</button>
+        </section>
+      </div>}
       <details className="inventory-add-details">
         <summary>Detalhes opcionais <ChevronDown size={15}/></summary>
         <div className="inventory-form-grid"><div><label htmlFor="inventory-quantity">Quantidade</label><input id="inventory-quantity" type="number" inputMode="numeric" min="1" max="999" value={quantity} onChange={event => setQuantity(event.target.value)}/></div><div><label htmlFor="inventory-category">Categoria</label><select id="inventory-category" value={category} onChange={event => setCategory(event.target.value)}>{INVENTORY_CATEGORIES.map(option => <option key={option.id} value={option.id}>{option.emoji} {option.label}</option>)}</select></div></div>
