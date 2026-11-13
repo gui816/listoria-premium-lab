@@ -20,7 +20,8 @@ export default function ProductEntryComposer({
   voiceDescription = "Diz os produtos",
   photoTitle = "Fotografia",
   photoDescription = "Fotografa uma lista ou os produtos",
-  addLabel = "Adicionar produto"
+  addLabel = "Adicionar produto",
+  inlineActions = false
 }) {
   return (
     <div className="product-entry-composer">
@@ -32,12 +33,16 @@ export default function ProductEntryComposer({
           onFocus={onFocus} onBlur={onBlur} placeholder={placeholder}
           aria-label={addLabel} maxLength={100}/>
         {extraControl}
+        {inlineActions && <>
+          <button type="button" className={`product-entry-inline-action photo`} onClick={onPhoto} disabled={busy || disabled} aria-label={photoTitle}><Camera size={21}/></button>
+          <button type="button" className={`product-entry-inline-action voice${listening ? " is-listening" : ""}`} onClick={onVoice} disabled={busy || disabled} aria-label={listening ? "A ouvir" : voiceTitle}><Mic size={21}/></button>
+        </>}
         <button className="product-entry-submit" type="submit" aria-label={addLabel}
           disabled={disabled || busy || !value.trim()}>
           {busy ? <LoaderCircle size={19} className="spin"/> : <Plus size={21}/>}
         </button>
       </div>
-      <div className="product-entry-actions">
+      {!inlineActions && <div className="product-entry-actions">
         <button type="button" className={`product-entry-action${listening ? " is-listening" : ""}`}
           onClick={onVoice} disabled={busy || disabled}>
           <Mic size={21}/><strong>{listening ? "A ouvir…" : voiceTitle}</strong><small>{voiceDescription}</small>
@@ -45,7 +50,7 @@ export default function ProductEntryComposer({
         <button type="button" className="product-entry-action" onClick={onPhoto} disabled={busy || disabled}>
           <Camera size={21}/><strong>{photoTitle}</strong><small>{photoDescription}</small>
         </button>
-      </div>
+      </div>}
     </div>
   );
 }
