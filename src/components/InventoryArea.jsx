@@ -96,18 +96,17 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
     return matchesSearch && matchesCategory;
   }), [items, search, filter]);
 
-  async function saveInventoryProduct(productName, productQuantity = quantity) {
+  async function saveInventoryProduct(productName, productQuantity = quantity, productCategory = category) {
     const cleanName = String(productName || "").trim();
     if (!cleanName || !shareCode || saving) return false;
     setSaving(true);
     setError("");
-    const inferredCategory = inferInventoryCategory(cleanName);
     const { data, error: rpcError } = await supabase.rpc("add_family_inventory_item", {
       p_share_code: shareCode,
       p_name: cleanName,
       p_quantity: Math.max(1, Math.min(999, Number.parseInt(productQuantity, 10) || 1)),
-      p_category: inferredCategory,
-      p_storage_location: inferredCategory === "frescos" ? "frigorifico" : location,
+      p_category: productCategory,
+      p_storage_location: location,
       p_expiry_date: expiryDate || null
     });
     if (rpcError) {
@@ -131,7 +130,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
   }
 
   async function addSuggestedProduct(productName) {
-    await saveInventoryProduct(productName, 1);
+    await saveInventoryProduct(productName, quantity, inferInventoryCategory(productName));
   }
 
   function stopVoiceCapture() {
