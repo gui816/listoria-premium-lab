@@ -37,9 +37,6 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
   const [voiceTranscript, setVoiceTranscript] = useState("");
   const captureFileRef = useRef(null);
   const recognitionRef = useRef(null);
-  const silenceTimerRef = useRef(null);
-  const voiceTranscriptRef = useRef("");
-  const recognitionFailedRef = useRef(false);
   const voiceResultHandledRef = useRef(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
@@ -254,7 +251,6 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
       recognitionRef.current = recognition;
-      recognitionFailedRef.current = false;
       voiceResultHandledRef.current = false;
 
       recognition.onstart = () => {
@@ -267,7 +263,6 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
 
       recognition.onerror = event => {
         voiceResultHandledRef.current = true;
-        recognitionFailedRef.current = true;
         setCaptureBusy(false);
         setCaptureListening(false);
         setVoiceModalOpen(false);
