@@ -32,5 +32,5 @@ jobs:
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - name: Type-check basket estimate functions
-        run: deno check supabase/functions/listora-basket-estimate/index.ts supabase/functions/listora-basket-estimate-v2/index.ts supabase/functions/listora-recipe-assistant/index.ts
+      - name: Type-check AI Edge Functions
+        run: deno check supabase/functions/listora-basket-estimate/index.ts supabase/functions/listora-basket-estimate-v2/index.ts supabase/functions/listora-list-extract/index.ts supabase/functions/listora-receipt-extract/index.ts supabase/functions/listora-recipe-assistant/index.ts

@@ -121,29 +121,37 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
     return "despensa";
   }
 
+  async function requestCapturedItems(payload) {
+    const { data, error: invokeError } = await supabase.functions.invoke("listora-list-extract", { body: payload });
+    if (invokeError) {
+      let detail = invokeError.message || "Não foi possível contactar o serviço de interpretação.";
+      try {
+        const response = invokeError.context;
+        if (response && typeof response.json === "function") {
+          const body = await response.json();
+          detail = body?.error || body?.message || detail;
+        }
+      } catch { /* Keep the original error. */ }
+      throw new Error(detail);
+    }
+    if (data?.error) throw new Error(data.error);
+    const found = (Array.isArray(data?.items) ? data.items : [])
+      .map(item => ({
+        name: String(item?.name || item?.product || "").trim().replace(/\\s+/g, " ").slice(0, 100),
+        quantity: Math.max(1, Math.min(999, Number.parseInt(item?.quantity, 10) || 1))
+      }))
+      .filter(item => item.name).slice(0, 60);
+    if (!found.length) throw new Error("Não identificámos produtos. Tenta uma fotografia mais nítida ou fala novamente.");
+    return found;
+  }
+
   async function extractCapturedItems(payload, source) {
     setCaptureBusy(true);
     setCaptureListening(false);
     setCaptureError("");
     setCaptureSource(source);
     try {
-      const { data, error: invokeError } = await supabase.functions.invoke("listora-list-extract", { body: payload });
-      if (invokeError) {
-        let detail = invokeError.message || "Não foi possível contactar o serviço de interpretação.";
-        try {
-          const response = invokeError.context;
-          if (response && typeof response.json === "function") {
-            const body = await response.json();
-            detail = body?.error || body?.message || detail;
-          }
-        } catch { /* Keep the original error. */ }
-        throw new Error(detail);
-      }
-      if (data?.error) throw new Error(data.error);
-      const found = (Array.isArray(data?.items) ? data.items : [])
-        .map(item => ({ name: String(item?.name || item?.product || "").trim().replace(/\s+/g, " ").slice(0, 100), quantity: Math.max(1, Math.min(999, Number.parseInt(item?.quantity, 10) || 1)) }))
-        .filter(item => item.name).slice(0, 60);
-      if (!found.length) throw new Error("Não identificámos produtos. Tenta uma fotografia mais nítida ou fala novamente.");
+      const found = await requestCapturedItems(payload);
       setCapturedItems(found);
     } catch (err) {
       setCaptureError(err.message || "Não foi possível interpretar os produtos. Tenta novamente.");
@@ -153,33 +161,69 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
     }
   }
 
-  async function processCapturePhoto(file) {
-    if (!file) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setCaptureError("Escolhe uma fotografia em formato JPG, PNG ou WebP.");
-      return;
+  async function prepareCapturePhoto(file) {
+    let imageBlob = file;
+    if (typeof createImageBitmap === "function") {
+      try {
+        const bitmap = await createImageBitmap(file);
+        const scale = Math.min(1, 1800 / Math.max(bitmap.width, bitmap.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+        canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("Não foi possível preparar a fotografia.");
+        context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        const compressed = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.84));
+        bitmap.close?.();
+        if (compressed) imageBlob = compressed;
+      } catch { /* Fall back to the original image when image decoding is unavailable. */ }
     }
-    if (file.size > 12 * 1024 * 1024) {
-      setCaptureError("A fotografia deve ter menos de 12 MB.");
-      return;
-    }
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Não foi possível ler a fotografia."));
+      reader.readAsDataURL(imageBlob);
+    });
+    const [header, fileData] = dataUrl.split(",");
+    const mimeType = header.match(/data:(.*?);base64/)?.[1] || file.type || "image/jpeg";
+    if (!fileData || fileData.length > 14_000_000) throw new Error("A fotografia continua demasiado grande. Tenta uma imagem mais pequena.");
+    return { text: "", mimeType, fileData };
+  }
+
+  async function processCapturePhotos(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    const exceededLimit = files.length > 3;
+    const selectedFiles = files.slice(0, 3);
     setCaptureBusy(true);
     setCaptureSource("photo");
     setCaptureError("");
+    setCapturedItems([]);
     try {
-      const dataUrl = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => reject(new Error("Não foi possível ler a fotografia."));
-        reader.readAsDataURL(file);
-      });
-      const [header, fileData] = dataUrl.split(",");
-      const mimeType = header.match(/data:(.*?);base64/)?.[1] || "image/jpeg";
-      await extractCapturedItems({ text: "", mimeType, fileData }, "photo");
+      const allItems = [];
+      for (const file of selectedFiles) {
+        if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+          throw new Error("Escolhe fotografias em formato JPG, PNG ou WebP.");
+        }
+        if (file.size > 15 * 1024 * 1024) {
+          throw new Error("Cada fotografia deve ter menos de 15 MB.");
+        }
+        const payload = await prepareCapturePhoto(file);
+        allItems.push(...await requestCapturedItems(payload));
+      }
+      const merged = new Map();
+      for (const item of allItems) {
+        const key = item.name.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLocaleLowerCase().replace(/\\s+/g, " ").trim();
+        const existing = merged.get(key);
+        if (existing) existing.quantity = Math.min(999, existing.quantity + item.quantity);
+        else merged.set(key, { ...item });
+      }
+      setCapturedItems(Array.from(merged.values()).slice(0, 60));
+      if (exceededLimit) setCaptureError("Só analisámos as primeiras 3 fotografias. Podes adicionar mais numa nova operação.");
     } catch (err) {
-      setCaptureError(err.message || "Não foi possível ler a fotografia.");
-      setCaptureBusy(false);
+      setCaptureError(err.message || "Não foi possível interpretar as fotografias. Tenta novamente.");
     } finally {
+      setCaptureBusy(false);
       if (captureFileRef.current) captureFileRef.current.value = "";
     }
   }
@@ -197,16 +241,20 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
       recognitionRef.current?.stop();
       return;
     }
+
     setCaptureError("");
     setVoiceTranscript("");
     voiceTranscriptRef.current = "";
     recognitionFailedRef.current = false;
     voiceResultHandledRef.current = false;
+    setVoiceModalOpen(true);
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setCaptureError("O reconhecimento de voz não está disponível neste navegador. Podes usar o microfone do teclado no campo de produto.");
       return;
     }
+
     try {
       const recognition = new SpeechRecognition();
       recognition.lang = language || "pt-PT";
@@ -214,21 +262,20 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
       recognitionRef.current = recognition;
-      setVoiceModalOpen(true);
 
       recognition.onstart = () => setCaptureListening(true);
       recognition.onresult = event => {
         const transcript = Array.from(event.results || [])
           .map(result => result?.[0]?.transcript || "")
           .join(" ")
+          .replace(/\s+/g, " ")
           .trim();
         if (!transcript) return;
-
         voiceTranscriptRef.current = transcript;
         setVoiceTranscript(transcript);
         clearVoiceSilenceTimer();
         silenceTimerRef.current = window.setTimeout(() => {
-          recognition.stop();
+          if (!voiceResultHandledRef.current) recognition.stop();
         }, 3000);
       };
       recognition.onerror = event => {
@@ -249,14 +296,12 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
         clearVoiceSilenceTimer();
         setCaptureListening(false);
         if (recognitionFailedRef.current || voiceResultHandledRef.current) return;
-
         const transcript = voiceTranscriptRef.current.trim();
         if (!transcript) {
           setVoiceModalOpen(false);
           setCaptureError("Não detetámos voz. Tenta novamente.");
           return;
         }
-
         voiceResultHandledRef.current = true;
         setVoiceTranscript(transcript);
         void extractCapturedItems({ text: transcript, mimeType: "", fileData: "" }, "voice");
@@ -291,31 +336,29 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
     if (!valid.length || captureBusy || saving) return;
     setCaptureBusy(true);
     setCaptureError("");
-    let insertedCount = 0;
     try {
-      for (const item of valid) {
-        const categoryId = inferInventoryCategory(item.name);
-        const storageLocation = categoryId === "frescos" ? "frigorifico" : "despensa";
-        const { data, error: rpcError } = await supabase.rpc("add_family_inventory_item", {
-          p_share_code: shareCode,
-          p_name: item.name.trim().slice(0, 100),
-          p_quantity: Math.max(1, Math.min(999, Number.parseInt(item.quantity, 10) || 1)),
-          p_category: categoryId,
-          p_storage_location: storageLocation,
-          p_expiry_date: null
-        });
-        if (rpcError) throw new Error("Não foi possível guardar todos os produtos. Verifica a ligação e tenta novamente.");
-        setItems(data?.items || []);
-        insertedCount += 1;
-      }
+      const batch = valid.map(item => {
+        const category = inferInventoryCategory(item.name);
+        return {
+          name: item.name.trim().slice(0, 100),
+          quantity: Math.max(1, Math.min(999, Number.parseInt(item.quantity, 10) || 1)),
+          category,
+          storage_location: category === "frescos" ? "frigorifico" : "despensa"
+        };
+      });
+      const { data, error: rpcError } = await supabase.rpc("add_family_inventory_items", {
+        p_share_code: shareCode,
+        p_items: batch
+      });
+      if (rpcError) throw new Error("Não foi possível guardar os produtos. Nenhum produto foi alterado. Verifica a ligação e tenta novamente.");
+      setItems(data?.items || []);
       setCapturedItems([]);
       setVoiceTranscript("");
       broadcastInventoryChange();
       const addedNames = valid.slice(0, 3).map(item => item.name).join(", ");
       const remaining = valid.length - Math.min(valid.length, 3);
-      onNotify?.(`${addedNames}${remaining > 0 ? ` +${remaining}` : ""} — ${valid.length} ${valid.length === 1 ? "produto adicionado a Em casa" : "produtos adicionados a Em casa"}`);
+      onNotify?.(addedNames + (remaining > 0 ? " +" + remaining : "") + " — " + valid.length + " " + (valid.length === 1 ? "produto adicionado a Em casa" : "produtos adicionados a Em casa"));
     } catch (err) {
-      if (insertedCount > 0) setCapturedItems(valid.slice(insertedCount));
       setCaptureError(err.message || "Não foi possível guardar os produtos.");
     } finally {
       setCaptureBusy(false);
@@ -400,15 +443,17 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
         busy={captureBusy || saving}
         listening={captureListening}
       />
-      <input ref={captureFileRef} className="inventory-capture-file" type="file" accept="image/jpeg,image/png,image/webp" onChange={event => { void processCapturePhoto(event.target.files?.[0]); }} />
+      <input ref={captureFileRef} className="inventory-capture-file" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => { void processCapturePhotos(event.target.files); }} />
+      {captureBusy && captureSource === "photo" && <div className="inventory-capture-status" role="status"><LoaderCircle size={17} className="spin"/><span>A analisar as fotografias e a identificar os produtos…</span></div>}
       {captureError && <p className="inventory-error" role="alert">{captureError}</p>}
       {voiceModalOpen && <div className="modal-backdrop voice-modal-backdrop" onClick={() => { if (captureBusy) return; recognitionFailedRef.current = true; clearVoiceSilenceTimer(); recognitionRef.current?.abort(); setCaptureListening(false); setVoiceModalOpen(false); }}>
         <section className="share-modal voice-modal voice-listening-modal" onClick={event => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="inventory-voice-title">
           <button type="button" className="modal-close" aria-label="Fechar" disabled={captureBusy} onClick={() => { recognitionFailedRef.current = true; clearVoiceSilenceTimer(); recognitionRef.current?.abort(); setCaptureListening(false); setVoiceModalOpen(false); }}><X size={20}/></button>
           <div className={`voice-listening-icon${captureBusy ? " is-processing" : ""}`}>{captureBusy ? <LoaderCircle size={30} className="spin"/> : <Mic size={30}/>}</div>
-          <span className={`voice-listening-pill${captureBusy ? " is-processing" : ""}`}><span/> {captureBusy ? "A identificar" : "A ouvir"}</span>
-          <h2 id="inventory-voice-title">{captureBusy ? "A identificar os produtos" : "Estou a ouvir!"}</h2>
-          <p>{captureBusy ? "Estamos a organizar os produtos que disseste. Só mais um momento." : "Diz-me que produtos já tens em casa."}</p>
+          <span className={`voice-listening-pill${captureBusy ? " is-processing" : ""}`}><span/> {captureBusy ? "A identificar" : captureError ? "Voz indisponível" : "A ouvir"}</span>
+          <h2 id="inventory-voice-title">{captureBusy ? "A identificar os produtos" : captureError ? "Não foi possível iniciar a voz" : "Estou a ouvir!"}</h2>
+          <p>{captureBusy ? "Estamos a organizar os produtos que disseste. Só mais um momento." : captureError ? "Podes fechar esta janela e usar o microfone do teclado no campo de produto." : "Diz-me que produtos já tens em casa."}</p>
+          {captureError && <p className="inventory-error" role="alert">{captureError}</p>}
           {captureBusy ? <div className="voice-transcript-panel"><small>O que percebemos</small><strong>“{voiceTranscript}”</strong><div className="voice-processing-note"><LoaderCircle size={15} className="spin"/>A identificar produtos e quantidades…</div></div> : <>
             {voiceTranscript && <div className="voice-transcript-panel"><small>O que percebemos</small><strong>“{voiceTranscript}”</strong></div>}
             <div className="voice-wave" aria-hidden="true"><span/><span/><span/><span/><span/><span/><span/><span/><span/></div>
@@ -424,6 +469,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
           <div className="share-graphic"><ShoppingBasket size={28}/></div>
           <h2 id="inventory-capture-title">Confirmar produtos</h2>
           <p>{captureSource === "photo" ? "Revê os produtos reconhecidos na fotografia." : "Revê os produtos reconhecidos por voz."} Podes corrigir nomes e quantidades antes de os adicionar ao inventário.</p>
+          {captureError && <p className="inventory-error" role="alert">{captureError}</p>}
           <div className="import-preview-list">{capturedItems.map((item, index) => <div className="import-preview-row" key={index}>
             <input aria-label={`Produto ${index + 1}`} value={item.name} maxLength={100} onChange={event => updateCapturedItem(index, { name: event.target.value })}/>
             <input aria-label={`Quantidade de ${item.name}`} type="number" min="1" max="999" value={item.quantity} onChange={event => updateCapturedItem(index, { quantity: event.target.value })}/>

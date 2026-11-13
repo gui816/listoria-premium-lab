@@ -42,9 +42,9 @@ Para builds Android através do GitHub Actions:
 O workflow injeta o secret em `VITE_GEMINI_API_KEY` apenas durante `npm run build`. Como o Vite incorpora variáveis `VITE_*` no JavaScript do cliente, a chave pode ser extraída do APK; usa uma chave exclusiva para esta app e configura limites/alertas de utilização na Google AI. A fotografia e a transcrição de voz são enviadas à Google para processamento. Para desenvolvimento local, define `VITE_GEMINI_API_KEY` no teu `.env.local`.
 
 
-## Estimativa indicativa do cabaz (Premium – fase inicial)
+## Comparação inteligente do cabaz
 
-A comparação utiliza um catálogo de países e supermercados mantido no Supabase. O utilizador escolhe o país e as cadeias que pretende comparar; a função envia essa seleção e os artigos ao Gemini para produzir intervalos de preço indicativos. Não é necessário pedir acesso à localização nem consultar OpenStreetMap/Overpass.
+A comparação gratuita utiliza um catálogo de países e supermercados mantido no Supabase. O utilizador escolhe o país e as cadeias que pretende comparar; a função envia essa seleção e os artigos ao Gemini para produzir intervalos de preço indicativos. Não é necessário pedir acesso à localização nem consultar OpenStreetMap/Overpass.
 
 O catálogo inicial inclui mercados da Europa, América do Sul, Estados Unidos e Canadá. Os países, moedas e supermercados são configuráveis através da migração `supabase/migrations/202611030001_international_supermarket_catalogue.sql`. A seleção do país e das cadeias fica guardada localmente no dispositivo nesta fase.
 
@@ -55,7 +55,18 @@ Para ativar a funcionalidade no projeto Supabase:
 3. Publica a função: `supabase functions deploy listora-basket-estimate`.
 4. Confirma que a função está disponível no mesmo projeto indicado por `VITE_SUPABASE_URL`.
 
-A função utiliza as variáveis de ambiente internas `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` para consultar o catálogo. A chave de serviço nunca deve ser exposta no frontend. As estimativas não consultam preços atuais nem garantem poupanças; a disponibilidade das cadeias pode variar por região. Esta fase ainda não inclui preços reais, histórico, cache, controlo de quota ou validação de subscrição Premium no servidor.
+A função utiliza as variáveis de ambiente internas `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` para consultar o catálogo. A chave de serviço nunca deve ser exposta no frontend. As estimativas não consultam preços atuais nem garantem poupanças; a disponibilidade das cadeias pode variar por região. A comparação está disponível gratuitamente para todos os utilizadores autenticados. A proteção contra abuso aplica-se apenas a pedidos excessivos num curto intervalo e não representa um limite comercial mensal.
+
+
+## Migrações de estabilização e aplicação gratuita
+
+Depois das migrações de inventário e de listas partilhadas já existentes, executa no SQL Editor do Supabase, por esta ordem:
+
+1. `supabase/migrations/202611130001_move_purchased_item_to_inventory.sql` — permite transferir artigos comprados para Em casa numa única transação, removendo-os da lista de compras sem duplicar stock.
+2. `supabase/migrations/202611130002_ai_rate_limits.sql` — cria proteção de frequência isolada por utilizador e funcionalidade para os pedidos de IA.
+3. `supabase/migrations/202611130003_bulk_inventory_add.sql` — guarda todos os produtos reconhecidos por voz/fotografia numa única transação, evitando importações parciais e duplicações em tentativas.
+
+A Listora não utiliza subscrições, planos Premium, paywalls nem quotas comerciais. As funções de comparação, extração por fotografia/voz, leitura de faturas e sugestões de receitas estão disponíveis para todos os utilizadores autenticados (incluindo sessões anónimas). As Edge Functions validam a sessão e utilizam `GEMINI_API_KEY` no servidor; não coloques chaves Gemini nem `service_role` no frontend.
 
 ## Deploy
 
@@ -63,7 +74,10 @@ A aplicação pode ser distribuída como app Android através do APK gerado no G
 
 ## Segurança
 
-As tabelas não têm acesso direto concedido ao papel `anon`; a app usa funções PostgreSQL `SECURITY DEFINER` com `search_path` fixo e validação do código de partilha. O código de convite dá acesso de leitura e escrita à lista, pelo que deve ser partilhado apenas com pessoas de confiança. O código gerado tem 12 caracteres hexadecimais. Antes de promover a aplicação para uso público, acrescenta proteção contra abuso/rate limiting e considera autenticação e convites revogáveis.
+Todas as funcionalidades estão disponíveis gratuitamente. Não existem planos pagos, subscrições nem bloqueios por subscrição. Os pedidos às APIs de IA mantêm proteção técnica contra abuso e frequência excessiva.
+
+
+As tabelas não têm acesso direto concedido ao papel `anon`; a app usa funções PostgreSQL `SECURITY DEFINER` com `search_path` fixo e validação do código de partilha. O código de convite dá acesso de leitura e escrita à lista, pelo que deve ser partilhado apenas com pessoas de confiança. O código gerado tem 12 caracteres hexadecimais. As Edge Functions de IA validam a sessão e aplicam rate limiting independente por utilizador e funcionalidade (10 pedidos por minuto por funcionalidade). Este limite protege os serviços externos e não restringe a utilização mensal nem bloqueia funcionalidades por plano. Para utilização pública em escala, considera também convites revogáveis e associação das listas a contas.
 
 ## Estrutura
 

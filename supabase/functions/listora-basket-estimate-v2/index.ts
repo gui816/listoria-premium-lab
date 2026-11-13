@@ -39,50 +39,16 @@ serve(async (req) => {
     const authUser = await authResponse.json();
     if (!authUser?.id) return json({ error: "Sessão inválida." }, 401);
 
-    // Permanent Premium exemption for explicitly allowlisted authenticated accounts.
-    const premiumAllowlist = (Deno.env.get("PREMIUM_ALLOWLIST_EMAILS") || "")
-      .split(",").map((email) => email.trim().toLowerCase()).filter(Boolean);
-    const isAllowlistedPremium = Boolean(authUser.email && premiumAllowlist.includes(String(authUser.email).trim().toLowerCase()));
-
     const adminHeaders = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" };
-    stage = "subscription_check";
-    const subscriptionUrl = new URL("/rest/v1/subscriptions", supabaseUrl);
-    subscriptionUrl.search = new URLSearchParams({
-      select: "status,current_period_end,past_due_grace_until",
-      user_id: `eq.${authUser.id}`,
-      order: "created_at.desc",
-      limit: "1"
-    }).toString();
-    const subscriptionResponse = await fetch(subscriptionUrl, { headers: adminHeaders, signal: AbortSignal.timeout(10000) });
-    if (!subscriptionResponse.ok) throw new Error("Não foi possível validar a subscrição Premium.");
-    const subscriptions = await subscriptionResponse.json();
-    const subscription = subscriptions?.[0];
-    const now = Date.now();
-    const graceActive = subscription?.status === "past_due" && subscription.past_due_grace_until && new Date(subscription.past_due_grace_until).getTime() > now;
-    const paidCancellation = subscription?.status === "canceled" && subscription.current_period_end && new Date(subscription.current_period_end).getTime() > now;
-    const hasPremium = isAllowlistedPremium || Boolean(subscription && (["active", "trialing"].includes(subscription.status) || graceActive || paidCancellation));
-
-    stage = "demo_subscription_check";
-    const demoUrl = new URL("/rest/v1/premium_demo_subscriptions", supabaseUrl);
-    demoUrl.search = new URLSearchParams({ select: "status,current_period_end,cancel_at_period_end,past_due_grace_until", user_id: `eq.${authUser.id}`, limit: "1" }).toString();
-    const demoResponse = await fetch(demoUrl, { headers: adminHeaders, signal: AbortSignal.timeout(10000) });
-    if (!demoResponse.ok) throw new Error("Não foi possível validar o modo de demonstração Premium.");
-    const demoRows = await demoResponse.json();
-    const demoSubscription = demoRows?.[0];
-    const demoGrace = demoSubscription?.status === "past_due" && demoSubscription.past_due_grace_until && new Date(demoSubscription.past_due_grace_until).getTime() > now;
-    const demoPaidPeriod = demoSubscription?.cancel_at_period_end && demoSubscription.current_period_end && new Date(demoSubscription.current_period_end).getTime() > now;
-    const hasDemoPremium = Boolean(demoSubscription && ((demoSubscription.status === "active" && (!demoSubscription.current_period_end || new Date(demoSubscription.current_period_end).getTime() > now)) || demoGrace || demoPaidPeriod));
-    const hasAnyPremium = hasPremium || hasDemoPremium;
-
     stage = "rate_limit_check";
-    const rateResponse = await fetch(new URL("/rest/v1/rpc/consume_premium_rate_limit", supabaseUrl), {
+    const rateResponse = await fetch(new URL("/rest/v1/rpc/consume_ai_rate_limit", supabaseUrl), {
       method: "POST", headers: adminHeaders,
-      body: JSON.stringify({ p_user_id: authUser.id, p_feature_key: "basket_estimate", p_request_id: requestId, p_limit: 10, p_window_seconds: 60 }),
+      body: JSON.stringify({ p_user_id: authUser.id, p_feature_key: "basket_estimate", p_limit: 10, p_window_seconds: 60 }),
       signal: AbortSignal.timeout(10000)
     });
     if (!rateResponse.ok) throw new Error("Não foi possível validar o limite de utilização.");
     const rateRows = await rateResponse.json();
-    if (rateRows?.[0]?.allowed === false) return json({ error: "Estás a fazer demasiadas pesquisas num curto espaço de tempo. Aguarda um minuto e tenta novamente.", code: "rate_limited", retryAfter: rateRows[0].retry_after_seconds }, 429);
+    if (rateRows?.[0]?.allowed === false) return json({ error: "Estás a fazer demasiadas pesquisas num curto espaço de tempo. Aguarda um minuto e tenta novamente.", code: "rate_limited", retryAfter: rateRows[0].retry_after_s }, 429);
 
     stage = "input_validation";
     const body = await req.json();
@@ -154,18 +120,6 @@ serve(async (req) => {
       "Selected supermarkets: " + JSON.stringify(stores.map((store: any) => ({ name: store.name, website: store.website, pricePosition: store.price_position }))),
       "Return valid JSON only: {stores:[{name,status,estimatedTotal,rangeMin,rangeMax,confidence,notes,items:[{requestedName,matchedProductName,brand,packageSize,normalizedUnit,matchType,estimationMethod,estimationBasis,matchConfidence,matchingNotes,quantity,unit,estimatedUnitPrice,estimatedSubtotal,confidence}]}]}. Never omit requested items. Use null prices only when no relevant evidence exists." 
     ].join("\n");
-
-    let freeTrialUsed = false;
-    if (!hasAnyPremium) {
-      const trialUrl = new URL("/rest/v1/premium_comparison_trials", supabaseUrl);
-      trialUrl.search = new URLSearchParams({ select: "user_id", user_id: `eq.${authUser.id}`, limit: "1" }).toString();
-      const trialCheck = await fetch(trialUrl, { headers: adminHeaders, signal: AbortSignal.timeout(10000) });
-      if (!trialCheck.ok) throw new Error("Não foi possível validar a utilização gratuita.");
-      const existingTrial = await trialCheck.json();
-      if (existingTrial?.length) {
-        return json({ error: "Já utilizaste a tua comparação gratuita. Subscreve o Listoria Premium para continuares a comparar o teu cabaz.", code: "premium_required" }, 403);
-      }
-    }
 
     // Isolate each retailer so a larger basket does not become one oversized
     // Gemini + Search task. Keep concurrency bounded and preserve successful stores.
@@ -524,30 +478,6 @@ serve(async (req) => {
       return json({ error: "Não foi possível obter preços ou estimativas suficientemente fundamentadas. Tenta novamente dentro de alguns instantes.", code: "no_reliable_estimates", experiment: experimentMetrics }, 502);
     }
 
-    stage = "free_trial_consume";
-    if (!hasAnyPremium) {
-      const trialResponse = await fetch(new URL("/rest/v1/rpc/consume_free_comparison_trial", supabaseUrl), {
-        method: "POST", headers: adminHeaders,
-        body: JSON.stringify({ p_user_id: authUser.id, p_request_id: requestId }),
-        signal: AbortSignal.timeout(10000)
-      });
-      if (!trialResponse.ok) throw new Error("Não foi possível confirmar a utilização gratuita.");
-      const trialGranted = await trialResponse.json();
-      if (trialGranted !== true) {
-        return json({ error: "Já utilizaste a tua comparação gratuita. Subscreve o Listoria Premium para continuares a comparar o teu cabaz.", code: "premium_required" }, 403);
-      }
-      freeTrialUsed = true;
-      // Record the first successful free comparison as the user's conversion cohort entry.
-      // Analytics failures must not turn a valid estimate into a failed user request.
-      const cohortResponse = await fetch(new URL("/rest/v1/premium_comparison_cohorts?on_conflict=user_id", supabaseUrl), {
-        method: "POST",
-        headers: { ...adminHeaders, Prefer: "resolution=ignore-duplicates,return=minimal" },
-        body: JSON.stringify({ user_id: authUser.id, first_free_comparison_at: new Date().toISOString(), request_id: requestId }),
-        signal: AbortSignal.timeout(8000)
-      });
-      if (!cohortResponse.ok) console.error("Could not record Smart Comparison conversion cohort:", await cohortResponse.text());
-    }
-
     return json({
       generatedAt: new Date().toISOString(),
       country: { code: country.code, name: country.name },
@@ -563,7 +493,6 @@ serve(async (req) => {
         .filter((source: any, index: number, all: any[]) => all.findIndex((entry: any) => entry.url === source.url) === index)
         .slice(0, 20),
       stores: results,
-      freeTrialUsed,
       disclaimer: "Estimativa recolhida por IA. O valor apresentado pode não corresponder exatamente ao preço de catálogo ou incluir todos os descontos e promoções aplicáveis."
     });
   } catch (error: any) {
