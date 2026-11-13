@@ -452,9 +452,9 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
         <section className="share-modal voice-modal voice-listening-modal" onClick={event => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="inventory-voice-title">
           <button type="button" className="modal-close" aria-label="Fechar" disabled={captureBusy} onClick={() => { recognitionFailedRef.current = true; clearVoiceSilenceTimer(); recognitionRef.current?.abort(); setCaptureListening(false); setVoiceModalOpen(false); }}><X size={20}/></button>
           <div className={`voice-listening-icon${captureBusy ? " is-processing" : ""}`}>{captureBusy ? <LoaderCircle size={30} className="spin"/> : <Mic size={30}/>}</div>
-          <span className={`voice-listening-pill${captureBusy ? " is-processing" : ""}`}><span/> {captureBusy ? "A identificar" : "A ouvir"}</span>
-          <h2 id="inventory-voice-title">{captureBusy ? "A identificar os produtos" : "Estou a ouvir!"}</h2>
-          <p>{captureBusy ? "Estamos a organizar os produtos que disseste. Só mais um momento." : "Diz-me que produtos já tens em casa."}</p>
+          <span className={`voice-listening-pill${captureBusy ? " is-processing" : ""}`}><span/> {captureBusy ? "A identificar" : captureError ? "Voz indisponível" : "A ouvir"}</span>
+          <h2 id="inventory-voice-title">{captureBusy ? "A identificar os produtos" : captureError ? "Não foi possível iniciar a voz" : "Estou a ouvir!"}</h2>
+          <p>{captureBusy ? "Estamos a organizar os produtos que disseste. Só mais um momento." : captureError ? "Podes fechar esta janela e usar o microfone do teclado no campo de produto." : "Diz-me que produtos já tens em casa."}</p>
           {captureError && <p className="inventory-error" role="alert">{captureError}</p>}
           {captureBusy ? <div className="voice-transcript-panel"><small>O que percebemos</small><strong>“{voiceTranscript}”</strong><div className="voice-processing-note"><LoaderCircle size={15} className="spin"/>A identificar produtos e quantidades…</div></div> : <>
             {voiceTranscript && <div className="voice-transcript-panel"><small>O que percebemos</small><strong>“{voiceTranscript}”</strong></div>}
