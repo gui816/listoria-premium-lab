@@ -284,6 +284,7 @@ export default function App() {
   const [filter, setFilter] = useState("all");
   const [showDone, setShowDone] = useState(false);
   const [showPurchasedInline, setShowPurchasedInline] = useState(false);
+  const [inventoryTransferBusy, setInventoryTransferBusy] = useState(false);
   const [shoppingMode, setShoppingMode] = useState(false);
   const [showShoppingNudge, setShowShoppingNudge] = useState(true);
   const [itemsSectionVisible, setItemsSectionVisible] = useState(false);
@@ -828,22 +829,46 @@ export default function App() {
   }
 
   async function movePurchasedToInventory(item) {
-    if (!listCode || !item?.name) return false;
-    const { error: rpcError } = await supabase.rpc("add_family_inventory_item", {
+    if (!listCode || !item?._id) return false;
+    const { data, error: rpcError } = await supabase.rpc("move_purchased_item_to_inventory", {
       p_share_code: listCode,
-      p_name: item.name,
-      p_quantity: Math.max(1, Number(item.quantity) || 1),
-      p_category: item.category || "outros",
-      p_storage_location: "despensa",
-      p_expiry_date: null
+      p_item_id: item._id
     });
     if (rpcError) {
       setError(t("Não foi possível guardar o produto em casa. Tenta novamente."));
       return false;
     }
-    notify(t("Produto guardado em casa"));
+    setItems(data?.items || items.filter(current => current._id !== item._id));
     broadcastChange();
+    notify(item.name + " — " + t("Adicionado a Em casa"));
     return true;
+  }
+
+  async function moveAllPurchasedToInventory() {
+    if (!doneItems.length || inventoryTransferBusy || !listCode) return;
+    setInventoryTransferBusy(true);
+    let latestItems = items;
+    let moved = 0;
+    try {
+      for (const item of doneItems) {
+        const { data, error: rpcError } = await supabase.rpc("move_purchased_item_to_inventory", {
+          p_share_code: listCode,
+          p_item_id: item._id
+        });
+        if (rpcError) throw rpcError;
+        latestItems = data?.items || latestItems.filter(current => current._id !== item._id);
+        moved += 1;
+        setItems(latestItems);
+      }
+      broadcastChange();
+      notify(moved + " " + (moved === 1 ? "produto adicionado" : "produtos adicionados") + " a Em casa");
+    } catch {
+      broadcastChange();
+      notify(moved + " produtos adicionados a Em casa. Não foi possível transferir os restantes.");
+      await loadList();
+    } finally {
+      setInventoryTransferBusy(false);
+    }
   }
 
   function parseGeminiItems(payload) {
@@ -1472,7 +1497,7 @@ export default function App() {
       {!shoppingMode && <nav className="main-tabs segmented-tabs main-tabs-expanded app-area-navigation" aria-label={t("Áreas da Listora")}>
         <button type="button" className={activeTab === "shopping" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "shopping"} onClick={() => setActiveTab("shopping")}><ShoppingBasket size={20}/> <span className="tab-label">{t("Compras")}</span></button>
         <button type="button" className={activeTab === "inventory" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "inventory"} onClick={() => setActiveTab("inventory")}><Refrigerator size={20}/> <span className="tab-label">{t("Em casa")}</span></button>
-        <button type="button" className={activeTab === "finance" || activeTab === "receipts" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "finance" || activeTab === "receipts"} onClick={() => setActiveTab("finance")}><Wallet size={20}/> <span className="tab-label">{t("Financeiro")}</span></button>
+        <button type="button" className={activeTab === "finance" || activeTab === "receipts" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "finance" || activeTab === "receipts"} onClick={() => setActiveTab("finance")}><Wallet size={20}/> <span className="tab-label">{t("Gastos")}</span></button>
         <button type="button" className={activeTab === "recipes" ? "main-tab active" : "main-tab"} aria-pressed={activeTab === "recipes"} onClick={() => setActiveTab("recipes")}><ChefHat size={20}/> <span className="tab-label">{t("Receitas")}</span></button>
       </nav>}
       {activeTab === "shopping" && <>
@@ -1548,7 +1573,7 @@ export default function App() {
             return <article data-item-id={String(item._id)} className={`shopping-item ${item.done ? "is-done" : ""} ${String(item._id) === recentlyAddedItemId ? "is-recently-added" : ""}`} key={item._id}>
               <button className={`check-button ${item.done ? "checked" : ""}`} onClick={() => updateItem(item, { done: !item.done })} aria-label={item.done ? t("Marcar como por comprar") : t("Marcar como comprado")}>{item.done && <Check size={17}/>}</button>
               <div className="item-copy"><span className="item-name">{item.name}</span><span className="item-meta"><span>{cat.emoji} {t(cat.label)}</span><span className="meta-dot">·</span><span>{t("Qtd.")} {item.quantity}</span></span></div>
-              {item.done && <button type="button" className="inventory-save-inline" onClick={() => void movePurchasedToInventory(item)} title={t("Guardar em casa")}><Plus size={14}/><span>{t("Em casa")}</span></button>}
+              {item.done && <button type="button" className="inventory-save-inline" onClick={() => void movePurchasedToInventory(item)} title={t("Adicionar a Em casa")}><Plus size={14}/><span>{t("Adicionar a Em casa")}</span></button>}
               <button className="delete-button" onClick={() => deleteItem(item)} aria-label={`${t("Remover")} ${item.name}`}><Trash2 size={17}/></button>
             </article>;
           })}</div>
@@ -1558,7 +1583,7 @@ export default function App() {
             <span><CheckCheck size={17}/><strong>{t("Comprados")} ({doneItems.filter(item => filter === "all" || item.category === filter).length})</strong></span>
             <ChevronDown size={18} className={showPurchasedInline ? "rotate" : ""}/>
           </button>
-          {showPurchasedInline && <div className="supermarket-purchased-list">{doneItems.filter(item => filter === "all" || item.category === filter).map(item => {
+          {showPurchasedInline && <div className="supermarket-purchased-list">{doneItems.length > 1 && <button type="button" className="inventory-save-all" disabled={inventoryTransferBusy} onClick={() => void moveAllPurchasedToInventory()}>{inventoryTransferBusy ? <LoaderCircle size={15} className="spin"/> : <Refrigerator size={15}/>} {inventoryTransferBusy ? "A adicionar…" : "Adicionar todos a Em casa"}</button>}{doneItems.filter(item => filter === "all" || item.category === filter).map(item => {
             const cat = CATEGORIES.find(c => c.id === item.category) || CATEGORIES[5];
             return <article className="shopping-item is-done" key={item._id}>
               <button className="check-button checked" onClick={() => updateItem(item, { done: false })} aria-label={t("Marcar como por comprar")}><Check size={17}/></button>
@@ -1623,7 +1648,7 @@ export default function App() {
         return submitItem(item.name, item.quantity || 1, item.category || "auto", true);
       }} />}
       {activeTab === "finance" && <section className="finance-hub">
-        <header className="finance-hub-heading area-page-heading"><div className="area-page-heading-copy"><span className="eyebrow">{t("VISÃO DA FAMÍLIA")}</span><h1>{t("Assistente financeiro")}</h1><p>{t("Acompanha o que já gastaste e prepara melhor as próximas compras.")}</p></div><span className="area-page-heading-icon"><Wallet size={25}/></span></header>
+        <header className="finance-hub-heading area-page-heading"><div className="area-page-heading-copy"><span className="eyebrow">{t("VISÃO DA FAMÍLIA")}</span><h1>{t("Assistente de gastos")}</h1><p>{t("Acompanha o que já gastaste e prepara melhor as próximas compras.")}</p></div><span className="area-page-heading-icon"><Wallet size={25}/></span></header>
         <div className="finance-overview-card"><span>{t("Despesas registadas")}</span><strong>{receipts.length ? receipts.reduce((sum, receipt) => sum + (Number(receipt.total) || 0), 0).toLocaleString(language, {style:"currency",currency:"EUR"}) : t("Sem dados")}</strong><small>{receipts.length ? t("Com base nas faturas guardadas nesta lista.") : t("Importa uma fatura se quiseres acompanhar as despesas reais.")}</small></div>
         <div className="finance-action-card"><div className="finance-action-icon"><Receipt size={21}/></div><div><strong>{t("Faturas e histórico")}</strong><p>{t("Consulta os comprovativos e os valores reais das tuas compras.")}</p></div><button type="button" className="secondary-button" onClick={() => setActiveTab("receipts")}>{t("Ver faturas")} <ArrowRight size={16}/></button></div>
         <div className="finance-note"><Sparkles size={17}/><p>{t("As previsões de despesa serão apresentadas quando existirem dados suficientes de compras e comparações. Não confundimos estimativas com despesas reais.")}</p></div>
