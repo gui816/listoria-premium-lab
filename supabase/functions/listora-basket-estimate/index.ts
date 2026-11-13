@@ -39,7 +39,7 @@ serve(async (req) => {
     stage = "rate_limit_check";
     const rateResponse = await fetch(new URL("/rest/v1/rpc/consume_ai_rate_limit", supabaseUrl), {
       method: "POST", headers: adminHeaders,
-      body: JSON.stringify({ p_user_id: authUser.id, p_feature_key: "basket_estimate", p_request_id: requestId, p_limit: 10, p_window_seconds: 60 }),
+      body: JSON.stringify({ p_user_id: authUser.id, p_feature_key: "basket_estimate", p_limit: 10, p_window_seconds: 60 }),
       signal: AbortSignal.timeout(10000)
     });
     if (!rateResponse.ok) throw new Error("Não foi possível validar o limite de utilização.");
