@@ -64,6 +64,7 @@ Depois das migrações de inventário e de listas partilhadas já existentes, ex
 
 1. `supabase/migrations/202611130001_move_purchased_item_to_inventory.sql` — permite transferir artigos comprados para Em casa numa única transação, removendo-os da lista de compras sem duplicar stock.
 2. `supabase/migrations/202611130002_ai_rate_limits.sql` — cria proteção de frequência isolada por utilizador e funcionalidade para os pedidos de IA.
+3. `supabase/migrations/202611130003_bulk_inventory_add.sql` — guarda todos os produtos reconhecidos por voz/fotografia numa única transação, evitando importações parciais e duplicações em tentativas.
 
 A Listora não utiliza subscrições, planos Premium, paywalls nem quotas comerciais. As funções de comparação, extração por fotografia/voz, leitura de faturas e sugestões de receitas estão disponíveis para todos os utilizadores autenticados (incluindo sessões anónimas). As Edge Functions validam a sessão e utilizam `GEMINI_API_KEY` no servidor; não coloques chaves Gemini nem `service_role` no frontend.
 
