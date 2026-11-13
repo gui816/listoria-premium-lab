@@ -1,35 +1,9 @@
 import { useMemo } from "react";
+import { buildReceiptSummary } from "../lib/receipt-summary.js";
 import { ArrowRight, Receipt, ShoppingBasket, Sparkles, Wallet } from "lucide-react";
 
 export default function FamilySpendingDashboard({ receipts = [], language = "pt-PT", t, onOpenReceipts, onAddExpense }) {
-  const summary = useMemo(() => {
-    const now = new Date();
-    const months = Array.from({ length: 6 }, (_, index) => new Date(now.getFullYear(), now.getMonth() - 5 + index, 1));
-    const monthly = months.map(month => {
-      const key = month.getFullYear() + "-" + String(month.getMonth() + 1).padStart(2, "0");
-      const total = receipts.reduce((sum, receipt) => {
-        const date = new Date(String(receipt.purchasedAt || "") + "T12:00:00");
-        const receiptKey = Number.isNaN(date.getTime()) ? "" : date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0");
-        return sum + (receiptKey === key ? Number(receipt.total) || 0 : 0);
-      }, 0);
-      return { key, label: month.toLocaleDateString(language, { month: "short" }), total };
-    });
-    const total = receipts.reduce((sum, receipt) => sum + (Number(receipt.total) || 0), 0);
-    const byStore = new Map();
-    for (const receipt of receipts) {
-      const store = String(receipt.storeName || "Outros").trim() || "Outros";
-      byStore.set(store, (byStore.get(store) || 0) + (Number(receipt.total) || 0));
-    }
-    const topStore = [...byStore.entries()].sort((a, b) => b[1] - a[1])[0] || null;
-    return {
-      total,
-      currentMonth: monthly[monthly.length - 1]?.total || 0,
-      average: receipts.length ? total / receipts.length : 0,
-      count: receipts.length,
-      monthly,
-      topStore
-    };
-  }, [receipts, language]);
+  const summary = useMemo(() => buildReceiptSummary(receipts, language), [receipts, language]);
 
   const maxMonthly = Math.max(1, ...summary.monthly.map(entry => entry.total));
   const formatMoney = value => Number(value || 0).toLocaleString(language, { style: "currency", currency: "EUR" });
