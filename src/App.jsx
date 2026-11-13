@@ -1415,15 +1415,6 @@ export default function App() {
             <div className="discover-smart-visual-foot"><Sparkles size={14}/>{t("Correspondências e estimativas explicadas")}</div>
           </div>
         </section>
-        <section className="discover-premium-callout">
-          <div className="discover-premium-callout-icon"><Sparkles size={19}/></div>
-          <div className="discover-premium-callout-copy">
-            <span>LISTORIA PREMIUM</span>
-            <strong>Experimenta uma comparação gratuita. Depois, continua por 1,99 €/mês.</strong>
-            <p>Comparações inteligentes do cabaz sempre que precisares, sem limites mensais e com proteção contra utilização abusiva. Subscrição mensal, que podes gerir ou cancelar a qualquer momento.</p>
-          </div>
-          <span className="discover-premium-price">1,99 € <small>/ mês</small></span>
-        </section>
         <div className="discover-section-heading discover-secondary-heading"><span className="discover-kicker">{t("MAIS FORMAS DE SIMPLIFICAR")}</span><h2>{t("Pequenos detalhes que fazem a diferença.")}</h2><p>{t("Tudo o que ajuda a manter as compras e a rotina da família organizadas.")}</p></div>
         <div className="discover-feature-grid discover-secondary-features">
           <article className="discover-feature"><div className="discover-art"><div className="discover-mini-list"><span><Check size={13}/>Leite</span><span><Check size={13}/>Pão</span><span className="discover-muted-item">○ Fruta</span></div><span className="discover-art-icon"><ShoppingBasket size={22}/></span></div><span className="discover-kicker">{t("NO SUPERMERCADO")}</span><h2>{t("Compra com mais foco.")}</h2><p>{t("Usa o modo supermercado para acompanhar o que já foi comprado e o que falta. É especialmente útil quando várias pessoas fazem compras em simultâneo, porque todos podem acompanhar a mesma lista atualizada.")}</p></article>
