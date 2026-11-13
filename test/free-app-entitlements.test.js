@@ -34,7 +34,7 @@ test("AI extraction and recipe endpoints authenticate users and apply per-featur
   ];
   for (const [path, feature] of endpoints) {
     const source = await read(path);
-    assert.match(source, /auth\\/v1\\/user/);
+    assert.match(source, /auth\/v1\/user/);
     assert.match(source, /consume_ai_rate_limit/);
     assert.ok(source.includes("p_feature_key: \"" + feature + "\""));
   }
