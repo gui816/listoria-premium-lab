@@ -197,16 +197,20 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
       recognitionRef.current?.stop();
       return;
     }
+
     setCaptureError("");
     setVoiceTranscript("");
     voiceTranscriptRef.current = "";
     recognitionFailedRef.current = false;
     voiceResultHandledRef.current = false;
+    setVoiceModalOpen(true);
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setCaptureError("O reconhecimento de voz não está disponível neste navegador. Podes usar o microfone do teclado no campo de produto.");
       return;
     }
+
     try {
       const recognition = new SpeechRecognition();
       recognition.lang = language || "pt-PT";
@@ -214,21 +218,20 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
       recognitionRef.current = recognition;
-      setVoiceModalOpen(true);
 
       recognition.onstart = () => setCaptureListening(true);
       recognition.onresult = event => {
         const transcript = Array.from(event.results || [])
           .map(result => result?.[0]?.transcript || "")
           .join(" ")
+          .replace(/\s+/g, " ")
           .trim();
         if (!transcript) return;
-
         voiceTranscriptRef.current = transcript;
         setVoiceTranscript(transcript);
         clearVoiceSilenceTimer();
         silenceTimerRef.current = window.setTimeout(() => {
-          recognition.stop();
+          if (!voiceResultHandledRef.current) recognition.stop();
         }, 3000);
       };
       recognition.onerror = event => {
@@ -249,14 +252,12 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
         clearVoiceSilenceTimer();
         setCaptureListening(false);
         if (recognitionFailedRef.current || voiceResultHandledRef.current) return;
-
         const transcript = voiceTranscriptRef.current.trim();
         if (!transcript) {
           setVoiceModalOpen(false);
           setCaptureError("Não detetámos voz. Tenta novamente.");
           return;
         }
-
         voiceResultHandledRef.current = true;
         setVoiceTranscript(transcript);
         void extractCapturedItems({ text: transcript, mimeType: "", fileData: "" }, "voice");
@@ -409,6 +410,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
           <span className={`voice-listening-pill${captureBusy ? " is-processing" : ""}`}><span/> {captureBusy ? "A identificar" : "A ouvir"}</span>
           <h2 id="inventory-voice-title">{captureBusy ? "A identificar os produtos" : "Estou a ouvir!"}</h2>
           <p>{captureBusy ? "Estamos a organizar os produtos que disseste. Só mais um momento." : "Diz-me que produtos já tens em casa."}</p>
+          {captureError && <p className="inventory-error" role="alert">{captureError}</p>}
           {captureBusy ? <div className="voice-transcript-panel"><small>O que percebemos</small><strong>“{voiceTranscript}”</strong><div className="voice-processing-note"><LoaderCircle size={15} className="spin"/>A identificar produtos e quantidades…</div></div> : <>
             {voiceTranscript && <div className="voice-transcript-panel"><small>O que percebemos</small><strong>“{voiceTranscript}”</strong></div>}
             <div className="voice-wave" aria-hidden="true"><span/><span/><span/><span/><span/><span/><span/><span/><span/></div>
