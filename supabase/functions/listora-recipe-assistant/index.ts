@@ -17,6 +17,35 @@ serve(async (req) => {
   if (!apiKey) return json({ error: "O serviço de IA não está configurado. Confirma o segredo GEMINI_API_KEY no Supabase." }, 503);
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const authorization = req.headers.get("Authorization") || "";
+    if (!supabaseUrl || !anonKey || !serviceKey) {
+      return json({ error: "O serviço de IA não está corretamente configurado." }, 503);
+    }
+    if (!authorization) return json({ error: "Inicia sessão para utilizar esta funcionalidade." }, 401);
+
+    const authResponse = await fetch(new URL("/auth/v1/user", supabaseUrl), {
+      headers: { apikey: anonKey, Authorization: authorization },
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!authResponse.ok) return json({ error: "Sessão inválida. Volta a iniciar sessão." }, 401);
+    const authUser = await authResponse.json();
+    if (!authUser?.id) return json({ error: "Sessão inválida." }, 401);
+
+    const rateResponse = await fetch(new URL("/rest/v1/rpc/consume_ai_rate_limit", supabaseUrl), {
+      method: "POST",
+      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_user_id: authUser.id, p_feature_key: "recipe_assistant", p_limit: 10, p_window_seconds: 60 }),
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!rateResponse.ok) return json({ error: "Não foi possível validar a proteção de utilização. Tenta novamente." }, 503);
+    const rateRows = await rateResponse.json();
+    if (rateRows?.[0]?.allowed === false) {
+      return json({ error: "Atingiste temporariamente o número de pedidos permitido. Aguarda um minuto e tenta novamente.", code: "rate_limited", retryAfter: rateRows[0].retry_after_s }, 429);
+    }
+
     const body = await req.json();
     const inventory = Array.isArray(body?.inventory) ? body.inventory.slice(0, 60).map((item: Record<string, unknown>) => ({
       name: String(item?.name || "").trim().slice(0, 100),
