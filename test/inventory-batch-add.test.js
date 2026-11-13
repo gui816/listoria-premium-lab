@@ -8,7 +8,7 @@ test("captured inventory products are inserted in one transactional batch", () =
   assert.match(migration, /create or replace function public\.add_family_inventory_items/);
   assert.match(migration, /jsonb_array_elements\(p_items\)/);
   assert.match(migration, /perform public\.add_family_inventory_item/);
-  assert.match(migration, /return public\.family_list_payload\(v_list_id\)/);
+  assert.match(migration, /return public\.family_inventory_payload\(v_list_id\)/);
   assert.match(migration, /jsonb_array_length\(p_items\) > 60/);
 });
 
