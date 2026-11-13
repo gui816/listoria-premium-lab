@@ -4149,3 +4149,101 @@ button { -webkit-tap-highlight-color: transparent; }
     min-height: 46px;
   }
 }
+
+
+/* Family spending overview */
+.finance-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.finance-metric-grid .finance-overview-card {
+  min-width: 0;
+  min-height: 118px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+}
+.finance-metric-grid .finance-overview-card strong {
+  overflow-wrap: anywhere;
+  font-size: clamp(18px, 2.4vw, 25px);
+}
+.finance-monthly-card {
+  margin: 14px 0;
+  padding: 18px;
+  border: 1px solid #e2e9df;
+  border-radius: 18px;
+  background: #fffefa;
+}
+.finance-section-heading h2 { margin: 0; color: var(--ink); font-size: 16px; }
+.finance-section-heading p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.finance-monthly-chart {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: end;
+  gap: 12px;
+  min-height: 175px;
+  padding-top: 20px;
+}
+.finance-month-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: end;
+  gap: 8px;
+  min-width: 0;
+  height: 150px;
+}
+.finance-month-column > strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: #53685a;
+  font-size: 9px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.finance-month-bar-track {
+  display: flex;
+  align-items: end;
+  width: min(100%, 34px);
+  height: 100px;
+  overflow: hidden;
+  border-radius: 9px;
+  background: #eff3ed;
+}
+.finance-month-bar-track span {
+  display: block;
+  width: 100%;
+  min-height: 4px;
+  border-radius: 8px;
+  background: #36765a;
+}
+.finance-month-column > small {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: capitalize;
+}
+.finance-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 28px 12px;
+  color: var(--muted);
+  text-align: center;
+}
+.finance-empty strong { color: var(--ink); font-size: 13px; }
+.finance-empty span { max-width: 300px; font-size: 11px; line-height: 1.45; }
+@media (max-width: 620px) {
+  .finance-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .finance-metric-grid .finance-overview-card { min-height: 108px; padding: 13px; }
+  .finance-metric-grid .finance-overview-card:first-child { grid-column: 1 / -1; }
+  .finance-monthly-card { padding: 14px 10px; }
+  .finance-monthly-chart { gap: 6px; min-height: 155px; }
+  .finance-month-column { height: 132px; }
+  .finance-month-column > strong { font-size: 8px; }
+  .finance-month-bar-track { width: min(100%, 27px); height: 88px; }
+}
