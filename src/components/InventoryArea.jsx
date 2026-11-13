@@ -232,6 +232,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
         }, 3000);
       };
       recognition.onerror = event => {
+        if (recognitionFailedRef.current) return;
         recognitionFailedRef.current = true;
         clearVoiceSilenceTimer();
         setCaptureListening(false);
