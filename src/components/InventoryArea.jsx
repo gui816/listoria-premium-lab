@@ -96,18 +96,54 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
     return matchesSearch && matchesCategory;
   }), [items, search, filter]);
 
+  async function saveInventoryProduct(productName, productQuantity = quantity, productCategory = category) {
+    const cleanName = String(productName || "").trim();
+    if (!cleanName || !shareCode || saving) return false;
+    setSaving(true);
+    setError("");
+    const { data, error: rpcError } = await supabase.rpc("add_family_inventory_item", {
+      p_share_code: shareCode,
+      p_name: cleanName,
+      p_quantity: Math.max(1, Math.min(999, Number.parseInt(productQuantity, 10) || 1)),
+      p_category: productCategory,
+      p_storage_location: location,
+      p_expiry_date: expiryDate || null
+    });
+    if (rpcError) {
+      setError("Não foi possível guardar. A atualização da base de dados pode ainda não estar aplicada.");
+      setSaving(false);
+      return false;
+    }
+    setItems(data?.items || []);
+    setName("");
+    setQuantity("1");
+    setExpiryDate("");
+    broadcastInventoryChange();
+    onNotify?.(`${cleanName} adicionado a Em casa`);
+    setSaving(false);
+    return true;
+  }
+
   async function addItem(event) {
     event.preventDefault();
-    const cleanName = name.trim();
-    if (!cleanName || !shareCode || saving) return;
-    setSaving(true); setError("");
-    const { data, error: rpcError } = await supabase.rpc("add_family_inventory_item", {
-      p_share_code: shareCode, p_name: cleanName, p_quantity: Math.max(1, Math.min(999, Number.parseInt(quantity, 10) || 1)),
-      p_category: category, p_storage_location: location, p_expiry_date: expiryDate || null
-    });
-    if (rpcError) setError("Não foi possível guardar. A atualização da base de dados pode ainda não estar aplicada.");
-    else { setItems(data?.items || []); setName(""); setQuantity("1"); setExpiryDate(""); broadcastInventoryChange(); onNotify?.(`${cleanName} adicionado a Em casa`); }
-    setSaving(false);
+    await saveInventoryProduct(name, quantity);
+  }
+
+  async function addSuggestedProduct(productName) {
+    await saveInventoryProduct(productName, quantity, inferInventoryCategory(productName));
+  }
+
+  function stopVoiceCapture() {
+    if (captureBusy) return;
+    recognitionRef.current?.stop();
+  }
+
+  function closeVoiceCapture() {
+    if (captureBusy) return;
+    voiceResultHandledRef.current = true;
+    recognitionRef.current?.abort();
+    setCaptureListening(false);
+    setVoiceModalOpen(false);
   }
 
   function inferInventoryCategory(productName) {
@@ -425,7 +461,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
       <div><strong>{items.length}</strong><span>Produtos</span></div><div><strong>{totalUnits}</strong><span>Unidades</span></div><div><strong>{lowStock}</strong><span>Stock baixo</span></div>
     </div>
     {expiringSoon > 0 && <div className="inventory-expiry-alert"><CalendarDays size={17}/><span>{expiringSoon} {expiringSoon === 1 ? "produto próximo" : "produtos próximos"} da validade</span></div>}
-    <form className="inventory-add-form" onSubmit={addItem}>
+    <form className="inventory-add-form inventory-product-entry" onSubmit={addItem}>
       <ProductEntryComposer
         value={name}
         onChange={event => setName(event.target.value)}
@@ -437,13 +473,19 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
         onPhoto={() => captureFileRef.current?.click()}
         busy={captureBusy || saving}
         listening={captureListening}
+        inlineActions
+        extraControl={<select className="inventory-entry-quantity" aria-label="Quantidade" value={quantity} onChange={event => setQuantity(event.target.value)}><option value="1">1 un.</option><option value="2">2 un.</option><option value="3">3 un.</option><option value="4">4 un.</option><option value="5">5 un.</option><option value="6">6 un.</option><option value="12">12 un.</option></select>}
       />
+      <div className="inventory-quick-add" aria-label="Sugestões rápidas">
+        <span>Sugestões rápidas</span>
+        <div>{(language === "en" ? ["Milk", "Bread", "Eggs", "Water"] : ["Leite", "Pão", "Ovos", "Água"]).map(product => <button type="button" key={product} disabled={saving || captureBusy} onClick={() => { void addSuggestedProduct(product); }}><Plus size={14}/>{product}</button>)}</div>
+      </div>
       <input ref={captureFileRef} className="inventory-capture-file" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => { void processCapturePhotos(event.target.files); }} />
       {captureBusy && captureSource === "photo" && <div className="inventory-capture-status" role="status"><LoaderCircle size={17} className="spin"/><span>A analisar as fotografias e a identificar os produtos…</span></div>}
       {captureError && <p className="inventory-error" role="alert">{captureError}</p>}
-      {voiceModalOpen && <div className="modal-backdrop voice-modal-backdrop" onClick={() => { if (captureBusy) return; recognitionFailedRef.current = true; clearVoiceSilenceTimer(); recognitionRef.current?.abort(); setCaptureListening(false); setVoiceModalOpen(false); }}>
+      {voiceModalOpen && <div className="modal-backdrop voice-modal-backdrop" onClick={closeVoiceCapture}>
         <section className="share-modal voice-modal voice-listening-modal" onClick={event => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="inventory-voice-title">
-          <button type="button" className="modal-close" aria-label="Fechar" disabled={captureBusy} onClick={() => { recognitionFailedRef.current = true; clearVoiceSilenceTimer(); recognitionRef.current?.abort(); setCaptureListening(false); setVoiceModalOpen(false); }}><X size={20}/></button>
+          <button type="button" className="modal-close" aria-label="Fechar" disabled={captureBusy} onClick={closeVoiceCapture}><X size={20}/></button>
           <div className={`voice-listening-icon${captureBusy ? " is-processing" : ""}`}>{captureBusy ? <LoaderCircle size={30} className="spin"/> : <Mic size={30}/>}</div>
           <span className={`voice-listening-pill${captureBusy ? " is-processing" : ""}`}><span/> {captureBusy ? "A identificar" : captureError ? "Voz indisponível" : "A ouvir"}</span>
           <h2 id="inventory-voice-title">{captureBusy ? "A identificar os produtos" : captureError ? "Não foi possível iniciar a voz" : "Estou a ouvir!"}</h2>
@@ -455,7 +497,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
             <div className="voice-listening-example"><small>Podes dizer vários produtos de seguida</small><strong>“Leite, arroz, maçãs e dois iogurtes.”</strong></div>
           </>}
           <button type="button" className="primary-button voice-stop-button" disabled={captureBusy || !captureListening} onClick={stopVoiceCapture}>{captureBusy ? <><LoaderCircle size={17} className="spin"/>A identificar…</> : <><Mic size={17}/>Terminar gravação</>}</button>
-          <small className="voice-listening-hint">{captureBusy ? "Não feches esta janela. Estamos quase a terminar." : "Também termina automaticamente após 3 segundos de silêncio."}</small>
+          <small className="voice-listening-hint">{captureBusy ? "Não feches esta janela. Estamos quase a terminar." : "A gravação termina automaticamente quando acabares de falar."}</small>
         </section>
       </div>}
       {capturedItems.length > 0 && <div className="modal-backdrop" onClick={() => !captureBusy && setCapturedItems([])}>
