@@ -336,31 +336,29 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
     if (!valid.length || captureBusy || saving) return;
     setCaptureBusy(true);
     setCaptureError("");
-    let insertedCount = 0;
     try {
-      for (const item of valid) {
-        const categoryId = inferInventoryCategory(item.name);
-        const storageLocation = categoryId === "frescos" ? "frigorifico" : "despensa";
-        const { data, error: rpcError } = await supabase.rpc("add_family_inventory_item", {
-          p_share_code: shareCode,
-          p_name: item.name.trim().slice(0, 100),
-          p_quantity: Math.max(1, Math.min(999, Number.parseInt(item.quantity, 10) || 1)),
-          p_category: categoryId,
-          p_storage_location: storageLocation,
-          p_expiry_date: null
-        });
-        if (rpcError) throw new Error("Não foi possível guardar todos os produtos. Verifica a ligação e tenta novamente.");
-        setItems(data?.items || []);
-        insertedCount += 1;
-      }
+      const batch = valid.map(item => {
+        const category = inferInventoryCategory(item.name);
+        return {
+          name: item.name.trim().slice(0, 100),
+          quantity: Math.max(1, Math.min(999, Number.parseInt(item.quantity, 10) || 1)),
+          category,
+          storage_location: category === "frescos" ? "frigorifico" : "despensa"
+        };
+      });
+      const { data, error: rpcError } = await supabase.rpc("add_family_inventory_items", {
+        p_share_code: shareCode,
+        p_items: batch
+      });
+      if (rpcError) throw new Error("Não foi possível guardar os produtos. Nenhum produto foi alterado. Verifica a ligação e tenta novamente.");
+      setItems(data?.items || []);
       setCapturedItems([]);
       setVoiceTranscript("");
       broadcastInventoryChange();
       const addedNames = valid.slice(0, 3).map(item => item.name).join(", ");
       const remaining = valid.length - Math.min(valid.length, 3);
-      onNotify?.(`${addedNames}${remaining > 0 ? ` +${remaining}` : ""} — ${valid.length} ${valid.length === 1 ? "produto adicionado a Em casa" : "produtos adicionados a Em casa"}`);
+      onNotify?.(addedNames + (remaining > 0 ? " +" + remaining : "") + " — " + valid.length + " " + (valid.length === 1 ? "produto adicionado a Em casa" : "produtos adicionados a Em casa"));
     } catch (err) {
-      if (insertedCount > 0) setCapturedItems(valid.slice(insertedCount));
       setCaptureError(err.message || "Não foi possível guardar os produtos.");
     } finally {
       setCaptureBusy(false);
@@ -471,6 +469,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
           <div className="share-graphic"><ShoppingBasket size={28}/></div>
           <h2 id="inventory-capture-title">Confirmar produtos</h2>
           <p>{captureSource === "photo" ? "Revê os produtos reconhecidos na fotografia." : "Revê os produtos reconhecidos por voz."} Podes corrigir nomes e quantidades antes de os adicionar ao inventário.</p>
+          {captureError && <p className="inventory-error" role="alert">{captureError}</p>}
           <div className="import-preview-list">{capturedItems.map((item, index) => <div className="import-preview-row" key={index}>
             <input aria-label={`Produto ${index + 1}`} value={item.name} maxLength={100} onChange={event => updateCapturedItem(index, { name: event.target.value })}/>
             <input aria-label={`Quantidade de ${item.name}`} type="number" min="1" max="999" value={item.quantity} onChange={event => updateCapturedItem(index, { quantity: event.target.value })}/>
