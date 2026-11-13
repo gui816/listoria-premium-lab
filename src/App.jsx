@@ -165,9 +165,36 @@ const FAMILY_LANDING_I18N = { en: {
   "Guarda faturas, consulta o histórico e acompanha os gastos reais da família, sem confundir valores registados com estimativas de cabaz.":"Save receipts, review history and track actual family spending, separately from estimated basket prices.",
   "Recebe sugestões de refeições com base nos produtos em casa ou em fotografias dos teus ingredientes e descobre o que falta comprar.":"Get meal ideas based on what's at home or photos of your ingredients, and find out what else you need to buy."
 }};
+const FAMILY_FINANCE_I18N = {
+  en: {
+    "Gastos":"Expenses",
+    "Gastos da família":"Family spending",
+    "Total registado":"Total recorded",
+    "Este mês":"This month",
+    "Média por compra":"Average per purchase",
+    "Valor médio das faturas":"Average receipt value",
+    "Evolução dos gastos":"Spending over time",
+    "Últimos seis meses, com base nas faturas guardadas.":"Last six months based on saved receipts.",
+    "Ainda não existem despesas registadas":"No expenses recorded yet",
+    "Adiciona uma fatura para começares a acompanhar os gastos da família.":"Add a receipt to start tracking family spending.",
+    "Maior volume registado":"Highest spending by store",
+    "Registar despesa":"Record an expense",
+    "Adiciona um gasto manualmente, mesmo sem comprovativo.":"Add an expense manually, even without a receipt.",
+    "Registar gasto":"Add expense",
+    "Registos e comprovativos":"Records and receipts",
+    "Consulta despesas manuais e faturas guardadas pela família.":"Review manual expenses and receipts saved by the family.",
+    "Faturas e despesas":"Receipts and expenses",
+    "Registos da família":"Family records",
+    "Local ou descrição":"Place or description",
+    "Registar despesa ou fatura":"Record an expense or receipt",
+    "Gastos mensais nos últimos seis meses":"Monthly spending over the last six months",
+    "Com base nas faturas registadas":"Based on recorded receipts",
+    "Os valores apresentados correspondem às faturas e despesas registadas. As estimativas de cabaz não são contabilizadas como despesas reais.":"Figures include recorded expenses and receipts. Basket estimates are not counted as actual spending."
+  }
+};
 function tx(text, lang) {
   if (!lang || lang === "pt-PT") return text;
-  return FAMILY_LANDING_I18N[lang]?.[text] || ANALYTICS_CONSENT_I18N[lang]?.[text] || LANDING_I18N[lang]?.[text] || GUIDED_TOUR_I18N[lang]?.[text] || RECEIPTS_TABS_I18N[lang]?.[text] || AUDIT_I18N[lang]?.[text] || EXTRA_I18N[lang]?.[text] || I18N[lang]?.[text] || EXTRA_I18N.en[text] || I18N.en[text] || text;
+  return FAMILY_FINANCE_I18N[lang]?.[text] || FAMILY_LANDING_I18N[lang]?.[text] || ANALYTICS_CONSENT_I18N[lang]?.[text] || LANDING_I18N[lang]?.[text] || GUIDED_TOUR_I18N[lang]?.[text] || RECEIPTS_TABS_I18N[lang]?.[text] || AUDIT_I18N[lang]?.[text] || EXTRA_I18N[lang]?.[text] || I18N[lang]?.[text] || EXTRA_I18N.en[text] || I18N.en[text] || text;
 }
 const LANGUAGE_FLAGS = {
   "pt-PT": "🇵🇹", en: "🇬🇧", es: "🇪🇸", fr: "🇫🇷", de: "🇩🇪",
