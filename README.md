@@ -57,6 +57,16 @@ Para ativar a funcionalidade no projeto Supabase:
 
 A função utiliza as variáveis de ambiente internas `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` para consultar o catálogo. A chave de serviço nunca deve ser exposta no frontend. As estimativas não consultam preços atuais nem garantem poupanças; a disponibilidade das cadeias pode variar por região. A comparação está disponível gratuitamente para todos os utilizadores autenticados. A proteção contra abuso aplica-se apenas a pedidos excessivos num curto intervalo e não representa um limite comercial mensal.
 
+
+## Migrações de estabilização e aplicação gratuita
+
+Depois das migrações de inventário e de listas partilhadas já existentes, executa no SQL Editor do Supabase, por esta ordem:
+
+1. `supabase/migrations/202611130001_move_purchased_item_to_inventory.sql` — permite transferir artigos comprados para Em casa numa única transação, removendo-os da lista de compras sem duplicar stock.
+2. `supabase/migrations/202611130002_ai_rate_limits.sql` — cria proteção de frequência isolada por utilizador e funcionalidade para os pedidos de IA.
+
+A Listora não utiliza subscrições, planos Premium, paywalls nem quotas comerciais. As funções de comparação, extração por fotografia/voz, leitura de faturas e sugestões de receitas estão disponíveis para todos os utilizadores autenticados (incluindo sessões anónimas). As Edge Functions validam a sessão e utilizam `GEMINI_API_KEY` no servidor; não coloques chaves Gemini nem `service_role` no frontend.
+
 ## Deploy
 
 A aplicação pode ser distribuída como app Android através do APK gerado no GitHub Actions. Não é necessário publicar uma página web para criar listas ou partilhá-las: os familiares introduzem na app o código da lista. O build web continua disponível para desenvolvimento e testes, mas não é um requisito para a partilha. O URL Supabase e a chave publicável são dados de cliente e podem estar no bundle. **Nunca coloques uma chave `service_role` no frontend.**
@@ -66,7 +76,7 @@ A aplicação pode ser distribuída como app Android através do APK gerado no G
 Todas as funcionalidades estão disponíveis gratuitamente. Não existem planos pagos, subscrições nem bloqueios por subscrição. Os pedidos às APIs de IA mantêm proteção técnica contra abuso e frequência excessiva.
 
 
-As tabelas não têm acesso direto concedido ao papel `anon`; a app usa funções PostgreSQL `SECURITY DEFINER` com `search_path` fixo e validação do código de partilha. O código de convite dá acesso de leitura e escrita à lista, pelo que deve ser partilhado apenas com pessoas de confiança. O código gerado tem 12 caracteres hexadecimais. Antes de promover a aplicação para uso público, acrescenta proteção contra abuso/rate limiting e considera autenticação e convites revogáveis.
+As tabelas não têm acesso direto concedido ao papel `anon`; a app usa funções PostgreSQL `SECURITY DEFINER` com `search_path` fixo e validação do código de partilha. O código de convite dá acesso de leitura e escrita à lista, pelo que deve ser partilhado apenas com pessoas de confiança. O código gerado tem 12 caracteres hexadecimais. As Edge Functions de IA validam a sessão e aplicam rate limiting independente por utilizador e funcionalidade (10 pedidos por minuto por funcionalidade). Este limite protege os serviços externos e não restringe a utilização mensal nem bloqueia funcionalidades por plano. Para utilização pública em escala, considera também convites revogáveis e associação das listas a contas.
 
 ## Estrutura
 
