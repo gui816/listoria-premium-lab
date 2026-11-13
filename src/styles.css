@@ -4141,3 +4141,97 @@ button { -webkit-tap-highlight-color: transparent; }
     min-height: 46px;
   }
 }
+
+
+/* Home inventory capture: visible AI feedback and an inline review step. */
+.inventory-capture-status,
+.inventory-capture-error,
+.inventory-capture-preview {
+  margin: 12px 0 0;
+}
+.inventory-capture-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #dce8d9;
+  border-radius: 13px;
+  background: #f1f6ef;
+  color: var(--green-dark);
+  padding: 13px 14px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.inventory-capture-status svg { flex: 0 0 auto; }
+.inventory-capture-error {
+  border-radius: 12px;
+  background: #fff0ed;
+  color: #a2473d;
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.inventory-capture-preview {
+  border: 1px solid #dce6d9;
+  border-radius: 17px;
+  background: #fffefa;
+  padding: 15px;
+  box-shadow: 0 8px 24px #263a2608;
+}
+.inventory-capture-preview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.inventory-capture-preview-heading > div { display: grid; gap: 4px; }
+.inventory-capture-preview-heading strong { color: var(--ink); font-size: 14px; }
+.inventory-capture-preview-heading small,
+.inventory-capture-transcript { color: var(--muted); font-size: 11px; line-height: 1.45; }
+.inventory-capture-preview-heading > span {
+  display: grid; place-items: center; min-width: 29px; height: 29px;
+  border-radius: 50%; background: var(--mint); color: var(--green-dark);
+  font-size: 12px; font-weight: 800;
+}
+.inventory-capture-transcript { margin: 0 0 10px; }
+.inventory-capture-preview-list { display: grid; gap: 7px; }
+.inventory-capture-preview-row {
+  display: grid; grid-template-columns: minmax(0,1fr) 92px 34px;
+  align-items: center; gap: 7px;
+}
+.inventory-capture-preview-row > input,
+.inventory-capture-preview-row label {
+  min-width: 0; height: 42px; border: 1px solid #e2e7de;
+  border-radius: 10px; background: #fbfcf8;
+}
+.inventory-capture-preview-row > input { padding: 0 10px; color: var(--ink); font-size: 12px; }
+.inventory-capture-preview-row label { display: flex; align-items: center; gap: 3px; padding: 0 7px; }
+.inventory-capture-preview-row label span { color: var(--muted); font-size: 10px; }
+.inventory-capture-preview-row label input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); text-align: center; font-size: 12px; }
+.inventory-capture-preview-row > button {
+  width: 34px; height: 36px; border: 0; border-radius: 9px;
+  background: #f8eeeb; color: #a45a50; display: grid; place-items: center;
+}
+.inventory-capture-preview-actions { display: flex; gap: 8px; margin-top: 13px; }
+.inventory-capture-preview-actions button {
+  min-height: 43px; border-radius: 11px; font-size: 12px; font-weight: 700;
+}
+.inventory-capture-cancel { flex: 0 0 auto; padding: 0 13px; border: 1px solid #e3e7df; background: #fffefa; color: var(--muted); }
+.inventory-capture-confirm { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 0 10px; border: 0; background: var(--green-dark); color: white; }
+.inventory-capture-confirm:disabled { opacity: .55; }
+.inventory-save-inline { white-space: nowrap; }
+.inventory-save-inline span { font-size: 10px; }
+.inventory-save-all {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  margin: 10px 0 3px; min-height: 36px; padding: 0 12px;
+  border: 1px solid #d9e6d5; border-radius: 10px;
+  background: #f1f6ef; color: var(--green-dark); font-size: 11px; font-weight: 700;
+}
+.inventory-save-all:disabled { opacity: .55; }
+.discover-household-features { margin-top: 12px; }
+@media (max-width: 480px) {
+  .inventory-capture-preview { padding: 12px; }
+  .inventory-capture-preview-actions { flex-direction: column-reverse; }
+  .inventory-capture-cancel, .inventory-capture-confirm { width: 100%; min-height: 44px; }
+  .inventory-capture-preview-row { grid-template-columns: minmax(0,1fr) 78px 32px; gap: 5px; }
+}

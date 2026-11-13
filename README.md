@@ -85,3 +85,12 @@ A autenticação usa Supabase Auth e mantém o modo de convidado para permitir c
 A conversão de uma sessão anónima para email/password usa `auth.updateUser`, preservando o mesmo UUID do utilizador. A ligação Google usa `auth.linkIdentity`; confirma que o identity linking está permitido nas definições do projeto Supabase. O login normal usa email/password ou Google OAuth.
 
 **Importante:** esta primeira fase estabelece a identidade e o perfil, mas as listas continuam a ser autorizadas pelo código de partilha existente e o identificador de membro continua associado ao dispositivo. A migração da propriedade das listas para contas e membros autenticados será feita numa fase posterior, com um fluxo explícito para associar listas antigas à conta, sem quebrar os convites atuais.
+
+
+## Transferir compras concluídas para Em casa
+
+A ação **Adicionar a Em casa** transfere um artigo já marcado como comprado para o inventário doméstico e retira-o da lista de compras numa única transação. Para ativar esta operação, executa também a migração:
+
+- `supabase/migrations/202611130001_move_purchased_item_to_inventory.sql`
+
+Executa-a depois de `202611110001_household_inventory.sql` no SQL Editor do Supabase. A migração é necessária para que a transferência individual e em lote seja atómica e não duplique quantidades se a operação for repetida.
