@@ -44,7 +44,7 @@ serve(async (req) => {
     });
     if (!rateResponse.ok) throw new Error("Não foi possível validar o limite de utilização.");
     const rateRows = await rateResponse.json();
-    if (rateRows?.[0]?.allowed === false) return json({ error: "Estás a fazer demasiadas pesquisas num curto espaço de tempo. Aguarda um minuto e tenta novamente.", code: "rate_limited", retryAfter: rateRows[0].retry_after_seconds }, 429);
+    if (rateRows?.[0]?.allowed === false) return json({ error: "Estás a fazer demasiadas pesquisas num curto espaço de tempo. Aguarda um minuto e tenta novamente.", code: "rate_limited", retryAfter: rateRows[0].retry_after_s }, 429);
 
     stage = "request_validation";
     const body = await req.json();
