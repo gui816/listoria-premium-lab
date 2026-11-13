@@ -478,20 +478,6 @@ serve(async (req) => {
       return json({ error: "Não foi possível obter preços ou estimativas suficientemente fundamentadas. Tenta novamente dentro de alguns instantes.", code: "no_reliable_estimates", experiment: experimentMetrics }, 502);
     }
 
-    return json({ error: "Já utilizaste a tua comparação gratuita. Subscreve o Listoria Premium para continuares a comparar o teu cabaz.", code: "premium_required" }, 403);
-      }
-      freeTrialUsed = true;
-      // Record the first successful free comparison as the user's conversion cohort entry.
-      // Analytics failures must not turn a valid estimate into a failed user request.
-      const cohortResponse = await fetch(new URL("/rest/v1/premium_comparison_cohorts?on_conflict=user_id", supabaseUrl), {
-        method: "POST",
-        headers: { ...adminHeaders, Prefer: "resolution=ignore-duplicates,return=minimal" },
-        body: JSON.stringify({ user_id: authUser.id, first_free_comparison_at: new Date().toISOString(), request_id: requestId }),
-        signal: AbortSignal.timeout(8000)
-      });
-      if (!cohortResponse.ok) console.error("Could not record Smart Comparison conversion cohort:", await cohortResponse.text());
-    }
-
     return json({
       generatedAt: new Date().toISOString(),
       country: { code: country.code, name: country.name },
