@@ -3249,6 +3249,14 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 .welcome-benefits svg { flex: 0 0 17px; }
 .welcome-benefits b { color: #43584a; font-size: 11px; line-height: 1.25; font-weight: 750; }
+.welcome-benefits-areas { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.welcome-benefits-areas > span { min-height: 70px; }
+.welcome-benefits-areas svg { width: 20px; height: 20px; }
+.discover-household-features { margin-top: 18px; }
+@media (max-width: 560px) {
+  .welcome-benefits-areas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .welcome-benefits-areas > span { min-height: 62px; }
+}
 @media (min-width: 960px) {
   .welcome-benefits { margin-top: -7px; margin-bottom: 0; }
   .welcome-benefits > span { min-height: 68px; padding: 10px 8px; }
