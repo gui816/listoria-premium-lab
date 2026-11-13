@@ -498,7 +498,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
             <div className="voice-listening-example"><small>Podes dizer vários produtos de seguida</small><strong>“Leite, arroz, maçãs e dois iogurtes.”</strong></div>
           </>}
           <button type="button" className="primary-button voice-stop-button" disabled={captureBusy || !captureListening} onClick={stopVoiceCapture}>{captureBusy ? <><LoaderCircle size={17} className="spin"/>A identificar…</> : <><Mic size={17}/>Terminar gravação</>}</button>
-          <small className="voice-listening-hint">{captureBusy ? "Não feches esta janela. Estamos quase a terminar." : "Também termina automaticamente após 3 segundos de silêncio."}</small>
+          <small className="voice-listening-hint">{captureBusy ? "Não feches esta janela. Estamos quase a terminar." : "A gravação termina automaticamente quando acabares de falar."}</small>
         </section>
       </div>}
       {capturedItems.length > 0 && <div className="modal-backdrop" onClick={() => !captureBusy && setCapturedItems([])}>
