@@ -151,9 +151,22 @@ const ANALYTICS_CONSENT_I18N = {
   "zh-CN": {"Preferências de privacidade":"隐私偏好设置","A tua privacidade importa.":"我们重视你的隐私。","Com a tua autorização, usamos cookies de análise para perceber que campanhas trazem utilizadores e melhorar a Listora. Não recolhemos nomes, produtos nem conteúdo das listas.":"经你同意后，我们会使用分析 Cookie 了解哪些广告活动带来访客并改进 Listora。我们不会收集姓名、商品或清单内容。","Saber mais":"了解更多","Rejeitar":"拒绝","Aceitar análise":"接受分析","Gerir privacidade":"管理隐私","Preferências de análise":"分析偏好","Podes alterar a tua escolha a qualquer momento.":"你可以随时更改选择。","Rejeitar análise":"拒绝分析","Permitir análise":"允许分析"}
 };
 
+const FAMILY_LANDING_I18N = { en: {
+  "A casa da família.":"The family home.","Mais simples, todos os dias.":"Simpler, every day.",
+  "Compras, inventário doméstico, gastos e receitas — tudo organizado num só lugar e pensado para a família.":"Shopping, home inventory, spending and recipes — all organised in one place for the whole family.",
+  "Compras, Em casa, Financeiro e Receitas — conhece todas as funcionalidades.":"Shopping, At Home, Finance and Recipes — explore all the features.",
+  "As quatro áreas da Listora":"The four areas of Listora","Quatro áreas. Uma rotina mais simples.":"Four areas. One simpler routine.",
+  "Organiza as compras, sabe o que tens em casa, acompanha os gastos e encontra inspiração para cozinhar — tudo ligado.":"Organise shopping, keep track of what you have at home, follow spending and find cooking inspiration — all connected.",
+  "A Listora ajuda a gerir a rotina da família num só lugar: compras partilhadas, inventário de casa, gastos, receitas e ferramentas de IA.":"Listora helps manage family routines in one place: shared shopping, home inventory, spending, recipes and AI tools.",
+  "Sabe sempre o que tens.":"Always know what you have.","Gastos da família":"Family spending",
+  "Percebe para onde vai o orçamento.":"Understand where your budget goes.","Cozinha com o que já tens.":"Cook with what you already have.",
+  "Regista o que existe no frigorífico e na despensa, acompanha quantidades e adiciona produtos às compras quando começam a faltar.":"Track what's in your fridge and pantry, monitor quantities and add items to your shopping list when they run low.",
+  "Guarda faturas, consulta o histórico e acompanha os gastos reais da família, sem confundir valores registados com estimativas de cabaz.":"Save receipts, review history and track actual family spending, separately from estimated basket prices.",
+  "Recebe sugestões de refeições com base nos produtos em casa ou em fotografias dos teus ingredientes e descobre o que falta comprar.":"Get meal ideas based on what's at home or photos of your ingredients, and find out what else you need to buy."
+}};
 function tx(text, lang) {
   if (!lang || lang === "pt-PT") return text;
-  return ANALYTICS_CONSENT_I18N[lang]?.[text] || LANDING_I18N[lang]?.[text] || GUIDED_TOUR_I18N[lang]?.[text] || RECEIPTS_TABS_I18N[lang]?.[text] || AUDIT_I18N[lang]?.[text] || EXTRA_I18N[lang]?.[text] || I18N[lang]?.[text] || EXTRA_I18N.en[text] || I18N.en[text] || text;
+  return FAMILY_LANDING_I18N[lang]?.[text] || ANALYTICS_CONSENT_I18N[lang]?.[text] || LANDING_I18N[lang]?.[text] || GUIDED_TOUR_I18N[lang]?.[text] || RECEIPTS_TABS_I18N[lang]?.[text] || AUDIT_I18N[lang]?.[text] || EXTRA_I18N[lang]?.[text] || I18N[lang]?.[text] || EXTRA_I18N.en[text] || I18N.en[text] || text;
 }
 const LANGUAGE_FLAGS = {
   "pt-PT": "🇵🇹", en: "🇬🇧", es: "🇪🇸", fr: "🇫🇷", de: "🇩🇪",
@@ -1345,9 +1358,9 @@ export default function App() {
         <button type="button" className="discover-back" onClick={closeDiscover}><ArrowLeft size={17}/>{t("Voltar à página inicial")}</button>
         <div className="eyebrow"><Sparkles size={15}/>{t("CONHECE A LISTORA")}</div>
         <h1>{t("As compras da família.")}<br/><span>{t("Mais simples e inteligentes.")}</span></h1>
-        <p className="discover-intro">{t("A Listora ajuda a organizar as compras de toda a família num só lugar: da lista partilhada às fotografias, voz e faturas, com ajuda da inteligência artificial.")}</p>
+        <p className="discover-intro">{t("A Listora ajuda a gerir a rotina da família num só lugar: compras partilhadas, inventário de casa, gastos, receitas e ferramentas de IA.")}</p>
         <button type="button" className="primary-button discover-cta" onClick={startFromDiscover}>{t("Criar lista grátis")}<ArrowRight size={18}/></button>
-        <div className="discover-section-heading"><span className="discover-kicker">{t("O ESSENCIAL PARA A FAMÍLIA")}</span><h2>{t("Tudo começa numa lista partilhada.")}</h2><p>{t("Organiza as compras em conjunto e adiciona produtos da forma que te for mais simples.")}</p></div>
+        <div className="discover-section-heading"><span className="discover-kicker">{t("O ESSENCIAL PARA A FAMÍLIA")}</span><h2>{t("Quatro áreas. Uma rotina mais simples.")}</h2><p>{t("Organiza as compras, sabe o que tens em casa, acompanha os gastos e encontra inspiração para cozinhar — tudo ligado.")}</p></div>
         <div className="discover-feature-grid discover-primary-features">
           <article className="discover-feature"><div className="discover-art"><div className="discover-family-bubbles"><span>G</span><span>M</span><span>+</span></div><div className="discover-sync-line"><Check size={15}/>{t("Sincronizada")}</div></div><span className="discover-kicker">{t("EM FAMÍLIA")}</span><h2>{t("Todos contribuem para a mesma lista.")}</h2><p>{t("Convida a família e mantém a lista partilhada atualizada para que todos saibam o que falta comprar.")}</p></article>
           <article className="discover-feature"><div className="discover-art"><div className="discover-art-paper"><span/><span/><span/><span/></div><span className="discover-art-icon"><Camera size={25}/></span><span className="discover-ai-tag"><Sparkles size={12}/> IA</span></div><span className="discover-kicker">{t("FOTOGRAFIA + IA")}</span><h2>{t("Uma fotografia. Uma lista pronta a rever.")}</h2><p>{t("Fotografa uma lista manuscrita, uma folha de papel ou um quadro. A inteligência artificial analisa a imagem e identifica os produtos para confirmares antes de adicionar.")}</p></article>
@@ -1394,23 +1407,28 @@ export default function App() {
           <article className="discover-feature"><div className="discover-art"><div className="discover-repeat-icon"><Repeat2 size={34}/></div><div className="discover-saved-label"><FileText size={15}/>{t("Lista guardada")}</div></div><span className="discover-kicker">{t("ROTINAS MAIS SIMPLES")}</span><h2>{t("Repete compras habituais.")}</h2><p>{t("Guarda listas reutilizáveis e recupera compras frequentes sem ter de começar sempre do zero.")}</p></article>
         </div>
 
+
+        <div className="discover-feature-grid discover-secondary-features discover-household-features">
+          <article className="discover-feature"><div className="discover-art"><div className="discover-repeat-icon"><Refrigerator size={34}/></div><div className="discover-saved-label"><Check size={15}/> {t("Despensa atualizada")}</div></div><span className="discover-kicker">{t("EM CASA")}</span><h2>{t("Sabe sempre o que tens.")}</h2><p>{t("Regista o que existe no frigorífico e na despensa, acompanha quantidades e adiciona produtos às compras quando começam a faltar.")}</p></article>
+          <article className="discover-feature"><div className="discover-art"><div className="discover-receipt-art"><Wallet size={25}/><span/><span/><b>{t("Gastos da família")}</b></div></div><span className="discover-kicker">{t("GASTOS")}</span><h2>{t("Percebe para onde vai o orçamento.")}</h2><p>{t("Guarda faturas, consulta o histórico e acompanha os gastos reais da família, sem confundir valores registados com estimativas de cabaz.")}</p></article>
+          <article className="discover-feature"><div className="discover-art"><div className="discover-voice-orb"><ChefHat size={29}/></div><div className="discover-saved-label"><Sparkles size={15}/> IA</div></div><span className="discover-kicker">{t("RECEITAS")}</span><h2>{t("Cozinha com o que já tens.")}</h2><p>{t("Recebe sugestões de refeições com base nos produtos em casa ou em fotografias dos teus ingredientes e descobre o que falta comprar.")}</p></article>
+        </div>
+
         <section className="discover-ai-note"><div className="discover-ai-note-icon"><Sparkles size={22}/></div><div><h2>{t("Inteligência artificial com confirmação tua.")}</h2><p>{t("A IA ajuda a interpretar imagens e voz, mas pode cometer erros. Revê os resultados antes de os adicionares à lista ou utilizares informação extraída de uma fatura.")}</p></div></section>
         <section className="discover-bottom-cta"><span className="eyebrow"><Leaf size={15}/>{t("MAIS SIMPLES, JUNTOS")}</span><h2>{t("Vamos organizar as compras?")}</h2><p>{t("Cria uma lista e começa a usar a Listora com a tua família.")}</p><button type="button" className="primary-button" onClick={startFromDiscover}>{t("Criar lista grátis")}<ArrowRight size={18}/></button></section>
       </section> : <section className="welcome-content">
         <div className="welcome-hero-copy">
           <div className="eyebrow"><Leaf size={15}/> {t("MAIS SIMPLES, JUNTOS")}</div>
-          <h1>{t("As compras da família.")}<br/><span>{t("Sem esquecimentos.")}</span></h1>
-          <p className="welcome-copy">{t("Uma lista partilhada, sempre atualizada. Adiciona o que falta em casa e deixa o resto connosco.")}</p>
+          <h1>{t("A casa da família.")}<br/><span>{t("Mais simples, todos os dias.")}</span></h1>
+          <p className="welcome-copy">{t("Compras, inventário doméstico, gastos e receitas — tudo organizado num só lugar e pensado para a família.")}</p>
           <button type="button" className="primary-button welcome-primary-cta" onClick={scrollToCreateList}>{t("Criar lista grátis")}<ArrowRight size={18}/></button>
           <small className="welcome-cta-note">{t("Grátis para começar · Sem compromisso")}</small>
-          <button type="button" className="welcome-discover-card" onClick={openDiscover} aria-label={t("Conhece todas as funcionalidades da Listora")}><span className="welcome-discover-icon"><Sparkles size={22}/></span><span className="welcome-discover-copy"><strong>{t("Descobre tudo o que a Listora pode fazer")}</strong><small>{t("Fotografia e voz com IA, listas partilhadas, faturas e muito mais.")}</small></span><ArrowRight size={21} className="welcome-discover-arrow"/></button>
-          <div className="welcome-benefits" aria-label={t("Principais vantagens da Listora")}>
-            <span><Leaf size={17}/><b>{t("Simples e intuitivo")}</b></span>
-            <span><Users size={17}/><b>{t("Gestão em família")}</b></span>
-            <span><ShoppingBasket size={17}/><b>{t("Modo supermercado")}</b></span>
-            <span className="welcome-benefit-featured welcome-benefit-ai"><Sparkles size={19}/><b>{t("Voz e foto com IA")}</b></span>
-            <span className="welcome-benefit-featured welcome-benefit-comparison"><Store size={19}/><b>{t("Compara supermercados")}</b></span>
-            <span><Receipt size={17}/><b>{t("Faturas num só lugar")}</b></span>
+          <button type="button" className="welcome-discover-card" onClick={openDiscover} aria-label={t("Conhece todas as funcionalidades da Listora")}><span className="welcome-discover-icon"><Sparkles size={22}/></span><span className="welcome-discover-copy"><strong>{t("Descobre tudo o que a Listora pode fazer")}</strong><small>{t("Compras, Em casa, Financeiro e Receitas — conhece todas as funcionalidades.")}</small></span><ArrowRight size={21} className="welcome-discover-arrow"/></button>
+          <div className="welcome-benefits welcome-benefits-areas" aria-label={t("As quatro áreas da Listora")}>
+            <span><ShoppingBasket size={19}/><b>{t("Compras")}</b></span>
+            <span><Refrigerator size={19}/><b>{t("Em casa")}</b></span>
+            <span><Wallet size={19}/><b>{t("Financeiro")}</b></span>
+            <span><ChefHat size={19}/><b>{t("Receitas")}</b></span>
           </div>
         </div>
         {initialInviteCode && !inviteDismissed && <section className="invite-confirmation" aria-live="polite"><div className="invite-confirmation-icon"><Users size={22}/></div><div className="invite-confirmation-copy"><span className="invite-eyebrow">{t("CONVITE PARA UMA LISTA")}</span><h2>{inviteLookupBusy ? t("A verificar o convite…") : inviteList ? <>{t("Foste convidado para")} «{inviteList.name}»</> : t("Foste convidado para uma lista partilhada")}</h2><p>{inviteList ? t("Queres entrar nesta lista e partilhar as compras com a família?") : t("O código do convite já está preenchido. Confirma o teu nome para entrar.")}</p>{inviteAccepted && <form className="invite-name-entry" onSubmit={e => { e.preventDefault(); setError(""); void joinList(e); }}><label htmlFor="invite-name">{t("O teu nome")}</label><input id="invite-name" value={memberNameInput} onChange={e => setMemberNameInput(e.target.value)} placeholder={t("Escreve o teu nome")} autoComplete="name" maxLength={60} required/><button type="submit" className="invite-accept-button" disabled={loading || inviteLookupBusy}>{loading ? t("A entrar…") : t("Confirmar e entrar")}</button>{error && <p className="invite-error" role="alert">{error}</p>}</form>}</div><div className="invite-actions">{!inviteAccepted && <><button type="button" className="invite-dismiss-button" onClick={() => { setInviteDismissed(true); setJoinCode(""); setInviteList(null); window.history.replaceState({}, "", window.location.pathname); }}>{t("Não, obrigado")}</button><button type="button" className="invite-accept-button" disabled={inviteLookupBusy} onClick={() => setInviteAccepted(true)}>{t("Entrar na lista")}</button></>}</div></section>}
