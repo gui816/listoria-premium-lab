@@ -827,18 +827,15 @@ export default function App() {
 
   async function movePurchasedToInventory(item) {
     if (!listCode || !item?.name) return false;
-    const { error: rpcError } = await supabase.rpc("add_family_inventory_item", {
+    const { data, error: rpcError } = await supabase.rpc("move_purchased_item_to_inventory", {
       p_share_code: listCode,
-      p_name: item.name,
-      p_quantity: Math.max(1, Number(item.quantity) || 1),
-      p_category: item.category || "outros",
-      p_storage_location: "despensa",
-      p_expiry_date: null
+      p_item_id: item._id
     });
     if (rpcError) {
       setError(t("Não foi possível guardar o produto em casa. Tenta novamente."));
       return false;
     }
+    setItems(data?.items || items.filter(current => current._id !== item._id));
     notify(`${item.name} — ${t("Adicionado a Em casa")}`);
     broadcastChange();
     return true;
@@ -849,23 +846,22 @@ export default function App() {
     setInventoryTransferBusy(true);
     let moved = 0;
     try {
+      let latestItems = items;
       for (const item of doneItems) {
-        const { error: rpcError } = await supabase.rpc("add_family_inventory_item", {
+        const { data, error: rpcError } = await supabase.rpc("move_purchased_item_to_inventory", {
           p_share_code: listCode,
-          p_name: item.name,
-          p_quantity: Math.max(1, Number(item.quantity) || 1),
-          p_category: item.category || "outros",
-          p_storage_location: "despensa",
-          p_expiry_date: null
+          p_item_id: item._id
         });
         if (rpcError) throw rpcError;
+        latestItems = data?.items || latestItems.filter(current => current._id !== item._id);
         moved += 1;
+        setItems(latestItems);
       }
       broadcastChange();
       notify(`${moved} ${moved === 1 ? "produto adicionado" : "produtos adicionados"} a Em casa`);
     } catch {
       broadcastChange();
-      notify(`${moved} produtos adicionados. Não foi possível transferir os restantes.`);
+      notify(`${moved} produtos adicionados a Em casa. Não foi possível transferir os restantes.`);
     } finally {
       setInventoryTransferBusy(false);
     }

@@ -185,7 +185,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
   async function processCapturePhotos(fileList) {
     const files = Array.from(fileList || []);
     if (!files.length) return;
-    if (files.length > 3) setCaptureError("Podes adicionar no máximo 3 fotografias por operação. Vamos analisar as primeiras 3.");
+    const exceededLimit = files.length > 3;
     const selectedFiles = files.slice(0, 3);
     setCaptureBusy(true);
     setCaptureSource("photo");
@@ -211,6 +211,7 @@ export default function InventoryArea({ shareCode, language = "pt-PT", onAddToSh
         else merged.set(key, { ...item });
       }
       setCapturedItems(Array.from(merged.values()).slice(0, 60));
+      if (exceededLimit) setCaptureError("Só analisámos as primeiras 3 fotografias. Podes adicionar mais numa nova operação.");
     } catch (err) {
       setCaptureError(err.message || "Não foi possível interpretar as fotografias. Tenta novamente.");
     } finally {
