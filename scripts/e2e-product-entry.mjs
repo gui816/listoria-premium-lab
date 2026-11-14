@@ -50,6 +50,8 @@ async function exerciseViewport({ width, height, mobile }, screenshotPath) {
   await page.locator("#list-name").fill("Lista Playwright");
   await page.locator("#create-list-card .create-form button[type=submit]").click();
   await page.locator(".product-entry-composer-classic").waitFor({ state: "visible", timeout: 15000 });
+  const onboardingClose = page.locator(".onboarding-backdrop .modal-close");
+  if (await onboardingClose.isVisible().catch(() => false)) await onboardingClose.click();
 
   const composer = page.locator(".product-entry-composer-classic");
   await assert.equal(await composer.locator(".product-entry-leading-add").isVisible(), true);
