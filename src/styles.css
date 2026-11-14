@@ -4667,3 +4667,33 @@ input::placeholder, textarea::placeholder { color: #a0aaa0; }
   .quantity-modal-stepper button { width: 50px; height: 52px; border-radius: 14px; }
   .quantity-modal-stepper input { height: 54px; font-size: 23px; }
 }
+
+/* The shared composer owns the single visible outline; avoid a nested shopping card. */
+.shopping-actions-dock > .add-panel.floating-add-panel {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.inventory-product-entry .inventory-entry-quantity {
+  appearance: auto;
+  -webkit-appearance: auto;
+  flex: 0 0 43px;
+  width: 43px;
+  min-width: 43px;
+  padding: 0 2px;
+  color: #405b47;
+  background: #f4f7f1;
+  border: 1px solid #dce6da;
+  border-radius: 10px;
+  font-size: 12px;
+  text-align: center;
+}
+@media (max-width: 420px) {
+  .inventory-product-entry .inventory-entry-quantity {
+    flex-basis: 38px;
+    width: 38px;
+    min-width: 38px;
+    font-size: 11px;
+  }
+}
