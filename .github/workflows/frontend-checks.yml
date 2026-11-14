@@ -1,0 +1,50 @@
+name: Frontend checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build-and-mobile-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Unit tests
+        run: npm test
+      - name: Install Playwright Chromium
+        run: npx --yes playwright install --with-deps chromium
+      - name: Start preview server
+        run: |
+          npm run preview -- --host 127.0.0.1 > /tmp/listoria-preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/listoria-preview.log
+          exit 1
+      - name: Playwright mobile and desktop smoke screenshots
+        run: |
+          npx --yes playwright screenshot --browser chromium --viewport-size="393,852" --wait-for-timeout=2500 http://127.0.0.1:4173/ artifacts/listoria-mobile.png
+          npx --yes playwright screenshot --browser chromium --viewport-size="1440,900" --wait-for-timeout=1500 http://127.0.0.1:4173/ artifacts/listoria-desktop.png
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: listoria-frontend-smoke
+          path: artifacts/
+          if-no-files-found: ignore
