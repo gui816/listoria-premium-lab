@@ -1549,7 +1549,8 @@ export default function App() {
               onPhoto={() => setShowPhotoSource(true)}
               busy={importBusy}
               listening={listening}
-              inlineActions\n              extraControl={<button type="button" className="quantity-picker-trigger" aria-label={`${t("Quantidade")}: ${Math.max(1, Math.min(999, Number.parseInt(quantity, 10) || 1))}`} title={`${t("Quantidade")}: ${quantity}`} aria-haspopup="dialog" aria-expanded={showQuantityModal} onPointerDown={e => e.preventDefault()} onClick={() => { productNameInputRef.current?.blur(); setProductInputFocused(false); setKeyboardOpen(false); setShowQuantityModal(true); }}><ChevronDown size={21}/></button>}
+              inlineActions
+              extraControl={<button type="button" className="quantity-picker-trigger" aria-label={`${t("Quantidade")}: ${Math.max(1, Math.min(999, Number.parseInt(quantity, 10) || 1))}`} title={`${t("Quantidade")}: ${quantity}`} aria-haspopup="dialog" aria-expanded={showQuantityModal} onPointerDown={e => e.preventDefault()} onClick={() => { productNameInputRef.current?.blur(); setProductInputFocused(false); setKeyboardOpen(false); setShowQuantityModal(true); }}><ChevronDown size={21}/></button>}
             />
             {repeatSuggestions.length > 0 && !shoppingMode && !keyboardOpen && <details className="repeat-inline-disclosure">
               <summary><span>{t("Repetir compras")}</span><small>{Math.min(repeatSuggestions.length, 4)}</small><ChevronDown size={15}/></summary>
