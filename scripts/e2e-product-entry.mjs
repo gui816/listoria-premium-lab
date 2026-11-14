@@ -48,7 +48,7 @@ async function exerciseViewport({ width, height, mobile }, screenshotPath) {
   await page.locator("#member-name").waitFor({ state: "visible" });
   await page.locator("#member-name").fill("Teste Playwright");
   await page.locator("#list-name").fill("Lista Playwright");
-  await page.locator("#create-list-card button[type=submit]").click();
+  await page.locator("#create-list-card .create-form button[type=submit]").click();
   await page.locator(".product-entry-composer-classic").waitFor({ state: "visible", timeout: 15000 });
 
   const composer = page.locator(".product-entry-composer-classic");
