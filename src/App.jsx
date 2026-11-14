@@ -1549,7 +1549,8 @@ export default function App() {
               onPhoto={() => setShowPhotoSource(true)}
               busy={importBusy}
               listening={listening}
-              extraControl={<button type="button" className="quantity-picker-trigger" aria-label={t("Definir quantidade do produto")} aria-haspopup="dialog" aria-expanded={showQuantityModal} onPointerDown={e => e.preventDefault()} onClick={() => { productNameInputRef.current?.blur(); setProductInputFocused(false); setKeyboardOpen(false); setShowQuantityModal(true); }}><span>Qtd.</span><strong>{Math.max(1, Math.min(999, Number.parseInt(quantity, 10) || 1))}</strong></button>}
+              inlineActions
+              extraControl={<button type="button" className="quantity-picker-trigger" aria-label={`${t("Quantidade")}: ${Math.max(1, Math.min(999, Number.parseInt(quantity, 10) || 1))}`} title={`${t("Quantidade")}: ${quantity}`} aria-haspopup="dialog" aria-expanded={showQuantityModal} onPointerDown={e => e.preventDefault()} onClick={() => { productNameInputRef.current?.blur(); setProductInputFocused(false); setKeyboardOpen(false); setShowQuantityModal(true); }}><ChevronDown size={21}/></button>}
             />
             {repeatSuggestions.length > 0 && !shoppingMode && !keyboardOpen && <details className="repeat-inline-disclosure">
               <summary><span>{t("Repetir compras")}</span><small>{Math.min(repeatSuggestions.length, 4)}</small><ChevronDown size={15}/></summary>
@@ -1617,11 +1618,11 @@ export default function App() {
       </section>
       
       {showQuantityModal && createPortal(
-        <div className="quantity-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) { setShowQuantityModal(false); requestAnimationFrame(() => productNameInputRef.current?.focus({ preventScroll: true })); } }}>
+        <div className="quantity-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) { setShowQuantityModal(false); setProductInputFocused(false); setKeyboardOpen(false); productNameInputRef.current?.blur(); } }}>
           <section className="quantity-modal" role="dialog" aria-modal="true" aria-labelledby="quantity-modal-title">
             <div className="quantity-modal-heading">
               <div><span>{t("QUANTIDADE")}</span><h2 id="quantity-modal-title">{t("Quantos precisas?")}</h2></div>
-              <button type="button" aria-label={t("Fechar")} onClick={() => { setShowQuantityModal(false); requestAnimationFrame(() => productNameInputRef.current?.focus({ preventScroll: true })); }}><X size={19}/></button>
+              <button type="button" aria-label={t("Fechar")} onClick={() => { setShowQuantityModal(false); setProductInputFocused(false); setKeyboardOpen(false); productNameInputRef.current?.blur(); }}><X size={19}/></button>
             </div>
             <div className="quantity-modal-stepper">
               <button type="button" aria-label={t("Diminuir quantidade")} disabled={Number.parseInt(quantity, 10) <= 1} onClick={() => setQuantity(String(Math.max(1, (Number.parseInt(quantity, 10) || 1) - 1)))}><Minus size={22}/></button>
@@ -1629,7 +1630,7 @@ export default function App() {
               <button type="button" aria-label={t("Aumentar quantidade")} disabled={Number.parseInt(quantity, 10) >= 999} onClick={() => setQuantity(String(Math.min(999, (Number.parseInt(quantity, 10) || 1) + 1)))}><Plus size={22}/></button>
             </div>
             <p>{t("A quantidade será aplicada ao próximo produto que adicionares.")}</p>
-            <button type="button" className="quantity-modal-done" onClick={() => { setShowQuantityModal(false); requestAnimationFrame(() => productNameInputRef.current?.focus({ preventScroll: true })); }}>{t("Confirmar")}</button>
+            <button type="button" className="quantity-modal-done" onClick={() => { setShowQuantityModal(false); setProductInputFocused(false); setKeyboardOpen(false); productNameInputRef.current?.blur(); }}>{t("Confirmar")}</button>
           </section>
         </div>,
         document.body

@@ -4,21 +4,25 @@ import { readFile } from "node:fs/promises";
 
 const source = await readFile(new URL("../src/components/InventoryArea.jsx", import.meta.url), "utf8");
 
-test("voice opens feedback modal before checking browser support", () => {
+test("home voice capture provides a clear fallback when speech recognition is unavailable", () => {
   const start = source.indexOf("function startVoiceCapture()");
-  const modalOpen = source.indexOf("setVoiceModalOpen(true)", start);
   const supportCheck = source.indexOf("const SpeechRecognition", start);
-  assert.ok(start >= 0 && modalOpen > start && supportCheck > modalOpen);
-  assert.match(source, /Voz indisponível/);
+  assert.ok(start >= 0 && supportCheck > start);
+  assert.match(source, /O reconhecimento de voz não é suportado neste navegador/);
+  assert.match(source, /microfone do teclado/);
+  assert.match(source, /recognition\.onstart = \(\) =>/);
+  assert.match(source, /setVoiceModalOpen\(true\)/);
 });
 
-test("voice capture ends manually or after three seconds of silence", () => {
-  assert.match(source, /recognition\.continuous = true/);
-  assert.match(source, /recognition\.interimResults = true/);
-  assert.match(source, /setTimeout\(\(\) => \{/);
-  assert.match(source, /\}, 3000\)/);
-  assert.match(source, /function stopVoiceCapture\(\)/);
-  assert.match(source, /Terminar gravação/);
+test("home voice capture uses a single final result and keeps processing feedback visible", () => {
+  assert.match(source, /recognition\.continuous = false/);
+  assert.match(source, /recognition\.interimResults = false/);
+  assert.match(source, /recognition\.maxAlternatives = 1/);
+  assert.match(source, /recognition\.onresult = async event =>/);
+  assert.match(source, /await extractCapturedItems\(\{ text: transcript/);
+  assert.match(source, /recognition\.onend = \(\) =>/);
+  assert.match(source, /recognitionRef\.current\?\.stop\(\)/);
+  assert.match(source, /setVoiceModalOpen\(true\)/);
 });
 
 test("home photo capture supports multiple compressed images and visible progress", () => {
