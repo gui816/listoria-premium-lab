@@ -39,6 +39,7 @@ jobs:
           exit 1
       - name: Playwright mobile and desktop smoke screenshots
         run: |
+          mkdir -p artifacts
           npx --yes playwright screenshot --browser chromium --viewport-size="393,852" --wait-for-timeout=2500 http://127.0.0.1:4173/ artifacts/listoria-mobile.png
           npx --yes playwright screenshot --browser chromium --viewport-size="1440,900" --wait-for-timeout=1500 http://127.0.0.1:4173/ artifacts/listoria-desktop.png
       - name: Upload screenshots
