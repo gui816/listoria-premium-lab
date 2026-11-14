@@ -1549,6 +1549,7 @@ export default function App() {
               onPhoto={() => setShowPhotoSource(true)}
               busy={importBusy}
               listening={listening}
+              inlineActions={keyboardOpen}
               extraControl={<button type="button" className="quantity-picker-trigger" aria-label={t("Definir quantidade do produto")} aria-haspopup="dialog" aria-expanded={showQuantityModal} onPointerDown={e => e.preventDefault()} onClick={() => { productNameInputRef.current?.blur(); setProductInputFocused(false); setKeyboardOpen(false); setShowQuantityModal(true); }}><span>Qtd.</span><strong>{Math.max(1, Math.min(999, Number.parseInt(quantity, 10) || 1))}</strong></button>}
             />
             {repeatSuggestions.length > 0 && !shoppingMode && !keyboardOpen && <details className="repeat-inline-disclosure">
