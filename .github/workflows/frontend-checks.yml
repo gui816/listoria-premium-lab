@@ -26,6 +26,8 @@ jobs:
         run: npm run build
       - name: Unit tests
         run: npm test
+      - name: Install Playwright
+        run: npm install --no-save playwright
       - name: Install Playwright Chromium
         run: npx --yes playwright install --with-deps chromium
       - name: Start preview server
@@ -39,11 +41,10 @@ jobs:
           done
           cat /tmp/listoria-preview.log
           exit 1
-      - name: Playwright mobile and desktop smoke screenshots
+      - name: Playwright product-entry and quantity dialog checks
         run: |
           mkdir -p artifacts
-          npx --yes playwright screenshot --browser chromium --viewport-size="393,852" --wait-for-timeout=2500 http://127.0.0.1:4173/ artifacts/listoria-mobile.png
-          npx --yes playwright screenshot --browser chromium --viewport-size="1440,900" --wait-for-timeout=1500 http://127.0.0.1:4173/ artifacts/listoria-desktop.png
+          node test/e2e-product-entry.mjs
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
