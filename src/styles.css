@@ -4396,3 +4396,51 @@ input::placeholder, textarea::placeholder { color: #a0aaa0; }
   .inventory-product-entry .product-entry-submit { flex-basis: 42px; min-width: 42px; min-height: 42px; }
   .inventory-quick-add button { min-height: 36px; padding: 7px 10px; font-size: 12px; }
 }
+
+
+/* Accessible quantity picker dialog: restore the shared Listora modal language. */
+.quantity-modal-backdrop {
+  position: fixed; inset: 0; z-index: 60; display: flex; align-items: center;
+  justify-content: center; overflow-y: auto;
+  padding: max(18px, env(safe-area-inset-top, 0px)) 18px max(18px, env(safe-area-inset-bottom, 0px));
+  background: rgba(24, 35, 26, .52); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
+}
+.quantity-modal {
+  position: relative; width: min(100%, 430px);
+  max-height: calc(var(--listoria-visual-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 36px);
+  overflow-y: auto; padding: 24px; border: 1px solid #e2e9df; border-radius: 24px;
+  background: #fffefa; color: var(--ink); box-shadow: 0 24px 72px rgba(18, 35, 22, .24);
+}
+.quantity-modal-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 22px; }
+.quantity-modal-heading span { display: block; margin-bottom: 8px; color: var(--green); font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+.quantity-modal-heading h2 { margin: 0; color: var(--ink); font-family: Manrope, sans-serif; font-size: clamp(22px, 6vw, 27px); line-height: 1.16; letter-spacing: -.8px; }
+.quantity-modal-heading > button { display: grid; place-items: center; flex: 0 0 36px; width: 36px; height: 36px; padding: 0; border: 1px solid #e7ebe3; border-radius: 11px; background: #f3f5ef; color: #647365; }
+.quantity-modal-stepper { display: grid; grid-template-columns: 52px minmax(0, 1fr) 52px; align-items: center; gap: 10px; }
+.quantity-modal-stepper button { display: grid; place-items: center; width: 52px; height: 52px; border: 1px solid #dce7da; border-radius: 15px; background: #edf4eb; color: var(--green); }
+.quantity-modal-stepper button:disabled { opacity: .38; cursor: not-allowed; }
+.quantity-modal-stepper input { width: 100%; min-width: 0; height: 52px; border: 1px solid #dce5d8; border-radius: 14px; background: #fff; color: var(--ink); text-align: center; font-size: 22px; font-weight: 750; outline: none; }
+.quantity-modal-stepper input:focus { border-color: #83a982; box-shadow: 0 0 0 3px rgba(110, 157, 111, .16); }
+.quantity-modal > p { margin: 15px 0 19px; color: #788477; font-size: 12px; line-height: 1.55; }
+.quantity-modal-done { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; padding: 12px 18px; border: 0; border-radius: 13px; background: var(--green); color: #fff; font-size: 14px; font-weight: 750; box-shadow: 0 5px 14px rgba(33, 103, 70, .15); }
+.quantity-modal-done:active { background: var(--green-dark); transform: scale(.99); }
+@media (max-width: 420px) {
+  .quantity-modal { padding: 21px 18px 18px; border-radius: 21px; }
+  .quantity-modal-stepper { grid-template-columns: 48px minmax(0, 1fr) 48px; gap: 8px; }
+  .quantity-modal-stepper button { width: 48px; height: 48px; }
+  .quantity-modal-stepper input { height: 48px; }
+}
+
+/* Keep every product-entry action reachable above the Android soft keyboard. */
+@media (max-width: 680px) {
+  .shopping-actions-dock.keyboard-open { max-height: none; overflow: visible; }
+  .shopping-actions-dock.keyboard-open > .add-panel.floating-add-panel { max-height: none; overflow: visible; padding: 8px 10px; }
+  .shopping-actions-dock.keyboard-open .product-entry-heading,
+  .shopping-actions-dock.keyboard-open .product-entry-actions { display: none; }
+  .shopping-actions-dock.keyboard-open .product-entry-field-row { gap: 5px; }
+  .shopping-actions-dock.keyboard-open .product-entry-field-row > input { min-width: 0; height: 44px; padding: 0 9px; font-size: 14px; }
+  .shopping-actions-dock.keyboard-open .quantity-picker-trigger { min-width: 48px; min-height: 40px; padding: 0 7px; font-size: 11px; }
+  .shopping-actions-dock.keyboard-open .product-entry-inline-action { display: grid; place-items: center; flex: 0 0 38px; width: 38px; height: 40px; padding: 0; border: 1px solid #dce7da; border-radius: 11px; background: #edf4eb; color: var(--green); }
+  .shopping-actions-dock.keyboard-open .product-entry-inline-action.voice { background: #f8efe3; border-color: #efdfc8; color: #986b38; }
+  .shopping-actions-dock.keyboard-open .product-entry-submit { flex: 0 0 40px; width: 40px; height: 40px; }
+  .shopping-actions-dock.keyboard-open .quick-suggestions { max-height: 38px; padding: 3px 0 0; overflow: hidden; }
+}
